@@ -1,0 +1,249 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escuela</title>
+
+  <!-- Estilos para el loader -->
+  <style>
+    .loader-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease-out;
+    }
+    
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid #3c8dbc;
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+    }
+    
+    @keyframes rotation {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .loaded .loader-wrapper {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+
+
+  <!-- Google Font: Source Sans Pro -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}" rel="stylesheet" >
+  <!-- Theme style -->
+  <link rel="stylesheet" href= "{% static 'css/adminlte.min.css' %}" rel="stylesheet">
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap4.min.css">
+
+  {% block css %}  {% endblock css %}
+</head>
+<body class="hold-transition sidebar-mini">
+<!-- Loader -->
+<div class="loader-wrapper">
+  <div class="loader"></div>
+</div>
+
+<div class="wrapper">
+  <!-- Resto de tu código HTML... -->
+  <!-- Navbar -->
+  {% include 'base_parts/navbar.html'%}
+  <!-- /.navbar -->
+
+  <!-- Main Sidebar Container -->
+  {% include 'base_parts/menu.html'%}
+
+  <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            {% comment %} <h1 class="m-0">Starter Page</h1> {% endcomment %}
+          </div><!-- /.col -->
+          <div class="col-sm-6">
+            {% comment %} <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'inicio' %}">Inicio</a></li>
+              <li class="breadcrumb-item active">Starter Page</li>
+            </ol> {% endcomment %}
+          </div><!-- /.col -->
+        </div><!-- /.row -->
+      </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content-header -->
+
+    <!-- Main content -->
+    <div class="content">
+      <div class="container-fluid">
+        {% block content %}
+        <!-- Your Page Content Here -->
+        {% endblock content %}
+      </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content -->
+  </div>
+  <!-- /.content-wrapper -->
+
+  <!-- Control Sidebar -->
+  <aside class="control-sidebar control-sidebar-dark">
+    <!-- Control sidebar content goes here -->
+    <div class="p-3">
+      <h5>Title</h5>
+      <p>Sidebar content</p>
+    </div>
+  </aside>
+  <!-- /.control-sidebar -->
+
+  <!-- Main Footer -->
+  {% include 'base_parts/footer.html'%}
+</div>
+<!-- ./wrapper -->
+
+<!-- REQUIRED SCRIPTS -->
+<!-- jQuery -->
+<script src= "{% static 'plugins/jquery/jquery.min.js' %}" ></script>
+<!-- Bootstrap 4 -->
+<script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}" ></script>
+<!-- AdminLTE App -->
+<script src="{% static 'js/adminlte.min.js' %}" ></script>
+
+<!-- Alertas -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{% static 'js/alertas.js' %}" ></script>
+
+<script src="{% static 'js/fdv.js' %}" ></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
+<!-- JSZip para Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- PDFMake para PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<!-- DataTables Buttons -->
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+
+{% block scripts %} {% endblock scripts%}
+
+<script>
+  // Ocultar el loader cuando la página esté completamente cargada
+  window.addEventListener('load', function() {
+    // Agregamos un pequeño retraso para asegurarnos de que todo esté listo
+    setTimeout(function() {
+      document.body.classList.add('loaded');
+      
+      // Eliminamos el loader del DOM después de la animación
+      setTimeout(function() {
+        document.querySelector('.loader-wrapper').remove();
+      }, 300); // Tiempo igual a la duración de la transición
+    }, 500);
+  });
+
+  $(document).ready(function () {
+    // Configuración común para ambas tablas
+    const opcionesTabla = {
+      responsive: true,
+      dom: '<"row mb-3"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>' +
+           '<"row"<"col-sm-12"tr>>' +
+           '<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      buttons: [
+        {
+          extend: 'copy',
+          text: '<i class="far fa-copy mr-2"></i> Copiar',
+          className: 'btn btn-primary btn-sm rounded-pill mr-2 mb-2',
+          titleAttr: 'Copiar al portapapeles'
+        },
+        {
+          extend: 'excel',
+          text: '<i class="far fa-file-excel mr-2"></i> Excel',
+          className: 'btn btn-success btn-sm rounded-pill mr-2 mb-2',
+          titleAttr: 'Exportar a Excel'
+        },
+        {
+          extend: 'print',
+          text: '<i class="fas fa-print mr-2"></i> Imprimir',
+          className: 'btn btn-secondary btn-sm rounded-pill mr-2 mb-2',
+          titleAttr: 'Imprimir tabla'
+        },
+        {
+          extend: 'pdf',
+          text: '<i class="far fa-file-pdf mr-2"></i> PDF',
+          className: 'btn btn-danger btn-sm rounded-pill mr-2 mb-2',
+          titleAttr: 'Exportar a PDF'
+        },
+        {
+          extend: 'colvis',
+          text: '<i class="fas fa-eye mr-2"></i> Columnas',
+          className: 'btn btn-info btn-sm rounded-pill mb-2',
+          titleAttr: 'Mostrar/ocultar columnas'
+        }
+      ],
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
+        emptyTable: "No hay datos disponibles en la tabla"
+      }
+    };
+
+    // Función para inicializar DataTable solo si hay datos
+    function initDataTableIfNeeded(tableId, hasData) {
+      if (hasData && !$.fn.DataTable.isDataTable(tableId)) {
+        return $(tableId).DataTable(opcionesTabla);
+      }
+      return null;
+    }
+
+    // Inicializar tablas principales
+    initDataTableIfNeeded('#dataTables-example', {{ items|length }} > 0);
+    initDataTableIfNeeded('#dataTables-trash', {{ trash_items|length }} > 0);
+
+    // Inicializar las otras tablas cuando se muestren sus pestañas
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      const target = $(e.target).attr("href");
+      
+      if (target === '#trash-content') {
+        initDataTableIfNeeded('#dataTables-trash', {{ trash_items|length }} > 0);
+      }
+      
+      // Ajustar columnas al cambiar de pestaña
+      $.fn.dataTable.tables({visible: true, api: true}).columns.adjust();
+    });
+
+    // Inicializar la tabla de papelera si ya está activa (al recargar la página)
+    if ($('#trash-content').hasClass('active')) {
+      initDataTableIfNeeded('#dataTables-trash', {{ trash_items|length }} > 0);
+    }
+  });
+</script>
+  
+</body>
+</html>

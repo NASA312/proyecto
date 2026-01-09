@@ -1,0 +1,20 @@
+{% load crispy_forms_tags %}
+
+<div class="card card-info">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>  <!-- Título dinámico -->
+    </div>
+    <!-- /.card-header -->
+    <!-- form start -->
+    <form class="form-horizontal" method="post">
+        {% csrf_token %}  <!-- Token CSRF para protección -->
+        <div class="card-body">
+            {% crispy form %}  <!-- Renderiza el formulario usando crispy forms -->
+        </div>
+        <!-- /.card-body -->
+        <div class="card-footer">
+
+        </div>
+        <!-- /.card-footer -->
+    </form>
+</div>
