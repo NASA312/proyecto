@@ -44,6 +44,82 @@
               </li>
             </ul>
           </li>
+          <!-- Agregar esto en tu sidebar existente -->
+
+<!-- TUTORES -->
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-user-friends"></i>
+    <p>
+      Tutores
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_tutores' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Tutores</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_tutor' %}" class="nav-link">
+        <i class="fas fa-user-plus nav-icon"></i>
+        <p>Registrar Tutor</p>
+      </a>
+    </li>
+  </ul>
+</li>
+
+<!-- NIÑOS -->
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-child"></i>
+    <p>
+      Niños
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_ninos' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Niños</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_nino' %}" class="nav-link">
+        <i class="fas fa-plus-circle nav-icon"></i>
+        <p>Registrar Niño</p>
+      </a>
+    </li>
+  </ul>
+</li>
+
+<!-- VERIFICACIÓN Y REGISTROS -->
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-fingerprint"></i>
+    <p>
+      Control de Acceso
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:verificar_huella_tutor' %}" class="nav-link">
+        <i class="fas fa-hand-paper nav-icon"></i>
+        <p>Verificar Huella</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:historial_accesos' %}" class="nav-link">
+        <i class="fas fa-history nav-icon"></i>
+        <p>Historial de Accesos</p>
+      </a>
+    </li>
+  </ul>
+</li>
           
 
           

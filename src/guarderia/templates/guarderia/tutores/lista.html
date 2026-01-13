@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Tutores{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Lista de Tutores</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Tutores</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Tutores Registrados</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_tutor' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus"></i> Registrar Nuevo Tutor
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <table id="tablaTutores" class="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Nombre Completo</th>
+                  <th>Parentesco</th>
+                  <th>Teléfono</th>
+                  <th>Email</th>
+                  <th>Identificación</th>
+                  <th>Huella</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tutor in tutores %}
+                <tr>
+                  <td>{{ tutor.nombre_completo }}</td>
+                  <td>
+                    <span class="badge badge-info">{{ tutor.get_parentesco_display }}</span>
+                  </td>
+                  <td>{{ tutor.telefono }}</td>
+                  <td>{{ tutor.email|default:"N/A" }}</td>
+                  <td>{{ tutor.numero_identificacion }}</td>
+                  <td>
+                    {% if tutor.huella_registrada %}
+                      <span class="badge badge-success">
+                        <i class="fas fa-check"></i> Registrada
+                      </span>
+                    {% else %}
+                      <span class="badge badge-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Pendiente
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-info btn-sm" title="Ver Detalles">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      <a href="{% url 'guarderia:editar_tutor' tutor.id %}" class="btn btn-warning btn-sm" title="Editar">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      {% if not tutor.huella_registrada %}
+                      <a href="{% url 'guarderia:registrar_huella_tutor' tutor.id %}" class="btn btn-primary btn-sm" title="Registrar Huella">
+                        <i class="fas fa-fingerprint"></i>
+                      </a>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center">No hay tutores registrados</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    $('#tablaTutores').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false
+    });
+  });
+</script>
+{% endblock %}

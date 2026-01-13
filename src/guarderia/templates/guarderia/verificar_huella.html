@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verificar Huella{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-12 text-center">
+        <h1 class="m-0">Control de Acceso - Verificación de Huella</h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <!-- Card Principal -->
+        <div class="card card-primary card-outline" id="card-inicial">
+          <div class="card-header text-center">
+            <h3 class="card-title">
+              <i class="fas fa-fingerprint fa-2x"></i><br>
+              Coloque su dedo en el lector biométrico
+            </h3>
+          </div>
+          <div class="card-body text-center">
+            <div class="mb-4">
+              <i class="fas fa-hand-paper fa-5x text-primary"></i>
+            </div>
+            <h4>Esperando lectura de huella...</h4>
+            <p class="text-muted">El sistema verificará su identidad automáticamente</p>
+            <div class="progress mt-4" style="height: 30px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                   role="progressbar" 
+                   style="width: 100%">
+                Escaneando...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Tutor Verificado (oculto inicialmente) -->
+        <div class="card card-success" id="card-verificado" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-check-circle"></i> Tutor Verificado
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 text-center">
+                <i class="fas fa-user-circle fa-5x text-success mb-3"></i>
+                <h5 id="tutor-nombre"></h5>
+                <p class="text-muted" id="tutor-parentesco"></p>
+                <p><i class="fas fa-phone"></i> <span id="tutor-telefono"></span></p>
+              </div>
+              <div class="col-md-8">
+                <h5 class="mb-3"><i class="fas fa-child"></i> Seleccione al niño a recoger:</h5>
+                <div id="lista-ninos"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card de Error (oculto inicialmente) -->
+        <div class="card card-danger" id="card-error" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-times-circle"></i> Error en Verificación
+            </h3>
+          </div>
+          <div class="card-body text-center">
+            <i class="fas fa-exclamation-triangle fa-5x text-danger mb-3"></i>
+            <h4 id="mensaje-error">Huella no reconocida</h4>
+            <p class="text-muted">Por favor intente nuevamente o contacte al personal</p>
+            <button class="btn btn-primary mt-3" onclick="reiniciar()">
+              <i class="fas fa-redo"></i> Intentar Nuevamente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let verificando = false;
+
+function verificarHuella() {
+  if (verificando) return;
+  verificando = true;
+
+  // Simular verificación (en producción esto vendría del lector)
+  fetch("{% url 'guarderia:verificar_huella_tutor' %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      huella_template: 'base64_template_here' // Esto vendría del lector real
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      mostrarTutorVerificado(data);
+    } else {
+      mostrarError(data.mensaje);
+    }
+    verificando = false;
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    mostrarError('Error de conexión con el servidor');
+    verificando = false;
+  });
+}
+
+function mostrarTutorVerificado(data) {
+  document.getElementById('card-inicial').style.display = 'none';
+  document.getElementById('card-error').style.display = 'none';
+  document.getElementById('card-verificado').style.display = 'block';
+
+  document.getElementById('tutor-nombre').textContent = data.tutor.nombre;
+  document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
+  document.getElementById('tutor-telefono').textContent = data.tutor.telefono;
+
+  let listaNinos = document.getElementById('lista-ninos');
+  listaNinos.innerHTML = '';
+
+  data.ninos.forEach(nino => {
+    let card = `
+      <div class="card mb-2">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-0">${nino.nombre}</h6>
+            <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
+          </div>
+          <button class="btn btn-success" onclick="registrarSalida(${nino.id}, ${data.tutor.id})">
+            <i class="fas fa-sign-out-alt"></i> Registrar Salida
+          </button>
+        </div>
+      </div>
+    `;
+    listaNinos.innerHTML += card;
+  });
+}
+
+function mostrarError(mensaje) {
+  document.getElementById('card-inicial').style.display = 'none';
+  document.getElementById('card-verificado').style.display = 'none';
+  document.getElementById('card-error').style.display = 'block';
+  document.getElementById('mensaje-error').textContent = mensaje;
+}
+
+function registrarSalida(ninoId, tutorId) {
+  fetch("{% url 'guarderia:registrar_salida' %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      nino_id: ninoId,
+      tutor_id: tutorId
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Salida Registrada!',
+        text: data.mensaje,
+        timer: 3000,
+        showConfirmButton: false
+      }).then(() => {
+        reiniciar();
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: data.mensaje
+      });
+    }
+  })
+  .catch(error => {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo registrar la salida'
+    });
+  });
+}
+
+function reiniciar() {
+  document.getElementById('card-inicial').style.display = 'block';
+  document.getElementById('card-verificado').style.display = 'none';
+  document.getElementById('card-error').style.display = 'none';
+  verificando = false;
+  setTimeout(verificarHuella, 2000);
+}
+
+// Iniciar verificación automática cada 3 segundos
+setInterval(() => {
+  if (document.getElementById('card-inicial').style.display !== 'none') {
+    verificarHuella();
+  }
+}, 3000);
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Huella - {{ tutor.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Registro de Huella Dactilar</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_tutores' %}">Tutores</a></li>
+          <li class="breadcrumb-item active">Registrar Huella</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-6 offset-md-3">
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-fingerprint"></i> Captura Biométrica</h3>
+          </div>
+          <div class="card-body">
+            <div class="text-center mb-4">
+              <h4>{{ tutor.nombre_completo }}</h4>
+              <p class="text-muted">{{ tutor.get_parentesco_display }}</p>
+            </div>
+
+            <div id="estado-captura" class="text-center">
+              {% if tutor.huella_registrada %}
+                <div class="alert alert-success">
+                  <i class="fas fa-check-circle fa-3x mb-3"></i>
+                  <h4>Huella Registrada Exitosamente</h4>
+                  <p>La huella de {{ tutor.nombre_completo }} ha sido capturada y guardada.</p>
+                </div>
+                {% if tutor.huella_imagen %}
+                  <img src="{{ tutor.huella_imagen.url }}" class="img-fluid" alt="Huella capturada" style="max-width: 300px;">
+                {% endif %}
+              {% else %}
+                <div class="callout callout-info">
+                  <h5><i class="fas fa-hand-paper"></i> Instrucciones:</h5>
+                  <p>Por favor, coloque el dedo índice en el lector biométrico</p>
+                  <p class="mb-0">El sistema capturará la huella automáticamente</p>
+                </div>
+
+                <div class="overlay dark" id="loading-overlay">
+                  <i class="fas fa-3x fa-sync-alt fa-spin"></i>
+                  <p class="mt-2">Esperando captura de huella...</p>
+                </div>
+
+                <div id="huella-preview" class="mt-4" style="display: none;">
+                  <img id="imagen-huella" src="" class="img-fluid" alt="Huella capturada" style="max-width: 300px;">
+                </div>
+
+                <div id="error-mensaje" class="alert alert-danger mt-3" style="display: none;">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span id="error-texto"></span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-footer">
+            {% if tutor.huella_registrada %}
+              <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-success btn-block">
+                <i class="fas fa-check"></i> Continuar
+              </a>
+            {% else %}
+              <button id="btn-reintentar" class="btn btn-warning btn-block" style="display: none;" onclick="location.reload()">
+                <i class="fas fa-redo"></i> Reintentar Captura
+              </button>
+              <a href="{% url 'guarderia:lista_tutores' %}" class="btn btn-default btn-block">
+                <i class="fas fa-arrow-left"></i> Volver a Lista
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let verificando = false;
+
+function verificarCaptura() {
+  if (verificando) return;
+  verificando = true;
+
+  fetch("{% url 'guarderia:verificar_huella_capturada_tutor' tutor.id %}")
+    .then(response => response.json())
+    .then(data => {
+      if (data.capturada) {
+        document.getElementById('loading-overlay').style.display = 'none';
+        
+        if (data.imagen_url) {
+          document.getElementById('imagen-huella').src = data.imagen_url;
+          document.getElementById('huella-preview').style.display = 'block';
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Huella Capturada!',
+          text: 'La huella ha sido registrada exitosamente',
+          confirmButtonText: 'Continuar'
+        }).then(() => {
+          window.location.href = "{% url 'guarderia:detalle_tutor' tutor.id %}";
+        });
+      } else {
+        verificando = false;
+        setTimeout(verificarCaptura, 1000);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('loading-overlay').style.display = 'none';
+      document.getElementById('error-mensaje').style.display = 'block';
+      document.getElementById('error-texto').textContent = 
+        'Error al verificar la captura. Verifique que el lector esté conectado.';
+      document.getElementById('btn-reintentar').style.display = 'block';
+      verificando = false;
+    });
+}
+
+{% if not tutor.huella_registrada %}
+  setTimeout(verificarCaptura, 2000);
+{% endif %}
+</script>
+{% endblock %}

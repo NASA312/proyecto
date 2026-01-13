@@ -1,5 +1,5 @@
 """
-URL configuration for fdv project.
+URL configuration for proyecto project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.1/topics/http/urls/
@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index, name='inicio'),
     path('auth/', include('login.urls', namespace='auth')),
+    path('guarderia/', include('guarderia.urls')), 
 ]

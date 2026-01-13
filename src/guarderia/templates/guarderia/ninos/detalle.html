@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalles - {{ nino.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Detalles del Niño</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_ninos' %}">Niños</a></li>
+          <li class="breadcrumb-item active">{{ nino.nombre_completo }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Información del Niño -->
+      <div class="col-md-4">
+        <div class="card card-primary card-outline">
+          <div class="card-body box-profile">
+            <div class="text-center">
+              {% if nino.foto %}
+                <img src="{{ nino.foto.url }}" class="profile-user-img img-fluid img-circle" alt="{{ nino.nombre_completo }}" style="width: 150px; height: 150px; object-fit: cover;">
+              {% else %}
+                <div class="profile-user-img img-fluid img-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                  <i class="fas fa-user fa-4x"></i>
+                </div>
+              {% endif %}
+            </div>
+
+            <h3 class="profile-username text-center">{{ nino.nombre_completo }}</h3>
+            <p class="text-muted text-center">Grupo {{ nino.grupo }}</p>
+
+            <ul class="list-group list-group-unbordered mb-3">
+              <li class="list-group-item">
+                <b>Edad</b> <a class="float-right">{{ nino.edad }} años</a>
+              </li>
+              <li class="list-group-item">
+                <b>Fecha Nacimiento</b> 
+                <a class="float-right">{{ nino.fecha_nacimiento|date:"d/m/Y" }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Tipo de Sangre</b> 
+                <span class="float-right">
+                  <span class="badge badge-danger">{{ nino.tipo_sangre|default:"N/A" }}</span>
+                </span>
+              </li>
+              <li class="list-group-item">
+                <b>Tutores</b>
+                <span class="float-right">
+                  <span class="badge badge-info">{{ tutores.count }}</span>
+                </span>
+              </li>
+            </ul>
+
+            <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-block">
+              <i class="fas fa-user-friends"></i> Gestionar Tutores
+            </a>
+          </div>
+        </div>
+
+        <!-- Información Médica -->
+        <div class="card card-warning">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-heartbeat"></i> Información Médica</h3>
+          </div>
+          <div class="card-body">
+            <strong><i class="fas fa-allergies mr-1"></i> Alergias</strong>
+            <p class="text-muted">
+              {{ nino.alergias|default:"No registradas"|linebreaks }}
+            </p>
+            <hr>
+            <strong><i class="fas fa-pills mr-1"></i> Medicamentos</strong>
+            <p class="text-muted">
+              {{ nino.medicamentos|default:"No registrados"|linebreaks }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tutores Autorizados -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-user-friends"></i> Tutores Autorizados</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-edit"></i> Modificar Tutores
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if tutores %}
+              <div class="row">
+                {% for tutor in tutores %}
+                <div class="col-md-6 mb-3">
+                  <div class="card {% if tutor.huella_registrada %}border-success{% else %}border-warning{% endif %}">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h5 class="mb-1">{{ tutor.nombre_completo }}</h5>
+                          <p class="mb-1">
+                            <span class="badge badge-info">{{ tutor.get_parentesco_display }}</span>
+                          </p>
+                          <small class="text-muted">
+                            <i class="fas fa-phone"></i> {{ tutor.telefono }}
+                          </small>
+                          {% if tutor.email %}
+                            <br>
+                            <small class="text-muted">
+                              <i class="fas fa-envelope"></i> {{ tutor.email }}
+                            </small>
+                          {% endif %}
+                        </div>
+                        <div>
+                          {% if tutor.huella_registrada %}
+                            <span class="badge badge-success">
+                              <i class="fas fa-fingerprint"></i> Verificado
+                            </span>
+                          {% else %}
+                            <span class="badge badge-warning">
+                              <i class="fas fa-exclamation-triangle"></i> Sin huella
+                            </span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-footer">
+                      <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-eye"></i> Ver Detalles
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> 
+                No hay tutores asignados a este niño. 
+                <a href="{% url 'guarderia:asignar_tutores' nino.id %}">Asignar tutores ahora</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Historial de Accesos -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Historial de Entradas y Salidas</h3>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Fecha/Hora</th>
+                  <th>Tutor</th>
+                  <th>Tipo</th>
+                  <th>Método</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for registro in registros %}
+                <tr>
+                  <td>{{ registro.fecha_hora|date:"d/m/Y H:i" }}</td>
+                  <td>{{ registro.tutor.nombre_completo }}</td>
+                  <td>
+                    {% if registro.tipo == 'ENTRADA' %}
+                      <span class="badge badge-success">
+                        <i class="fas fa-sign-in-alt"></i> Entrada
+                      </span>
+                    {% else %}
+                      <span class="badge badge-info">
+                        <i class="fas fa-sign-out-alt"></i> Salida
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge badge-primary">
+                      <i class="fas fa-fingerprint"></i> {{ registro.metodo_verificacion }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if registro.verificacion_exitosa %}
+                      <span class="badge badge-success">Exitosa</span>
+                    {% else %}
+                      <span class="badge badge-danger">Fallida</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center">No hay registros de acceso</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if registros %}
+          <div class="card-footer">
+            <a href="{% url 'guarderia:historial_accesos' %}" class="btn btn-sm btn-default">
+              Ver historial completo
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

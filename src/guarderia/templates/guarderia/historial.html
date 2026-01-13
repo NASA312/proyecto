@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Historial de Accesos{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Historial de Entradas y Salidas</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Historial</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-3">
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+          <div class="inner">
+            <h3>{{ registros|length }}</h3>
+            <p>Registros Totales</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+          <div class="inner">
+            <h3>
+              {% with entradas=registros|length %}
+                {{ entradas }}
+              {% endwith %}
+            </h3>
+            <p>Hoy</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+          <div class="inner">
+            <h3 style="color: white;">Activo</h3>
+            <p style="color: white;">Sistema Operativo</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-fingerprint"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+          <div class="inner">
+            <h3>100%</h3>
+            <p>Verificaciones Exitosas</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Registros -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Últimos 100 Registros</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-minus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table id="tablaRegistros" class="table table-bordered table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha y Hora</th>
+                  <th>Niño</th>
+                  <th>Tutor</th>
+                  <th>Tipo</th>
+                  <th>Método</th>
+                  <th>Estado</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for registro in registros %}
+                <tr class="{% if not registro.verificacion_exitosa %}table-danger{% endif %}">
+                  <td>{{ registro.id }}</td>
+                  <td>
+                    <strong>{{ registro.fecha_hora|date:"d/m/Y" }}</strong><br>
+                    <small class="text-muted">{{ registro.fecha_hora|date:"H:i:s" }}</small>
+                  </td>
+                  <td>
+                    <a href="{% url 'guarderia:detalle_nino' registro.nino.id %}">
+                      {{ registro.nino.nombre_completo }}
+                    </a>
+                    <br>
+                    <small class="text-muted">Grupo: {{ registro.nino.grupo }}</small>
+                  </td>
+                  <td>
+                    <a href="{% url 'guarderia:detalle_tutor' registro.tutor.id %}">
+                      {{ registro.tutor.nombre_completo }}
+                    </a>
+                    <br>
+                    <small class="text-muted">{{ registro.tutor.get_parentesco_display }}</small>
+                  </td>
+                  <td>
+                    {% if registro.tipo == 'ENTRADA' %}
+                      <span class="badge badge-success">
+                        <i class="fas fa-sign-in-alt"></i> ENTRADA
+                      </span>
+                    {% else %}
+                      <span class="badge badge-info">
+                        <i class="fas fa-sign-out-alt"></i> SALIDA
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge badge-primary">
+                      <i class="fas fa-fingerprint"></i> {{ registro.metodo_verificacion }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if registro.verificacion_exitosa %}
+                      <span class="badge badge-success">
+                        <i class="fas fa-check"></i> Exitosa
+                      </span>
+                    {% else %}
+                      <span class="badge badge-danger">
+                        <i class="fas fa-times"></i> Fallida
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small class="text-muted">
+                      {{ registro.observaciones|default:"Sin observaciones" }}
+                    </small>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center">No hay registros disponibles</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha y Hora</th>
+                  <th>Niño</th>
+                  <th>Tutor</th>
+                  <th>Tipo</th>
+                  <th>Método</th>
+                  <th>Estado</th>
+                  <th>Observaciones</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros Rápidos -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card card-info collapsed-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-filter"></i> Filtros Avanzados</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="get" class="row">
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label>Fecha Desde:</label>
+                  <input type="date" name="fecha_desde" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label>Fecha Hasta:</label>
+                  <input type="date" name="fecha_hasta" class="form-control">
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="form-group">
+                  <label>Tipo:</label>
+                  <select name="tipo" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SALIDA">Salida</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="form-group">
+                  <label>Estado:</label>
+                  <select name="estado" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="exitosa">Exitosa</option>
+                    <option value="fallida">Fallida</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="form-group">
+                  <label>&nbsp;</label>
+                  <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-search"></i> Filtrar
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    $('#tablaRegistros').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[0, "desc"]], // Ordenar por ID descendente
+      "pageLength": 25,
+      "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]]
+    });
+  });
+</script>
+{% endblock %}

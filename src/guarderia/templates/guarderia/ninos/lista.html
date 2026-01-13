@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Niños{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Lista de Niños</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Niños</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Niños Registrados</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_nino' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle"></i> Registrar Nuevo Niño
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <table id="tablaNinos" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Nombre Completo</th>
+                  <th>Edad</th>
+                  <th>Grupo</th>
+                  <th>Tipo de Sangre</th>
+                  <th>Tutores</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for nino in ninos %}
+                <tr>
+                  <td class="text-center">
+                    {% if nino.foto %}
+                      <img src="{{ nino.foto.url }}" class="img-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ nino.nombre_completo }}">
+                    {% else %}
+                      <div class="img-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-user"></i>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td>{{ nino.nombre_completo }}</td>
+                  <td>{{ nino.edad }} años</td>
+                  <td><span class="badge badge-info">{{ nino.grupo }}</span></td>
+                  <td>
+                    <span class="badge badge-danger">{{ nino.tipo_sangre|default:"N/A" }}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-secondary">
+                      {{ nino.tutores.count }} tutor{{ nino.tutores.count|pluralize:"es" }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <a href="{% url 'guarderia:detalle_nino' nino.id %}" class="btn btn-info btn-sm" title="Ver Detalles">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-warning btn-sm" title="Asignar Tutores">
+                        <i class="fas fa-user-friends"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center">No hay niños registrados</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    $('#tablaNinos').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false
+    });
+  });
+</script>
+{% endblock %}

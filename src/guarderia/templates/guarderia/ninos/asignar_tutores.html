@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asignar Tutores - {{ nino.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Asignar Tutores</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_ninos' %}">Niños</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:detalle_nino' nino.id %}">{{ nino.nombre_completo }}</a></li>
+          <li class="breadcrumb-item active">Asignar Tutores</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-user-friends"></i> 
+              Tutores Autorizados para {{ nino.nombre_completo }}
+            </h3>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="card-body">
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Instrucciones:</strong> Seleccione todos los tutores que están autorizados para recoger a este niño. 
+                Solo los tutores seleccionados podrán registrar salidas mediante verificación de huella.
+              </div>
+
+              <div class="form-group">
+                <label>Seleccionar Tutores Autorizados:</label>
+                <div class="row">
+                  {% for tutor in form.tutores %}
+                    <div class="col-md-6 mb-3">
+                      <div class="custom-control custom-checkbox">
+                        <input type="checkbox" 
+                               class="custom-control-input" 
+                               id="tutor_{{ tutor.data.value }}" 
+                               name="tutores" 
+                               value="{{ tutor.data.value }}"
+                               {% if tutor.data.selected %}checked{% endif %}>
+                        <label class="custom-control-label" for="tutor_{{ tutor.data.value }}">
+                          <div class="card mb-0" style="border: 1px solid #dee2e6;">
+                            <div class="card-body p-2">
+                              <h6 class="mb-1">{{ tutor.choice_label }}</h6>
+                              <small class="text-muted">
+                                {% with tutor.choice_label|stringformat:"s" as tutor_name %}
+                                  {% for t in form.tutores.field.queryset %}
+                                    {% if t.nombre_completo == tutor_name %}
+                                      <i class="fas fa-phone"></i> {{ t.telefono }}<br>
+                                      <span class="badge badge-info">{{ t.get_parentesco_display }}</span>
+                                      {% if t.huella_registrada %}
+                                        <span class="badge badge-success">
+                                          <i class="fas fa-fingerprint"></i> Verificado
+                                        </span>
+                                      {% else %}
+                                        <span class="badge badge-warning">
+                                          <i class="fas fa-exclamation-triangle"></i> Sin huella
+                                        </span>
+                                      {% endif %}
+                                    {% endif %}
+                                  {% endfor %}
+                                {% endwith %}
+                              </small>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              {% if not form.tutores.field.queryset %}
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  No hay tutores registrados en el sistema. 
+                  <a href="{% url 'guarderia:registrar_tutor' %}">Registrar un tutor primero</a>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="card-footer">
+              <button type="submit" class="btn btn-primary" {% if not form.tutores.field.queryset %}disabled{% endif %}>
+                <i class="fas fa-save"></i> Guardar Asignación
+              </button>
+              <a href="{% url 'guarderia:detalle_nino' nino.id %}" class="btn btn-default">
+                <i class="fas fa-arrow-left"></i> Volver
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="card card-info">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-lightbulb"></i> Información Importante</h3>
+          </div>
+          <div class="card-body">
+            <ul class="mb-0">
+              <li>Los tutores deben tener su huella dactilar registrada para poder recoger al niño.</li>
+              <li>Puede asignar múltiples tutores para cada niño.</li>
+              <li>Si un tutor no aparece en la lista, primero debe 
+                <a href="{% url 'guarderia:registrar_tutor' %}">registrarlo en el sistema</a>.
+              </li>
+              <li>Los tutores con <span class="badge badge-warning">Sin huella</span> deben completar el registro de huella antes de poder recoger niños.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    // Hacer que toda la tarjeta sea clickeable
+    $('.custom-control-label .card').click(function(e) {
+      if (e.target.tagName !== 'INPUT') {
+        let checkbox = $(this).closest('.custom-control').find('input[type="checkbox"]');
+        checkbox.prop('checked', !checkbox.prop('checked'));
+      }
+    });
+
+    // Resaltar tarjetas seleccionadas
+    $('.custom-control-input').change(function() {
+      if ($(this).is(':checked')) {
+        $(this).next('label').find('.card').addClass('border-primary').css('background-color', '#e3f2fd');
+      } else {
+        $(this).next('label').find('.card').removeClass('border-primary').css('background-color', '');
+      }
+    });
+
+    // Aplicar estilo inicial a los ya seleccionados
+    $('.custom-control-input:checked').each(function() {
+      $(this).next('label').find('.card').addClass('border-primary').css('background-color', '#e3f2fd');
+    });
+  });
+</script>
+{% endblock %}
