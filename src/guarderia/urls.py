@@ -11,9 +11,9 @@ urlpatterns = [
     path('tutores/registrar/', views.registrar_tutor, name='registrar_tutor'),
     path('tutores/<int:tutor_id>/', views.detalle_tutor, name='detalle_tutor'),
     path('tutores/<int:tutor_id>/editar/', views.editar_tutor, name='editar_tutor'),
-    path('tutores/<int:tutor_id>/registrar-huella/', views.registrar_huella_tutor, name='registrar_huella_tutor'),
+    path('tutores/<int:tutor_id>/huella/', views.registrar_huella_tutor, name='registrar_huella_tutor'),
 
-    # AJAX
+    # AJAX Tutores
     path('tutores/buscar/', views.buscar_tutores_ajax, name='buscar_tutores_ajax'),
 
     # =====================================
@@ -37,12 +37,8 @@ urlpatterns = [
     path('registros/salida/', views.registrar_salida, name='registrar_salida'),
 
     # =====================================
-    # APIs (.NET)
+    # APIs para consultar estado de huella
     # =====================================
-    path('api/recibir-huella-tutor/', views.recibir_huella_tutor, name='recibir_huella_tutor'),
-    path(
-        'api/verificar-captura-tutor/<int:tutor_id>/',
-        views.verificar_huella_capturada_tutor,
-        name='verificar_huella_capturada_tutor'
-    ),
+    path('api/huella/tutor/<int:tutor_id>/verificar/', views.verificar_huella_capturada_tutor, name='verificar_huella_capturada_tutor'),
+    path('api/huella/tutor/<int:tutor_id>/estado/', views.verificar_estado_huella, name='verificar_estado_huella'),
 ]

@@ -112,41 +112,6 @@ def editar_tutor(request, tutor_id):
     return render(request, 'guarderia/tutores/editar.html', {'form': form, 'tutor': tutor})
 
 @login_required
-def buscar_tutores_ajax(request):
-    """Búsqueda de tutores vía AJAX"""
-    query = request.GET.get('q', '').strip()
-
-    if len(query) < 2:
-        return JsonResponse({'tutores': []})
-
-    tutores = (
-        Tutor.objects
-        .filter(activo=True)
-        .filter(
-            Q(nombre__icontains=query) |
-            Q(apellido_paterno__icontains=query) |
-            Q(apellido_materno__icontains=query) |
-            Q(numero_identificacion__icontains=query) |
-            Q(telefono__icontains=query)
-        )
-        [:26]  # límite de resultados
-    )
-
-    tutores_data = [
-        {
-            'id': tutor.id,
-            'nombre_completo': tutor.nombre_completo,
-            'telefono': tutor.telefono,
-            'parentesco': tutor.get_parentesco_display(),
-            'huella_registrada': tutor.huella_registrada,
-            'numero_identificacion': tutor.numero_identificacion,
-        }
-        for tutor in tutores
-    ]
-
-    return JsonResponse({'tutores': tutores_data})
-
-@login_required
 def registrar_huella_tutor(request, tutor_id):
     """Registrar huella del tutor con lector biométrico"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
@@ -159,6 +124,7 @@ def registrar_huella_tutor(request, tutor_id):
                 timeout=2
             )
             print(f"✓ Solicitud enviada al servidor biométrico para tutor {tutor_id}")
+            print(f"Respuesta del servidor .NET: {response.json()}")
         except requests.exceptions.ConnectionError:
             messages.error(request, 'No se puede conectar con el lector de huellas.')
         except Exception as e:
@@ -396,74 +362,147 @@ def registrar_salida(request):
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido'}, status=405)
 
 # ============================================
-# APIs para .NET
+# APIs para .NET - MÉTODO DE CONSULTA
 # ============================================
 
 @csrf_exempt
-def recibir_huella_tutor(request):
-    """API para recibir huella desde .NET"""
-    print("\n" + "="*50)
-    print("🔔 RECIBIENDO HUELLA DE TUTOR")
-    print("="*50)
-    
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            tutor_id = data.get('persona_id')
-            huella_base64 = data.get('huella_imagen')
-            template_base64 = data.get('huella_template')
-            
-            tutor = Tutor.objects.get(id=tutor_id)
-            
-            if huella_base64:
-                imagen_data = base64.b64decode(huella_base64)
-                tutor.huella_imagen.save(
-                    f'tutor_{tutor.id}.png',
-                    ContentFile(imagen_data),
-                    save=False
-                )
-            
-            if template_base64:
-                tutor.huella_template = base64.b64decode(template_base64)
-            
-            tutor.huella_registrada = True
-            tutor.fecha_registro_huella = timezone.now()
-            tutor.save()
-            
-            print("✅ HUELLA REGISTRADA")
-            return JsonResponse({'success': True, 'message': 'Huella registrada'})
-        except Exception as e:
-            print(f"✗ ERROR: {e}")
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
-    
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
-
-@csrf_exempt
 def verificar_huella_capturada_tutor(request, tutor_id):
-    """Verificar si la huella fue capturada"""
+    """API para verificar si la huella ya fue capturada - Consulta al servidor .NET"""
+    print(f"\n🔍 Verificando captura para tutor {tutor_id}")
+    
     try:
+        # Consultar estado al servidor .NET (puerto 5000)
         response = requests.get(f'http://localhost:5000/estado', timeout=2)
         data = response.json()
         
+        print(f"📡 Respuesta del servidor .NET:")
+        print(f"   - completado: {data.get('completado')}")
+        print(f"   - persona_id: {data.get('persona_id')}")
+        print(f"   - tiene imagen: {'Sí' if data.get('huella_imagen') else 'No'}")
+        print(f"   - tiene template: {'Sí' if data.get('huella_template') else 'No'}")
+        
+        # Si la captura está completa Y es para este tutor
         if data.get('completado') and str(data.get('persona_id')) == str(tutor_id):
+            print(f"✅ Huella completada para tutor {tutor_id}")
             tutor = Tutor.objects.get(id=tutor_id)
             
+            # Guardar imagen
             if data.get('huella_imagen'):
-                imagen_data = base64.b64decode(data['huella_imagen'])
-                tutor.huella_imagen.save(f'tutor_{tutor.id}.png', ContentFile(imagen_data), save=False)
+                try:
+                    imagen_data = base64.b64decode(data['huella_imagen'])
+                    tutor.huella_imagen.save(
+                        f'tutor_{tutor.id}.png',
+                        ContentFile(imagen_data),
+                        save=False
+                    )
+                    print(f"✅ Imagen guardada: {tutor.huella_imagen.name}")
+                except Exception as e:
+                    print(f"❌ Error guardando imagen: {e}")
             
+            # Guardar template
             if data.get('huella_template'):
-                tutor.huella_template = base64.b64decode(data['huella_template'])
+                try:
+                    tutor.huella_template = base64.b64decode(data['huella_template'])
+                    print(f"✅ Template guardado: {len(tutor.huella_template)} bytes")
+                except Exception as e:
+                    print(f"❌ Error guardando template: {e}")
             
+            # Marcar como registrada
             tutor.huella_registrada = True
             tutor.fecha_registro_huella = timezone.now()
             tutor.save()
             
+            print(f"💾 Guardado en BD - huella_registrada: {tutor.huella_registrada}")
+            print("="*50)
+            print("✅ HUELLA REGISTRADA EXITOSAMENTE EN DJANGO")
+            print("="*50 + "\n")
+            
             return JsonResponse({
                 'capturada': True,
-                'imagen_url': tutor.huella_imagen.url if tutor.huella_imagen else None
+                'imagen_url': tutor.huella_imagen.url if tutor.huella_imagen else None,
+                'huella_registrada': tutor.huella_registrada
             })
-        
-        return JsonResponse({'capturada': False})
+        else:
+            print(f"⏳ Aún no completado o persona_id no coincide")
+            return JsonResponse({'capturada': False})
+            
+    except requests.exceptions.ConnectionError:
+        print(f"❌ No se pudo conectar al servidor .NET en localhost:5000")
+        return JsonResponse({
+            'capturada': False, 
+            'error': 'Servidor .NET no disponible'
+        })
+    except Tutor.DoesNotExist:
+        print(f"❌ Tutor {tutor_id} no encontrado en la BD")
+        return JsonResponse({'error': 'Tutor no encontrado'}, status=404)
     except Exception as e:
-        return JsonResponse({'capturada': False, 'error': str(e)})
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'capturada': False, 
+            'error': str(e)
+        })
+
+@login_required
+def verificar_estado_huella(request, tutor_id):
+    """Endpoint para verificar el estado de la huella en la BD"""
+    try:
+        tutor = Tutor.objects.get(id=tutor_id)
+        
+        return JsonResponse({
+            'success': True,
+            'tutor_id': tutor.id,
+            'nombre': tutor.nombre_completo(),
+            'huella_registrada': tutor.huella_registrada,
+            'tiene_imagen': bool(tutor.huella_imagen),
+            'imagen_url': tutor.huella_imagen.url if tutor.huella_imagen else None,
+            'tiene_template': bool(tutor.huella_template),
+            'template_size': len(tutor.huella_template) if tutor.huella_template else 0,
+            'fecha_registro': tutor.fecha_registro_huella.isoformat() if tutor.fecha_registro_huella else None
+        })
+    except Tutor.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Tutor no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def buscar_tutores_ajax(request):
+    """Búsqueda de tutores vía AJAX"""
+    query = request.GET.get('q', '').strip()
+
+    if len(query) < 2:
+        return JsonResponse({'tutores': []})
+
+    tutores = (
+        Tutor.objects
+        .filter(activo=True)
+        .filter(
+            Q(nombre__icontains=query) |
+            Q(apellido_paterno__icontains=query) |
+            Q(apellido_materno__icontains=query) |
+            Q(numero_identificacion__icontains=query) |
+            Q(telefono__icontains=query)
+        )
+        [:26]
+    )
+
+    tutores_data = [
+        {
+            'id': tutor.id,
+            'nombre_completo': tutor.nombre_completo,
+            'telefono': tutor.telefono,
+            'parentesco': tutor.get_parentesco_display(),
+            'huella_registrada': tutor.huella_registrada,
+            'numero_identificacion': tutor.numero_identificacion,
+        }
+        for tutor in tutores
+    ]
+
+    return JsonResponse({'tutores': tutores_data})

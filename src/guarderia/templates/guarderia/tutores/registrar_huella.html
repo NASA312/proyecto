@@ -52,9 +52,12 @@
                   <p class="mb-0">El sistema capturará la huella automáticamente</p>
                 </div>
 
-                <div class="overlay dark" id="loading-overlay">
-                  <i class="fas fa-3x fa-sync-alt fa-spin"></i>
-                  <p class="mt-2">Esperando captura de huella...</p>
+                <div class="my-4">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Cargando...</span>
+                  </div>
+                  <p class="mt-2" id="mensaje-estado">Esperando captura de huella...</p>
+                  <small class="text-muted" id="intentos-contador">Intento 0/30</small>
                 </div>
 
                 <div id="huella-preview" class="mt-4" style="display: none;">
@@ -83,57 +86,173 @@
             {% endif %}
           </div>
         </div>
+
+        <!-- Card de Debug (solo en desarrollo) -->
+        <div class="card card-secondary collapsed-card">
+          <div class="card-header">
+            <h3 class="card-title">🔍 Información de Debug</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <pre id="debug-info" style="font-size: 11px; max-height: 300px; overflow-y: auto;"></pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 let verificando = false;
+let intentos = 0;
+const maxIntentos = 60; // 60 segundos (1 minuto)
+let intervalId = null;
+
+function log(mensaje) {
+  console.log(mensaje);
+  const debugInfo = document.getElementById('debug-info');
+  const timestamp = new Date().toLocaleTimeString();
+  debugInfo.textContent += `[${timestamp}] ${mensaje}\n`;
+  debugInfo.scrollTop = debugInfo.scrollHeight;
+}
+
+function actualizarUI(mensaje, intentosActuales) {
+  document.getElementById('mensaje-estado').textContent = mensaje;
+  document.getElementById('intentos-contador').textContent = `Intento ${intentosActuales}/${maxIntentos}`;
+}
+
+function mostrarError(mensaje) {
+  document.querySelector('.spinner-border').style.display = 'none';
+  document.getElementById('error-mensaje').style.display = 'block';
+  document.getElementById('error-texto').textContent = mensaje;
+  document.getElementById('btn-reintentar').style.display = 'block';
+  
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
+}
 
 function verificarCaptura() {
-  if (verificando) return;
+  if (verificando) {
+    log('⚠️ Ya hay una verificación en curso, saltando...');
+    return;
+  }
+  
   verificando = true;
+  intentos++;
+  
+  log(`🔍 Intento ${intentos}/${maxIntentos} - Consultando estado...`);
+  actualizarUI('Consultando estado del lector...', intentos);
 
   fetch("{% url 'guarderia:verificar_huella_capturada_tutor' tutor.id %}")
-    .then(response => response.json())
+    .then(response => {
+      log(`📡 Respuesta HTTP: ${response.status}`);
+      return response.json();
+    })
     .then(data => {
+      log(`📦 Datos recibidos: ${JSON.stringify(data)}`);
+      
       if (data.capturada) {
-        document.getElementById('loading-overlay').style.display = 'none';
+        log('✅ ¡HUELLA CAPTURADA!');
+        
+        // Detener el polling
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        
+        document.querySelector('.spinner-border').style.display = 'none';
         
         if (data.imagen_url) {
+          log(`🖼️ Mostrando imagen: ${data.imagen_url}`);
           document.getElementById('imagen-huella').src = data.imagen_url;
           document.getElementById('huella-preview').style.display = 'block';
         }
 
+        // Verificar en la base de datos
+        verificarEstadoBD();
+      } else {
+        log(`⏳ Aún no capturada. Siguiente intento en 1 segundo...`);
+        
+        if (intentos >= maxIntentos) {
+          log('❌ Tiempo máximo alcanzado');
+          mostrarError('Tiempo de espera agotado. Por favor, intente nuevamente.');
+        }
+        
+        verificando = false;
+      }
+    })
+    .catch(error => {
+      log(`❌ ERROR en la petición: ${error.message}`);
+      console.error('Error completo:', error);
+      
+      if (intentos < 5) {
+        log('⚠️ Reintentando en 1 segundo...');
+        verificando = false;
+      } else {
+        mostrarError('Error al comunicarse con el servidor. Verifique que el lector esté conectado.');
+      }
+    });
+}
+
+function verificarEstadoBD() {
+  log('🔍 Verificando estado en base de datos...');
+  
+  fetch("{% url 'guarderia:verificar_estado_huella' tutor.id %}")
+    .then(response => response.json())
+    .then(data => {
+      log(`💾 Estado en BD: ${JSON.stringify(data)}`);
+      
+      if (data.success && data.huella_registrada) {
         Swal.fire({
           icon: 'success',
-          title: '¡Huella Capturada!',
-          text: 'La huella ha sido registrada exitosamente',
+          title: '¡Huella Registrada!',
+          html: `
+            <p>La huella ha sido registrada exitosamente</p>
+            <ul style="text-align: left; display: inline-block;">
+              <li>Imagen: ${data.tiene_imagen ? '✅ Guardada' : '❌ No guardada'}</li>
+              <li>Template: ${data.tiene_template ? '✅ Guardado (' + data.template_size + ' bytes)' : '❌ No guardado'}</li>
+              <li>Fecha: ${data.fecha_registro || 'N/A'}</li>
+            </ul>
+          `,
           confirmButtonText: 'Continuar'
         }).then(() => {
           window.location.href = "{% url 'guarderia:detalle_tutor' tutor.id %}";
         });
       } else {
-        verificando = false;
-        setTimeout(verificarCaptura, 1000);
+        log('❌ La huella no se guardó correctamente en BD');
+        mostrarError('La huella no se guardó correctamente en la base de datos');
       }
     })
     .catch(error => {
-      console.error('Error:', error);
-      document.getElementById('loading-overlay').style.display = 'none';
-      document.getElementById('error-mensaje').style.display = 'block';
-      document.getElementById('error-texto').textContent = 
-        'Error al verificar la captura. Verifique que el lector esté conectado.';
-      document.getElementById('btn-reintentar').style.display = 'block';
-      verificando = false;
+      log(`❌ Error verificando BD: ${error.message}`);
+      mostrarError('Error al verificar el estado en la base de datos');
     });
 }
 
 {% if not tutor.huella_registrada %}
+  log('🚀 Iniciando sistema de captura de huella');
+  log(`📋 Tutor ID: {{ tutor.id }}`);
+  log(`👤 Tutor: {{ tutor.nombre_completo }}`);
+  log('⏰ Iniciando polling cada 1 segundo...');
+  
+  // Primera verificación inmediata
   setTimeout(verificarCaptura, 2000);
+  
+  // Polling cada 1 segundo
+  intervalId = setInterval(() => {
+    if (intentos < maxIntentos && !verificando) {
+      verificarCaptura();
+    } else if (intentos >= maxIntentos) {
+      clearInterval(intervalId);
+      log('🛑 Polling detenido - Máximo de intentos alcanzado');
+    }
+  }, 1000);
 {% endif %}
 </script>
-{% endblock %}
+{% endblock scripts %}
