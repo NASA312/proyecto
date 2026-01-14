@@ -63,6 +63,9 @@
               </li>
             </ul>
 
+            <a href="{% url 'guarderia:editar_nino' nino.id %}" class="btn btn-warning btn-block">
+              <i class="fas fa-edit"></i> Editar Información
+            </a>
             <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-block">
               <i class="fas fa-user-friends"></i> Gestionar Tutores
             </a>

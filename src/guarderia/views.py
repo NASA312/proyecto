@@ -10,6 +10,7 @@ from .forms import TutorForm, NinoForm, AsignarTutorForm
 import base64
 import json
 import requests
+from django.db.models import Q 
 
 # ============================================
 # VISTAS DE TUTORES
@@ -111,6 +112,41 @@ def editar_tutor(request, tutor_id):
     return render(request, 'guarderia/tutores/editar.html', {'form': form, 'tutor': tutor})
 
 @login_required
+def buscar_tutores_ajax(request):
+    """Búsqueda de tutores vía AJAX"""
+    query = request.GET.get('q', '').strip()
+
+    if len(query) < 2:
+        return JsonResponse({'tutores': []})
+
+    tutores = (
+        Tutor.objects
+        .filter(activo=True)
+        .filter(
+            Q(nombre__icontains=query) |
+            Q(apellido_paterno__icontains=query) |
+            Q(apellido_materno__icontains=query) |
+            Q(numero_identificacion__icontains=query) |
+            Q(telefono__icontains=query)
+        )
+        [:26]  # límite de resultados
+    )
+
+    tutores_data = [
+        {
+            'id': tutor.id,
+            'nombre_completo': tutor.nombre_completo,
+            'telefono': tutor.telefono,
+            'parentesco': tutor.get_parentesco_display(),
+            'huella_registrada': tutor.huella_registrada,
+            'numero_identificacion': tutor.numero_identificacion,
+        }
+        for tutor in tutores
+    ]
+
+    return JsonResponse({'tutores': tutores_data})
+
+@login_required
 def registrar_huella_tutor(request, tutor_id):
     """Registrar huella del tutor con lector biométrico"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
@@ -190,6 +226,42 @@ def detalle_nino(request, nino_id):
         'registros': registros
     }
     return render(request, 'guarderia/ninos/detalle.html', ctx)
+
+@login_required
+def editar_nino(request, nino_id):
+    """Editar información de niño"""
+    nino = get_object_or_404(Nino, id=nino_id)
+    
+    if request.method == 'POST':
+        form = NinoForm(request.POST, request.FILES, instance=nino)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            form.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Niño {nino.nombre_completo()} actualizado correctamente.',
+                    'redirect_url': f'/guarderia/ninos/{nino.id}/'
+                })
+            else:
+                messages.success(request, f'Niño {nino.nombre_completo()} actualizado correctamente.')
+                return redirect('guarderia:detalle_nino', nino_id=nino.id)
+        else:
+            if is_ajax:
+                errors = {}
+                for field, error_list in form.errors.items():
+                    errors[field] = [str(error) for error in error_list]
+                return JsonResponse({
+                    'success': False,
+                    'errors': errors,
+                    'message': 'Por favor corrige los errores.'
+                }, status=400)
+    else:
+        form = NinoForm(instance=nino)
+    
+    return render(request, 'guarderia/ninos/editar.html', {'form': form, 'nino': nino})
 
 @login_required
 def asignar_tutores(request, nino_id):

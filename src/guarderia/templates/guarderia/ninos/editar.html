@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Niño - {{ nino.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Editar Niño</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_ninos' %}">Niños</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:detalle_nino' nino.id %}">{{ nino.nombre_completo }}</a></li>
+          <li class="breadcrumb-item active">Editar</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <!-- Mostrar mensajes de Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card card-warning">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-edit"></i> Modificar Información del Niño</h3>
+          </div>
+          <form method="post" enctype="multipart/form-data" id="formEditarNino">
+            {% csrf_token %}
+            <div class="card-body">
+              <!-- Vista Previa de Foto Actual -->
+              {% if nino.foto %}
+              <div class="text-center mb-4">
+                <img src="{{ nino.foto.url }}" class="img-circle" style="width: 120px; height: 120px; object-fit: cover;" alt="{{ nino.nombre_completo }}">
+                <p class="text-muted mt-2">Foto actual</p>
+              </div>
+              {% endif %}
+
+              <!-- Información Personal -->
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Nombre(s) *</label>
+                    {{ form.nombre }}
+                    <span class="text-danger error-nombre"></span>
+                    {% if form.nombre.errors %}
+                      <span class="text-danger">{{ form.nombre.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Apellido Paterno *</label>
+                    {{ form.apellido_paterno }}
+                    <span class="text-danger error-apellido_paterno"></span>
+                    {% if form.apellido_paterno.errors %}
+                      <span class="text-danger">{{ form.apellido_paterno.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Apellido Materno</label>
+                    {{ form.apellido_materno }}
+                    <span class="text-danger error-apellido_materno"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fecha de Nacimiento y Tipo de Sangre -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Fecha de Nacimiento *</label>
+                    {{ form.fecha_nacimiento }}
+                    <span class="text-danger error-fecha_nacimiento"></span>
+                    {% if form.fecha_nacimiento.errors %}
+                      <span class="text-danger">{{ form.fecha_nacimiento.errors.0 }}</span>
+                    {% endif %}
+                    <small class="form-text text-muted">Edad actual: {{ nino.edad }} años</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Tipo de Sangre</label>
+                    {{ form.tipo_sangre }}
+                    <span class="text-danger error-tipo_sangre"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grupo -->
+              <div class="form-group">
+                <label>Grupo *</label>
+                {{ form.grupo }}
+                <span class="text-danger error-grupo"></span>
+                {% if form.grupo.errors %}
+                  <span class="text-danger">{{ form.grupo.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <!-- Información Médica -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Alergias</label>
+                    {{ form.alergias }}
+                    <span class="text-danger error-alergias"></span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Medicamentos</label>
+                    {{ form.medicamentos }}
+                    <span class="text-danger error-medicamentos"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Foto -->
+              <div class="form-group">
+                <label>Cambiar Fotografía del Niño</label>
+                <div class="custom-file">
+                  {{ form.foto }}
+                  <label class="custom-file-label" for="id_foto">
+                    {% if nino.foto %}
+                      {{ nino.foto.name|slice:"7:" }}
+                    {% else %}
+                      Seleccionar imagen...
+                    {% endif %}
+                  </label>
+                </div>
+                <span class="text-danger error-foto"></span>
+                <small class="form-text text-muted">
+                  Formatos permitidos: JPG, PNG. Tamaño máximo: 2MB. 
+                  {% if nino.foto %}Deje vacío para mantener la foto actual.{% endif %}
+                </small>
+              </div>
+
+              <div class="alert alert-warning">
+                <i class="icon fas fa-exclamation-triangle"></i>
+                <strong>Importante:</strong> Todos los cambios se guardarán inmediatamente. Revise los datos antes de continuar.
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button type="submit" class="btn btn-warning" id="btnGuardar">
+                <i class="fas fa-save"></i> Guardar Cambios
+              </button>
+              <a href="{% url 'guarderia:detalle_nino' nino.id %}" class="btn btn-default">
+                <i class="fas fa-times"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  // Actualizar label del input file
+  $('.custom-file-input').on('change', function() {
+    let fileName = $(this).val().split('\\').pop();
+    $(this).next('.custom-file-label').addClass("selected").html(fileName);
+  });
+
+  // Limpiar errores anteriores al enviar
+  $('#formEditarNino').on('submit', function() {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
+  });
+
+  // Interceptar respuesta AJAX
+  $(document).ajaxComplete(function(event, xhr, settings) {
+    if (settings.url && settings.url.includes('editar')) {
+      try {
+        const response = JSON.parse(xhr.responseText);
+        
+        if (response.success && response.redirect_url) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Cambios Guardados!',
+            text: response.message,
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = response.redirect_url;
+          });
+        } else if (!response.success && response.errors) {
+          for (let field in response.errors) {
+            $(`.error-${field}`).text(response.errors[field].join(', '));
+            $(`#id_${field}`).addClass('is-invalid');
+          }
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Error en el formulario',
+            text: response.message,
+            confirmButtonText: 'Entendido'
+          });
+        }
+      } catch (e) {
+        console.log('No es JSON o no es nuestra petición');
+      }
+    }
+  });
+
+  // Si hay errores de Django en el template
+  {% if form.errors %}
+    let errores = [];
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        errores.push("{{ field }}: {{ error }}");
+      {% endfor %}
+    {% endfor %}
+    
+    if (errores.length > 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Errores en el formulario',
+        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  {% endif %}
+});
+</script>
+{% endblock %}
