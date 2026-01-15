@@ -26,9 +26,11 @@ urlpatterns = [
     path('ninos/<int:nino_id>/asignar-tutores/', views.asignar_tutores, name='asignar_tutores'),
 
     # =====================================
-    # VERIFICACIÓN PÚBLICA
+    # VERIFICACIÓN PÚBLICA (NUEVAS)
     # =====================================
     path('verificar-huella/', views.verificar_huella_tutor, name='verificar_huella_tutor'),
+    path('verificar-huella-inicio/', views.verificar_huella_inicio, name='verificar_huella_inicio'),
+    path('verificar-huella-estado/', views.verificar_huella_estado, name='verificar_huella_estado'),
 
     # =====================================
     # REGISTROS
@@ -37,7 +39,7 @@ urlpatterns = [
     path('registros/salida/', views.registrar_salida, name='registrar_salida'),
 
     # =====================================
-    # APIs para consultar estado de huella
+    # APIs para consultar estado de huella (REGISTRO)
     # =====================================
     path('api/huella/tutor/<int:tutor_id>/verificar/', views.verificar_huella_capturada_tutor, name='verificar_huella_capturada_tutor'),
     path('api/huella/tutor/<int:tutor_id>/estado/', views.verificar_estado_huella, name='verificar_estado_huella'),

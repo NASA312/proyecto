@@ -506,3 +506,243 @@ def buscar_tutores_ajax(request):
     ]
 
     return JsonResponse({'tutores': tutores_data})
+
+# VISTAS ACTUALIZADAS - Usando FeatureSet para verificación
+
+@csrf_exempt
+def verificar_huella_inicio(request):
+    """Iniciar verificación de huella"""
+    if request.method == 'POST':
+        try:
+            # Iniciar captura en el servidor .NET
+            response = requests.get(
+                'http://localhost:5000/capturar?persona_id=verificacion',
+                timeout=2
+            )
+            
+            if response.status_code == 200:
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': 'Coloque su dedo en el lector'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': 'Error al iniciar captura'
+                })
+        except requests.exceptions.ConnectionError:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Lector no disponible. Verifique que el servidor .NET esté ejecutándose.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'Error: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False}, status=405)
+
+
+@csrf_exempt
+def verificar_huella_estado(request):
+    """Verificar estado y comparar usando FeatureSet"""
+    if request.method == 'GET':
+        try:
+            # Consultar estado de captura
+            response = requests.get('http://localhost:5000/estado', timeout=2)
+            estado = response.json()
+            
+            # Si aún no se completa
+            if not estado.get('completado'):
+                return JsonResponse({
+                    'completado': False,
+                    'mensaje': 'Esperando huella...'
+                })
+            
+            # *** USAR FEATURESET EN LUGAR DE TEMPLATE ***
+            featureset_capturado = estado.get('huella_featureset')
+            
+            if not featureset_capturado:
+                return JsonResponse({
+                    'completado': True,
+                    'success': False,
+                    'mensaje': 'No se capturó FeatureSet'
+                })
+            
+            print(f"\n{'='*60}")
+            print(f"🔍 VERIFICACIÓN DE HUELLA (FeatureSet)")
+            print(f"{'='*60}")
+            print(f"FeatureSet capturado: {len(featureset_capturado)} chars")
+            
+            # Obtener tutores con huellas registradas
+            tutores = Tutor.objects.filter(
+                huella_registrada=True,
+                huella_template__isnull=False,
+                activo=True
+            )
+            
+            print(f"Tutores a comparar: {tutores.count()}")
+            
+            if tutores.count() == 0:
+                return JsonResponse({
+                    'completado': True,
+                    'success': False,
+                    'mensaje': 'No hay tutores con huellas registradas'
+                })
+            
+            # Preparar datos: FeatureSet + Templates de tutores
+            tutores_data = []
+            for tutor in tutores:
+                try:
+                    template_base64 = base64.b64encode(tutor.huella_template).decode('utf-8')
+                    tutores_data.append({
+                        'id': tutor.id,
+                        'template': template_base64
+                    })
+                    print(f"  - Tutor {tutor.id}: {tutor.nombre_completo()}")
+                except Exception as e:
+                    print(f"  ✗ Error con tutor {tutor.id}: {e}")
+            
+            # Enviar a verificar: FeatureSet capturado vs Templates guardados
+            print(f"\n📤 Enviando a servidor .NET...")
+            
+            response_verificacion = requests.post(
+                'http://localhost:5000/verificar',
+                json={
+                    'feature_set_capturado': featureset_capturado,  # FeatureSet actual
+                    'tutores': tutores_data  # Templates guardados
+                },
+                timeout=10
+            )
+            
+            resultado = response_verificacion.json()
+            print(f"📥 Respuesta: {resultado}")
+            
+            if resultado.get('success'):
+                tutor_id = resultado.get('tutor_id')
+                far_achieved = resultado.get('far_achieved', 'N/A')
+                
+                tutor = Tutor.objects.get(id=tutor_id)
+                ninos = tutor.ninos.filter(activo=True)
+                
+                print(f"")
+                print(f"{'='*60}")
+                print(f"✅ TUTOR IDENTIFICADO")
+                print(f"{'='*60}")
+                print(f"ID: {tutor.id}")
+                print(f"Nombre: {tutor.nombre_completo()}")
+                print(f"FAR Achieved: {far_achieved}")
+                print(f"Niños autorizados: {ninos.count()}")
+                print(f"{'='*60}\n")
+                
+                return JsonResponse({
+                    'completado': True,
+                    'success': True,
+                    'tutor': {
+                        'id': tutor.id,
+                        'nombre': tutor.nombre_completo(),
+                        'parentesco': tutor.get_parentesco_display(),
+                        'telefono': tutor.telefono,
+                        'foto_url': tutor.huella_imagen.url if tutor.huella_imagen else None
+                    },
+                    'ninos': [
+                        {
+                            'id': n.id,
+                            'nombre': n.nombre_completo(),
+                            'grupo': n.grupo,
+                            'edad': n.edad(),
+                            'foto_url': n.foto.url if n.foto else None
+                        }
+                        for n in ninos
+                    ],
+                    'far_achieved': far_achieved
+                })
+            else:
+                print(f"❌ No se encontró coincidencia")
+                return JsonResponse({
+                    'completado': True,
+                    'success': False,
+                    'mensaje': 'Huella no reconocida'
+                })
+                
+        except requests.exceptions.ConnectionError:
+            return JsonResponse({
+                'completado': False,
+                'error': 'No se puede conectar con el servidor .NET'
+            })
+        except Exception as e:
+            print(f"❌ Error en verificación: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'completado': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False}, status=405)
+
+
+@csrf_exempt  
+def registrar_salida(request):
+    """Registrar salida de un niño"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nino_id = data.get('nino_id')
+            tutor_id = data.get('tutor_id')
+            
+            if not nino_id or not tutor_id:
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': 'Faltan datos'
+                }, status=400)
+            
+            nino = Nino.objects.get(id=nino_id, activo=True)
+            tutor = Tutor.objects.get(id=tutor_id, activo=True)
+            
+            # Verificar autorización
+            if tutor not in nino.tutores.all():
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': f'{tutor.nombre_completo()} no está autorizado para recoger a {nino.nombre_completo()}'
+                }, status=403)
+            
+            # Registrar salida
+            registro = RegistroAcceso.objects.create(
+                nino=nino,
+                tutor=tutor,
+                tipo='SALIDA',
+                verificacion_exitosa=True,
+                metodo_verificacion='HUELLA'
+            )
+            
+            print(f"✅ SALIDA REGISTRADA:")
+            print(f"   Niño: {nino.nombre_completo()}")
+            print(f"   Tutor: {tutor.nombre_completo()}")
+            print(f"   Hora: {registro.fecha_hora}")
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'{nino.nombre_completo()} entregado a {tutor.nombre_completo()}',
+                'registro_id': registro.id
+            })
+            
+        except Nino.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Niño no encontrado'
+            }, status=404)
+        except Tutor.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Tutor no encontrado'
+            }, status=404)
+        except Exception as e:
+            print(f"❌ Error registrando salida: {e}")
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'Error: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'success': False}, status=405)

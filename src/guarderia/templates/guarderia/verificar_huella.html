@@ -28,13 +28,14 @@
           </div>
           <div class="card-body text-center">
             <div class="mb-4">
-              <i class="fas fa-hand-paper fa-5x text-primary"></i>
+              <i class="fas fa-hand-paper fa-5x text-primary" id="icono-mano"></i>
             </div>
-            <h4>Esperando lectura de huella...</h4>
+            <h4 id="mensaje-estado">Esperando lectura de huella...</h4>
             <p class="text-muted">El sistema verificará su identidad automáticamente</p>
             <div class="progress mt-4" style="height: 30px;">
               <div class="progress-bar progress-bar-striped progress-bar-animated" 
                    role="progressbar" 
+                   id="barra-progreso"
                    style="width: 100%">
                 Escaneando...
               </div>
@@ -52,7 +53,8 @@
           <div class="card-body">
             <div class="row">
               <div class="col-md-4 text-center">
-                <i class="fas fa-user-circle fa-5x text-success mb-3"></i>
+                <img id="tutor-foto" src="" alt="Foto Tutor" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover; display: none;">
+                <i class="fas fa-user-circle fa-5x text-success mb-3" id="tutor-icono"></i>
                 <h5 id="tutor-nombre"></h5>
                 <p class="text-muted" id="tutor-parentesco"></p>
                 <p><i class="fas fa-phone"></i> <span id="tutor-telefono"></span></p>
@@ -62,6 +64,11 @@
                 <div id="lista-ninos"></div>
               </div>
             </div>
+          </div>
+          <div class="card-footer text-center">
+            <button class="btn btn-secondary" onclick="reiniciar()">
+              <i class="fas fa-arrow-left"></i> Nueva Verificación
+            </button>
           </div>
         </div>
 
@@ -90,129 +97,263 @@
 {% block scripts %}
 <script>
 let verificando = false;
+let intervalPolling = null;
+let tutorActualId = null;
 
-function verificarHuella() {
+// Iniciar verificación automáticamente al cargar
+document.addEventListener('DOMContentLoaded', function() {
+  iniciarVerificacion();
+});
+
+function iniciarVerificacion() {
   if (verificando) return;
+  
+  console.log('🔍 Iniciando verificación...');
   verificando = true;
-
-  // Simular verificación (en producción esto vendría del lector)
-  fetch("{% url 'guarderia:verificar_huella_tutor' %}", {
+  
+  // Actualizar UI
+  document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector...';
+  document.getElementById('icono-mano').className = 'fas fa-hand-paper fa-5x text-primary';
+  
+  // Llamar al endpoint para iniciar captura
+  fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: JSON.stringify({
-      huella_template: 'base64_template_here' // Esto vendría del lector real
-    })
+    }
   })
   .then(response => response.json())
   .then(data => {
+    console.log('Respuesta inicio:', data);
     if (data.success) {
-      mostrarTutorVerificado(data);
+      // Iniciar polling para verificar estado
+      iniciarPolling();
     } else {
-      mostrarError(data.mensaje);
+      mostrarError(data.mensaje || 'Error al iniciar captura');
     }
-    verificando = false;
   })
   .catch(error => {
     console.error('Error:', error);
-    mostrarError('Error de conexión con el servidor');
-    verificando = false;
+    mostrarError('No se puede conectar con el servidor. Verifique que el lector esté conectado.');
   });
 }
 
+function iniciarPolling() {
+  let intentos = 0;
+  const maxIntentos = 30; // 30 segundos máximo
+  
+  intervalPolling = setInterval(function() {
+    intentos++;
+    
+    // Actualizar mensaje
+    const puntos = '.'.repeat((intentos % 3) + 1);
+    document.getElementById('mensaje-estado').textContent = `Procesando${puntos}`;
+    document.getElementById('barra-progreso').textContent = `Procesando (${intentos}s)`;
+    
+    if (intentos > maxIntentos) {
+      clearInterval(intervalPolling);
+      mostrarError('Tiempo de espera agotado. Intente nuevamente.');
+      return;
+    }
+    
+    // Consultar estado
+    fetch("{% url 'guarderia:verificar_huella_estado' %}")
+      .then(response => response.json())
+      .then(data => {
+        console.log(`Polling ${intentos}:`, data);
+        
+        if (data.completado) {
+          clearInterval(intervalPolling);
+          
+          if (data.success) {
+            mostrarTutorVerificado(data);
+          } else {
+            mostrarError(data.mensaje || 'Huella no reconocida');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error en polling:', error);
+      });
+      
+  }, 1000); // Cada segundo
+}
+
 function mostrarTutorVerificado(data) {
+  console.log('✅ Tutor verificado:', data);
+  
   document.getElementById('card-inicial').style.display = 'none';
   document.getElementById('card-error').style.display = 'none';
   document.getElementById('card-verificado').style.display = 'block';
 
+  // Mostrar datos del tutor
   document.getElementById('tutor-nombre').textContent = data.tutor.nombre;
   document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
   document.getElementById('tutor-telefono').textContent = data.tutor.telefono;
+  
+  // Mostrar foto si existe
+  if (data.tutor.foto_url) {
+    document.getElementById('tutor-foto').src = data.tutor.foto_url;
+    document.getElementById('tutor-foto').style.display = 'block';
+    document.getElementById('tutor-icono').style.display = 'none';
+  } else {
+    document.getElementById('tutor-foto').style.display = 'none';
+    document.getElementById('tutor-icono').style.display = 'block';
+  }
+  
+  tutorActualId = data.tutor.id;
 
+  // Mostrar lista de niños
   let listaNinos = document.getElementById('lista-ninos');
   listaNinos.innerHTML = '';
 
-  data.ninos.forEach(nino => {
-    let card = `
-      <div class="card mb-2">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="mb-0">${nino.nombre}</h6>
-            <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
+  if (data.ninos && data.ninos.length > 0) {
+    data.ninos.forEach(nino => {
+      let fotoHtml = nino.foto_url 
+        ? `<img src="${nino.foto_url}" class="rounded-circle mr-2" style="width: 40px; height: 40px; object-fit: cover;">` 
+        : '<i class="fas fa-child fa-2x text-muted mr-2"></i>';
+      
+      let card = `
+        <div class="card mb-2">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              ${fotoHtml}
+              <div>
+                <h6 class="mb-0">${nino.nombre}</h6>
+                <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
+              </div>
+            </div>
+            <button class="btn btn-success" onclick="registrarSalida(${nino.id})">
+              <i class="fas fa-sign-out-alt"></i> Registrar Salida
+            </button>
           </div>
-          <button class="btn btn-success" onclick="registrarSalida(${nino.id}, ${data.tutor.id})">
-            <i class="fas fa-sign-out-alt"></i> Registrar Salida
-          </button>
         </div>
-      </div>
-    `;
-    listaNinos.innerHTML += card;
-  });
+      `;
+      listaNinos.innerHTML += card;
+    });
+  } else {
+    listaNinos.innerHTML = '<div class="alert alert-warning">No hay niños asignados a este tutor</div>';
+  }
+  
+  verificando = false;
 }
 
 function mostrarError(mensaje) {
+  console.log('❌ Error:', mensaje);
+  
   document.getElementById('card-inicial').style.display = 'none';
   document.getElementById('card-verificado').style.display = 'none';
   document.getElementById('card-error').style.display = 'block';
   document.getElementById('mensaje-error').textContent = mensaje;
+  
+  verificando = false;
+  
+  // Reiniciar automáticamente después de 5 segundos
+  setTimeout(function() {
+    reiniciar();
+  }, 5000);
 }
 
-function registrarSalida(ninoId, tutorId) {
-  fetch("{% url 'guarderia:registrar_salida' %}", {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: JSON.stringify({
-      nino_id: ninoId,
-      tutor_id: tutorId
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      Swal.fire({
-        icon: 'success',
-        title: '¡Salida Registrada!',
-        text: data.mensaje,
-        timer: 3000,
-        showConfirmButton: false
-      }).then(() => {
-        reiniciar();
-      });
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: data.mensaje
-      });
-    }
-  })
-  .catch(error => {
+function registrarSalida(ninoId) {
+  if (!tutorActualId) {
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'No se pudo registrar la salida'
+      text: 'No se pudo identificar al tutor'
     });
+    return;
+  }
+  
+  // Confirmar
+  Swal.fire({
+    title: '¿Registrar Salida?',
+    text: '¿Está seguro de registrar esta salida?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, registrar',
+    cancelButtonText: 'Cancelar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Deshabilitar botón
+      event.target.disabled = true;
+      event.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+      
+      fetch("{% url 'guarderia:registrar_salida' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+          nino_id: ninoId,
+          tutor_id: tutorActualId
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Salida Registrada!',
+            text: data.mensaje,
+            timer: 3000,
+            showConfirmButton: false
+          }).then(() => {
+            reiniciar();
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.mensaje
+          });
+          event.target.disabled = false;
+          event.target.innerHTML = '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo registrar la salida'
+        });
+        event.target.disabled = false;
+        event.target.innerHTML = '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
+      });
+    }
   });
 }
 
 function reiniciar() {
+  console.log('🔄 Reiniciando...');
+  
+  // Limpiar polling si existe
+  if (intervalPolling) {
+    clearInterval(intervalPolling);
+    intervalPolling = null;
+  }
+  
+  // Resetear variables
+  verificando = false;
+  tutorActualId = null;
+  
+  // Mostrar card inicial
   document.getElementById('card-inicial').style.display = 'block';
   document.getElementById('card-verificado').style.display = 'none';
   document.getElementById('card-error').style.display = 'none';
-  verificando = false;
-  setTimeout(verificarHuella, 2000);
+  
+  // Resetear mensajes
+  document.getElementById('mensaje-estado').textContent = 'Esperando lectura de huella...';
+  document.getElementById('barra-progreso').textContent = 'Escaneando...';
+  document.getElementById('icono-mano').className = 'fas fa-hand-paper fa-5x text-primary';
+  
+  // Iniciar nueva verificación después de 2 segundos
+  setTimeout(iniciarVerificacion, 2000);
 }
-
-// Iniciar verificación automática cada 3 segundos
-setInterval(() => {
-  if (document.getElementById('card-inicial').style.display !== 'none') {
-    verificarHuella();
-  }
-}, 3000);
 </script>
+
+<!-- SweetAlert2 para alertas bonitas -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock scripts %}
