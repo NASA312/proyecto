@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Observaciones de {{ nino.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Observaciones de {{ nino.nombre_completo }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_ninos' %}">Niños</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:detalle_nino' nino.id %}">{{ nino.nombre_completo }}</a></li>
+          <li class="breadcrumb-item active">Observaciones</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    
+    <!-- Información del Niño -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-2 text-center">
+                {% if nino.foto %}
+                  <img src="{{ nino.foto.url }}" alt="{{ nino.nombre_completo }}" class="img-fluid rounded" style="max-height: 150px;">
+                {% else %}
+                  <i class="fas fa-child fa-5x text-muted"></i>
+                {% endif %}
+              </div>
+              <div class="col-md-10">
+                <h3>{{ nino.nombre_completo }}</h3>
+                <p class="text-muted">
+                  <strong>Edad:</strong> {{ nino.edad }} años | 
+                  <strong>Grupo:</strong> {{ nino.grupo|default:"Sin grupo asignado" }} |
+                  <strong>Tipo de Sangre:</strong> {{ nino.tipo_sangre|default:"-" }}
+                </p>
+                
+                <!-- Estadísticas de Observaciones -->
+                <div class="row mt-3">
+                  <div class="col-md-4">
+                    <div class="info-box bg-info">
+                      <span class="info-box-icon"><i class="fas fa-clipboard-list"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Total Observaciones</span>
+                        <span class="info-box-number">{{ total }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="info-box bg-warning">
+                      <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Importantes</span>
+                        <span class="info-box-number">{{ importantes }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="info-box bg-danger">
+                      <span class="info-box-icon"><i class="fas fa-bell"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Pendientes de Notificar</span>
+                        <span class="info-box-number">{{ pendientes_notificar }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de Observaciones -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-list"></i> Historial de Observaciones</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_observacion' %}?nino_id={{ nino.id }}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Nueva Observación
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if observaciones %}
+              <div class="timeline">
+                {% for obs in observaciones %}
+                  <!-- Timeline Item -->
+                  <div>
+                    <i class="fas fa-{% if obs.importante %}exclamation-circle bg-warning{% elif obs.tipo == 'SALUD' %}heartbeat bg-danger{% elif obs.tipo == 'CONDUCTA' %}user bg-info{% elif obs.tipo == 'ACADEMICO' %}graduation-cap bg-success{% else %}clipboard bg-secondary{% endif %}"></i>
+                    <div class="timeline-item">
+                      <span class="time">
+                        <i class="fas fa-clock"></i> {{ obs.fecha|date:"d/m/Y" }} - {{ obs.hora|time:"H:i" }}
+                      </span>
+                      
+                      <h3 class="timeline-header">
+                        <span class="badge badge-{% if obs.tipo == 'SALUD' %}danger{% elif obs.tipo == 'CONDUCTA' %}info{% elif obs.tipo == 'MATERIAL' %}warning{% else %}secondary{% endif %}">
+                          {{ obs.get_tipo_display }}
+                        </span>
+                        {% if obs.importante %}
+                          <span class="badge badge-warning ml-2">
+                            <i class="fas fa-exclamation-triangle"></i> Importante
+                          </span>
+                        {% endif %}
+                        {% if obs.notificar_tutor %}
+                          {% if obs.notificado %}
+                            <span class="badge badge-success ml-2">
+                              <i class="fas fa-check"></i> Notificado
+                            </span>
+                          {% else %}
+                            <span class="badge badge-danger ml-2">
+                              <i class="fas fa-clock"></i> Pendiente de notificar
+                            </span>
+                          {% endif %}
+                        {% endif %}
+                      </h3>
+
+                      <div class="timeline-body">
+                        {{ obs.descripcion }}
+                        
+                        {% if obs.registrado_por %}
+                          <p class="text-muted mt-2 mb-0">
+                            <small><i class="fas fa-user"></i> Registrado por: {{ obs.registrado_por.get_full_name|default:obs.registrado_por.username }}</small>
+                          </p>
+                        {% endif %}
+                      </div>
+
+                      <div class="timeline-footer">
+                        <a href="{% url 'guarderia:editar_observacion' obs.id %}" class="btn btn-warning btn-sm">
+                          <i class="fas fa-edit"></i> Editar
+                        </a>
+                        {% if obs.notificar_tutor and not obs.notificado %}
+                          <button class="btn btn-success btn-sm btnMarcarNotificado" data-id="{{ obs.id }}">
+                            <i class="fas fa-check"></i> Marcar como Notificado
+                          </button>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+                
+                <!-- END Timeline Item -->
+                <div>
+                  <i class="fas fa-clock bg-gray"></i>
+                </div>
+              </div>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                No hay observaciones registradas para este niño. 
+                <a href="{% url 'guarderia:registrar_observacion' %}?nino_id={{ nino.id }}">Haga clic aquí para agregar una.</a>
+              </div>
+            {% endif %}
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'guarderia:detalle_nino' nino.id %}" class="btn btn-default">
+              <i class="fas fa-arrow-left"></i> Volver al Perfil del Niño
+            </a>
+            <a href="{% url 'guarderia:lista_observaciones' %}" class="btn btn-secondary">
+              <i class="fas fa-list"></i> Ver Todas las Observaciones
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Marcar observación como notificada
+  $('.btnMarcarNotificado').on('click', function() {
+    const observacionId = $(this).data('id');
+    const btn = $(this);
+    
+    Swal.fire({
+      title: '¿Marcar como notificado?',
+      text: 'Esta observación se marcará como notificada al tutor',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, marcar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: `/guarderia/observaciones/${observacionId}/notificar/`,
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          success: function(response) {
+            if (response.success) {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: response.message,
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => {
+                location.reload();
+              });
+            }
+          },
+          error: function() {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudo marcar la observación'
+            });
+          }
+        });
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
