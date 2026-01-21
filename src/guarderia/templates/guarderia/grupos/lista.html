@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Grupos{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Grupos</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Grupos</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-users"></i> Lista de Grupos</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_grupo' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Grupo
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if grupos %}
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover" id="tablaGrupos">
+                  <thead>
+                    <tr>
+                      <th style="width: 5%">#</th>
+                      <th style="width: 20%">Nombre</th>
+                      <th style="width: 15%">Tipo</th>
+                      <th style="width: 10%">Grado</th>
+                      <th style="width: 15%">Capacidad</th>
+                      <th style="width: 15%">Ocupación</th>
+                      <th style="width: 10%" class="text-center">Estado</th>
+                      <th style="width: 10%" class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in grupos %}
+                      <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ item.grupo.nombre }}</strong></td>
+                        <td><span class="badge badge-primary">{{ item.grupo.get_tipo_display }}</span></td>
+                        <td>{{ item.grupo.grado|default:"-" }}</td>
+                        <td>
+                          {{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima }}
+                          <small class="text-muted">({{ item.capacidad_disponible }} disponibles)</small>
+                        </td>
+                        <td>
+                          <div class="progress" style="height: 20px;">
+                            <div class="progress-bar {% if item.porcentaje_ocupacion >= 90 %}bg-danger{% elif item.porcentaje_ocupacion >= 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ item.porcentaje_ocupacion }}%"
+                                 aria-valuenow="{{ item.porcentaje_ocupacion }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                              {{ item.porcentaje_ocupacion }}%
+                            </div>
+                          </div>
+                        </td>
+                        <td class="text-center">
+                          {% if item.esta_lleno %}
+                            <span class="badge badge-danger">Lleno</span>
+                          {% else %}
+                            <span class="badge badge-success">Disponible</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-center">
+                          <a href="{% url 'guarderia:detalle_grupo' item.grupo.id %}" 
+                             class="btn btn-info btn-sm" 
+                             title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                          <a href="{% url 'guarderia:editar_grupo' item.grupo.id %}" 
+                             class="btn btn-warning btn-sm" 
+                             title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                No hay grupos registrados. 
+                <a href="{% url 'guarderia:registrar_grupo' %}">Haga clic aquí para agregar uno.</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Inicializar DataTable si existe
+  if ($.fn.DataTable) {
+    $('#tablaGrupos').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[2, 'asc'], [1, 'asc']]
+    });
+  }
+});
+</script>
+{% endblock scripts %}

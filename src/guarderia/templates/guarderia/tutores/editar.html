@@ -25,7 +25,7 @@
 <section class="content">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-8 offset-md-2">
+      <div class="col-md-10 offset-md-1">
         <div class="card card-warning">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-edit"></i> Modificar Información del Tutor</h3>
@@ -34,6 +34,7 @@
             {% csrf_token %}
             <div class="card-body">
               <!-- Información Personal -->
+              <h5 class="mb-3"><i class="fas fa-user"></i> Datos Personales</h5>
               <div class="row">
                 <div class="col-md-4">
                   <div class="form-group">
@@ -62,6 +63,7 @@
               </div>
 
               <!-- Contacto -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-phone"></i> Información de Contacto</h5>
               <div class="row">
                 <div class="col-md-4">
                   <div class="form-group">
@@ -87,12 +89,42 @@
               </div>
 
               <!-- Dirección -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-map-marker-alt"></i> Dirección</h5>
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Código Postal *</label>
+                    {{ form.codigo_postal }}
+                    <span class="text-danger error-codigo_postal"></span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Colonia *</label>
+                    <select name="colonia" id="id_colonia" class="form-control">
+                      {% if form.colonia.value %}
+                        <option value="{{ form.colonia.value }}" selected>{{ form.colonia.initial }}</option>
+                      {% else %}
+                        <option value="">Primero ingrese el código postal</option>
+                      {% endif %}
+                    </select>
+                    <span class="text-danger error-colonia"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Buscar Colonia</label>
+                    <input type="text" name="buscar_colonia" class="form-control" placeholder="Filtrar...">
+                  </div>
+                </div>
+              </div>
               <div class="form-group">
-                <label>Dirección</label>
+                <label>Dirección (Calle, Número, Referencias)</label>
                 {{ form.direccion }}
               </div>
 
               <!-- Identificación -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-id-card"></i> Identificación</h5>
               <div class="row">
                 <div class="col-md-6">
                   <div class="form-group">
@@ -115,6 +147,7 @@
               </div>
 
               <!-- Parentesco -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-users"></i> Relación con el Niño</h5>
               <div class="form-group">
                 <label>Parentesco con el niño *</label>
                 {{ form.parentesco }}
@@ -145,3 +178,87 @@
   </div>
 </section>
 {% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // ========================================
+  // BÚSQUEDA DE COLONIAS POR CÓDIGO POSTAL
+  // ========================================
+  const cpInput = document.getElementById('id_codigo_postal');
+  const coloniaSelect = document.getElementById('id_colonia');
+  const buscarInput = document.querySelector('[name="buscar_colonia"]');
+
+  // Si hay un código postal al cargar, buscar las colonias
+  if (cpInput.value.trim().length === 5) {
+    cargarColonias(cpInput.value.trim());
+  }
+
+  cpInput.addEventListener('blur', function() {
+    const cp = this.value.trim();
+    cargarColonias(cp);
+  });
+
+  function cargarColonias(cp) {
+    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
+      const valorActual = coloniaSelect.value;
+      
+      coloniaSelect.innerHTML = '<option>Buscando colonias...</option>';
+      coloniaSelect.disabled = true;
+      
+      fetch(`/guarderia/api/colonias/buscar/?cp=${cp}`)
+        .then(response => response.json())
+        .then(data => {
+          coloniaSelect.innerHTML = '<option value="">Seleccione una colonia</option>';
+          
+          if (data.success && data.colonias.length > 0) {
+            data.colonias.forEach(col => {
+              const option = document.createElement('option');
+              option.value = col.id;
+              option.textContent = `${col.nombre} - ${col.municipio}, ${col.estado}`;
+              
+              // Mantener la colonia seleccionada si existe
+              if (col.id == valorActual) {
+                option.selected = true;
+              }
+              
+              coloniaSelect.appendChild(option);
+            });
+            coloniaSelect.disabled = false;
+            buscarInput.disabled = false;
+          } else {
+            coloniaSelect.innerHTML = '<option value="">No se encontraron colonias</option>';
+            buscarInput.disabled = true;
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          coloniaSelect.innerHTML = '<option value="">Error al buscar colonias</option>';
+          buscarInput.disabled = true;
+        });
+    } else if (cp.length > 0) {
+      coloniaSelect.innerHTML = '<option value="">Ingrese un código postal válido (5 dígitos)</option>';
+      coloniaSelect.disabled = true;
+      buscarInput.disabled = true;
+    }
+  }
+
+  // Búsqueda dinámica de colonias
+  buscarInput.addEventListener('input', function() {
+    const busqueda = this.value.toLowerCase();
+    const options = coloniaSelect.querySelectorAll('option');
+    
+    options.forEach(option => {
+      if (option.value === '') return;
+      
+      const texto = option.textContent.toLowerCase();
+      if (texto.includes(busqueda)) {
+        option.style.display = '';
+      } else {
+        option.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+{% endblock scripts %}

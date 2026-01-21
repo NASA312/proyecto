@@ -1,9 +1,9 @@
 {% load static %}
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="{% url 'inicio' %}" class="brand-link">
+    <a href="{% url 'guarderia:dashboard' %}" class="brand-link">
       
-      <span class="brand-text font-weight-light">Escuela</span>
+      <span class="brand-text font-weight-light">Guardería</span>
     </a>
 
     <!-- Sidebar -->
@@ -27,7 +27,7 @@
           <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
           <li class="nav-item menu-close">
-            <a href="#" class="nav-link active">
+            <a href="#" class="nav-link">
               <i class="nav-icon fas fa-users"></i>
               <p>
                 Usuarios
@@ -121,9 +121,138 @@
   </ul>
 </li>
           
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-building"></i>
+    <p>
+      Dependencias
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
 
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_dependencias' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Dependencias</p>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_dependencia' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Dependencia</p>
+      </a>
+    </li>
+
+  </ul>
+</li>
+
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-sitemap"></i>
+    <p>
+      Departamentos
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_departamentos' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Departamentos</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_departamento' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Departamento</p>
+      </a>
+    </li>
+  </ul>
+</li>
+
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-user-md"></i>
+    <p>
+      Servicios Médicos
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_servicios_medicos' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Servicios Médicos</p>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_servicio_medico' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Servicio Médico</p>
+      </a>
+    </li>
+
+  </ul>
+</li>
+
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-users"></i>
+    <p>
+      Grupos
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_grupos' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Grupos</p>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_grupo' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Grupo</p>
+      </a>
+    </li>
+
+  </ul>
+</li>
+
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-clipboard-list"></i>
+    <p>
+      Observaciones
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_observaciones' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Observaciones</p>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_observacion' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Observación</p>
+      </a>
+    </li>
+
+  </ul>
+</li>
           
-
           
           <li class="nav-item">
             <a href="{% url 'admin:index' %}" class="nav-link">

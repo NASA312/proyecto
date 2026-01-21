@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Observación{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Registrar Nueva Observación</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_observaciones' %}">Observaciones</a></li>
+          <li class="breadcrumb-item active">Registrar</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-10 offset-md-1">
+        <!-- Mostrar mensajes de Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card card-warning">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Información de la Observación</h3>
+          </div>
+          <form method="post" id="formObservacion">
+            {% csrf_token %}
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Niño *</label>
+                    {{ form.nino }}
+                    <span class="text-danger error-nino"></span>
+                    {% if form.nino.errors %}
+                      <span class="text-danger">{{ form.nino.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Tipo de Observación *</label>
+                    {{ form.tipo }}
+                    <span class="text-danger error-tipo"></span>
+                    {% if form.tipo.errors %}
+                      <span class="text-danger">{{ form.tipo.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Fecha *</label>
+                    {{ form.fecha }}
+                    <span class="text-danger error-fecha"></span>
+                    {% if form.fecha.errors %}
+                      <span class="text-danger">{{ form.fecha.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Descripción de la Observación *</label>
+                {{ form.descripcion }}
+                <span class="text-danger error-descripcion"></span>
+                {% if form.descripcion.errors %}
+                  <span class="text-danger">{{ form.descripcion.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                      {{ form.importante }}
+                      <label class="custom-control-label" for="id_importante">
+                        <strong>Marcar como Importante</strong>
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">
+                      Las observaciones importantes se destacarán en el sistema
+                    </small>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                      {{ form.notificar_tutor }}
+                      <label class="custom-control-label" for="id_notificar_tutor">
+                        <strong>Notificar al Tutor</strong>
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">
+                      Se registrará como pendiente de notificación
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                <strong>Información:</strong> Esta observación quedará registrada en el expediente del niño y podrá ser consultada posteriormente.
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button type="submit" class="btn btn-warning" id="btnGuardar">
+                <i class="fas fa-save"></i> Guardar Observación
+              </button>
+              <a href="{% url 'guarderia:lista_observaciones' %}" class="btn btn-default">
+                <i class="fas fa-times"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Establecer fecha actual por defecto si no viene pre-cargada
+  if (!$('#id_fecha').val()) {
+    const today = new Date().toISOString().split('T')[0];
+    $('#id_fecha').val(today);
+  }
+
+  // Mejorar el select de niños con Select2 (si está disponible)
+  if ($.fn.select2) {
+    $('#id_nino').select2({
+      placeholder: 'Seleccione un niño',
+      allowClear: true,
+      width: '100%'
+    });
+  }
+
+  // Limpiar errores anteriores al enviar
+  $('#formObservacion').on('submit', function(e) {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
+  });
+
+  // Interceptar la respuesta exitosa (si se usa AJAX)
+  $(document).ajaxComplete(function(event, xhr, settings) {
+    if (settings.url && settings.url.includes('registrar_observacion')) {
+      try {
+        const response = JSON.parse(xhr.responseText);
+        
+        if (response.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: response.message,
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = '{% url "guarderia:lista_observaciones" %}';
+          });
+        } else if (!response.success && response.errors) {
+          for (let field in response.errors) {
+            $(`.error-${field}`).text(response.errors[field].join(', '));
+            $(`#id_${field}`).addClass('is-invalid');
+          }
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Error en el formulario',
+            text: 'Por favor corrija los errores',
+            confirmButtonText: 'Entendido'
+          });
+        }
+      } catch (e) {
+        console.log('No es JSON o no es nuestra petición');
+      }
+    }
+  });
+
+  // Si hay errores de Django en el template, mostrarlos
+  {% if form.errors %}
+    let errores = [];
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        errores.push("{{ field }}: {{ error }}");
+      {% endfor %}
+    {% endfor %}
+    
+    if (errores.length > 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Errores en el formulario',
+        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  {% endif %}
+});
+</script>
+{% endblock scripts %}

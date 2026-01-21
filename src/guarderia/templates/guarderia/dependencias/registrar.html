@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Dependencia{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Registrar Nueva Dependencia</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_dependencias' %}">Dependencias</a></li>
+          <li class="breadcrumb-item active">Registrar</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <!-- Mostrar mensajes de Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-building"></i> Información de la Dependencia</h3>
+          </div>
+          <form method="post" id="formDependencia">
+            {% csrf_token %}
+            <div class="card-body">
+              <div class="form-group">
+                <label>Nombre de la Dependencia *</label>
+                {{ form.nombre }}
+                <span class="text-danger error-nombre"></span>
+                {% if form.nombre.errors %}
+                  <span class="text-danger">{{ form.nombre.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label>Descripción</label>
+                {{ form.descripcion }}
+                <span class="text-danger error-descripcion"></span>
+                {% if form.descripcion.errors %}
+                  <span class="text-danger">{{ form.descripcion.errors.0 }}</span>
+                {% endif %}
+                <small class="form-text text-muted">
+                  Información adicional sobre la dependencia
+                </small>
+              </div>
+
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                <strong>Nota:</strong> Después de registrar la dependencia, podrá agregar departamentos asociados a ella.
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button type="submit" class="btn btn-primary" id="btnGuardar">
+                <i class="fas fa-save"></i> Guardar Dependencia
+              </button>
+              <a href="{% url 'guarderia:lista_dependencias' %}" class="btn btn-default">
+                <i class="fas fa-times"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Limpiar errores anteriores al enviar
+  $('#formDependencia').on('submit', function(e) {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
+  });
+
+  // Interceptar la respuesta exitosa (si se usa AJAX desde alertas.js)
+  $(document).ajaxComplete(function(event, xhr, settings) {
+    if (settings.url && settings.url.includes('registrar_dependencia')) {
+      try {
+        const response = JSON.parse(xhr.responseText);
+        
+        if (response.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: response.message,
+            timer: 2000,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = '{% url "guarderia:lista_dependencias" %}';
+          });
+        } else if (!response.success && response.errors) {
+          for (let field in response.errors) {
+            $(`.error-${field}`).text(response.errors[field].join(', '));
+            $(`#id_${field}`).addClass('is-invalid');
+          }
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Error en el formulario',
+            text: 'Por favor corrija los errores',
+            confirmButtonText: 'Entendido'
+          });
+        }
+      } catch (e) {
+        console.log('No es JSON o no es nuestra petición');
+      }
+    }
+  });
+
+  // Si hay errores de Django en el template, mostrarlos
+  {% if form.errors %}
+    let errores = [];
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        errores.push("{{ field }}: {{ error }}");
+      {% endfor %}
+    {% endfor %}
+    
+    if (errores.length > 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Errores en el formulario',
+        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  {% endif %}
+});
+</script>
+{% endblock scripts %}

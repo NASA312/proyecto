@@ -18,11 +18,17 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import *
 from django.conf import settings
+from django.shortcuts import redirect
 from django.conf.urls.static import static
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def home(request):
+    return redirect('guarderia:dashboard')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', index, name='inicio'),
+    path('', home, name='inicio'),
     path('auth/', include('login.urls', namespace='auth')),
     path('guarderia/', include('guarderia.urls')), 
 ]

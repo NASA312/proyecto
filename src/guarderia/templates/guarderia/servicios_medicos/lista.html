@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Servicios Médicos{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Servicios Médicos</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Servicios Médicos</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-hospital"></i> Lista de Servicios Médicos</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_servicio_medico' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Servicio Médico
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if servicios %}
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover" id="tablaServicios">
+                  <thead>
+                    <tr>
+                      <th style="width: 5%">#</th>
+                      <th style="width: 30%">Nombre</th>
+                      <th style="width: 15%">Siglas</th>
+                      <th style="width: 35%">Descripción</th>
+                      <th style="width: 15%" class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for servicio in servicios %}
+                      <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ servicio.nombre }}</strong></td>
+                        <td>
+                          {% if servicio.siglas %}
+                            <span class="badge badge-info">{{ servicio.siglas }}</span>
+                          {% else %}
+                            <span class="text-muted">-</span>
+                          {% endif %}
+                        </td>
+                        <td>{{ servicio.descripcion|default:"-"|truncatewords:15 }}</td>
+                        <td class="text-center">
+                          <a href="{% url 'guarderia:editar_servicio_medico' servicio.id %}" 
+                             class="btn btn-warning btn-sm" 
+                             title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                No hay servicios médicos registrados. 
+                <a href="{% url 'guarderia:registrar_servicio_medico' %}">Haga clic aquí para agregar uno.</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Inicializar DataTable si existe
+  if ($.fn.DataTable) {
+    $('#tablaServicios').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[1, 'asc']]
+    });
+  }
+});
+</script>
+{% endblock scripts %}

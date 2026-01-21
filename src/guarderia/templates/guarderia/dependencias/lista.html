@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Dependencias{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Dependencias y Departamentos</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Dependencias</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <!-- Mostrar mensajes de Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Dependencias Registradas</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_dependencia' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-building"></i> Registrar Dependencia
+              </a>
+              <a href="{% url 'guarderia:registrar_departamento' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-sitemap"></i> Registrar Departamento
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <p>Total dependencias: {{ dependencias|length }}</p>
+
+            <table id="tablaDependencias" class="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Descripción</th>
+                  <th>Departamentos</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+<tbody>
+  {% for dependencia in dependencias %}
+  <tr>
+    <td><strong>{{ dependencia.nombre }}</strong></td>
+    <td>{{ dependencia.descripcion|default:"Sin descripción" }}</td>
+    <td>
+      <button
+  class="btn btn-info btn-sm"
+  onclick="verDepartamentos('{{ dependencia.id }}', '{{ dependencia.nombre|escapejs }}')"
+>
+  <i class="fas fa-sitemap"></i> Ver Departamentos
+</button>
+
+    </td>
+    <td>
+      <button class="btn btn-warning btn-sm">Editar</button>
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Modal Ver Departamentos -->
+<div class="modal fade" id="modalVerDepartamentos" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info">
+        <h5 class="modal-title">
+          <i class="fas fa-list"></i> Departamentos de <span id="nombreDependencia"></span>
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="listaDepartamentos"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          <i class="fas fa-times"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+  if ($('#tablaDependencias').length) {
+    $('#tablaDependencias').DataTable({
+      responsive: true,
+      autoWidth: false
+    });
+  }
+});
+
+function verDepartamentos(dependenciaId, nombreDependencia) {
+  $('#nombreDependencia').text(nombreDependencia);
+  $('#listaDepartamentos').html(
+    '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>'
+  );
+
+  $.ajax({
+    url: "{% url 'guarderia:obtener_departamentos_ajax' %}",
+    method: 'GET',
+    data: { dependencia_id: dependenciaId },
+    success: function (response) {
+      if (response.success && response.departamentos.length > 0) {
+        let html = '<div class="list-group">';
+
+        response.departamentos.forEach(function (dept) {
+          html += `
+            <div class="list-group-item">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">
+                  <i class="fas fa-sitemap text-info"></i> ${dept.nombre}
+                </h5>
+              </div>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+        $('#listaDepartamentos').html(html);
+      } else {
+        $('#listaDepartamentos').html(
+          '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No hay departamentos registrados.</div>'
+        );
+      }
+    },
+    error: function () {
+      $('#listaDepartamentos').html(
+        '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Error al cargar los departamentos.</div>'
+      );
+    }
+  });
+
+  $('#modalVerDepartamentos').modal('show');
+}
+</script>
+{% endblock scripts %}

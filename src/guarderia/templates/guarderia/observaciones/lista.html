@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Observaciones{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Observaciones de Niños</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item active">Observaciones</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <!-- Filtros -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card card-outline card-info collapsed-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="get" id="formFiltros">
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Niño</label>
+                    <select name="nino" class="form-control" id="filtroNino">
+                      <option value="">Todos los niños</option>
+                      {% for nino in ninos %}
+                        <option value="{{ nino.id }}" {% if request.GET.nino == nino.id|stringformat:"s" %}selected{% endif %}>
+                          {{ nino.apellido_paterno }} {{ nino.apellido_materno }}, {{ nino.nombre }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Tipo</label>
+                    <select name="tipo" class="form-control">
+                      <option value="">Todos los tipos</option>
+                      {% for value, label in tipo_choices %}
+                        <option value="{{ value }}" {% if request.GET.tipo == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Fecha Desde</label>
+                    <input type="date" name="fecha_desde" class="form-control" value="{{ request.GET.fecha_desde }}">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Fecha Hasta</label>
+                    <input type="date" name="fecha_hasta" class="form-control" value="{{ request.GET.fecha_hasta }}">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label>Solo Importantes</label>
+                    <select name="importantes" class="form-control">
+                      <option value="">Todas</option>
+                      <option value="1" {% if request.GET.importantes == "1" %}selected{% endif %}>Solo importantes</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-1">
+                  <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-block">
+                      <i class="fas fa-search"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Observaciones -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Lista de Observaciones</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_observacion' %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-plus"></i> Nueva Observación
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if observaciones %}
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tablaObservaciones">
+                  <thead>
+                    <tr>
+                      <th style="width: 5%">#</th>
+                      <th style="width: 10%">Fecha</th>
+                      <th style="width: 20%">Niño</th>
+                      <th style="width: 10%">Tipo</th>
+                      <th style="width: 35%">Descripción</th>
+                      <th style="width: 10%" class="text-center">Estado</th>
+                      <th style="width: 10%" class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for obs in observaciones %}
+                      <tr {% if obs.importante %}class="table-warning"{% endif %}>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                          {{ obs.fecha|date:"d/m/Y" }}<br>
+                          <small class="text-muted">{{ obs.hora|time:"H:i" }}</small>
+                        </td>
+                        <td>
+                          <a href="{% url 'guarderia:observaciones_nino' obs.nino.id %}">
+                            <strong>{{ obs.nino.nombre_completo }}</strong>
+                          </a>
+                        </td>
+                        <td>
+                          <span class="badge badge-secondary">{{ obs.get_tipo_display }}</span>
+                        </td>
+                        <td>
+                          {{ obs.descripcion|truncatewords:20 }}
+                          {% if obs.importante %}
+                            <i class="fas fa-exclamation-triangle text-warning" title="Importante"></i>
+                          {% endif %}
+                        </td>
+                        <td class="text-center">
+                          {% if obs.notificar_tutor %}
+                            {% if obs.notificado %}
+                              <span class="badge badge-success">
+                                <i class="fas fa-check"></i> Notificado
+                              </span>
+                            {% else %}
+                              <span class="badge badge-danger">
+                                <i class="fas fa-clock"></i> Pendiente
+                              </span>
+                            {% endif %}
+                          {% else %}
+                            <span class="badge badge-secondary">-</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-center">
+                          <a href="{% url 'guarderia:editar_observacion' obs.id %}" 
+                             class="btn btn-warning btn-sm" 
+                             title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                          {% if obs.notificar_tutor and not obs.notificado %}
+                            <button class="btn btn-success btn-sm btnMarcarNotificado" 
+                                    data-id="{{ obs.id }}"
+                                    title="Marcar como notificado">
+                              <i class="fas fa-check"></i>
+                            </button>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                No hay observaciones registradas con los filtros seleccionados. 
+                <a href="{% url 'guarderia:registrar_observacion' %}">Haga clic aquí para agregar una.</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Inicializar Select2 para el filtro de niños
+  if ($.fn.select2) {
+    $('#filtroNino').select2({
+      placeholder: 'Seleccione un niño',
+      allowClear: true,
+      width: '100%'
+    });
+  }
+
+  // Inicializar DataTable
+  if ($.fn.DataTable) {
+    $('#tablaObservaciones').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[1, 'desc']],
+      "pageLength": 25
+    });
+  }
+
+  // Marcar observación como notificada
+  $('.btnMarcarNotificado').on('click', function() {
+    const observacionId = $(this).data('id');
+    const btn = $(this);
+    
+    Swal.fire({
+      title: '¿Marcar como notificado?',
+      text: 'Esta observación se marcará como notificada al tutor',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, marcar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: `/guarderia/observaciones/${observacionId}/marcar-notificada/`,
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+          },
+          success: function(response) {
+            if (response.success) {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: response.message,
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => {
+                location.reload();
+              });
+            }
+          },
+          error: function() {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudo marcar la observación'
+            });
+          }
+        });
+      }
+    });
+  });
+});
+</script>
+{% endblock scripts %}

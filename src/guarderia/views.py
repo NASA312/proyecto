@@ -5,12 +5,18 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from datetime import datetime, timedelta
 from .models import Tutor, Nino, RegistroAcceso
-from .forms import TutorForm, NinoForm, AsignarTutorForm
+from .forms import *
 import base64
 import json
 import requests
-from django.db.models import Q 
+from django.db.models import Count, Q
+import requests
+from django.views.decorators.http import require_http_methods
+from django.conf import settings
+import pandas as pd
+import os
 
 # ============================================
 # VISTAS DE TUTORES
@@ -636,6 +642,17 @@ def verificar_huella_estado(request):
                 print(f"Niños autorizados: {ninos.count()}")
                 print(f"{'='*60}\n")
                 
+                # ⭐ CORRECCIÓN: Convertir objeto Grupo a string ⭐
+                ninos_data = []
+                for n in ninos:
+                    ninos_data.append({
+                        'id': n.id,
+                        'nombre': n.nombre_completo(),
+                        'grupo': str(n.grupo) if n.grupo else 'Sin grupo',  # ← AQUÍ ESTÁ LA CORRECCIÓN
+                        'edad': n.edad(),
+                        'foto_url': n.foto.url if n.foto else None
+                    })
+                
                 return JsonResponse({
                     'completado': True,
                     'success': True,
@@ -646,16 +663,7 @@ def verificar_huella_estado(request):
                         'telefono': tutor.telefono,
                         'foto_url': tutor.huella_imagen.url if tutor.huella_imagen else None
                     },
-                    'ninos': [
-                        {
-                            'id': n.id,
-                            'nombre': n.nombre_completo(),
-                            'grupo': n.grupo,
-                            'edad': n.edad(),
-                            'foto_url': n.foto.url if n.foto else None
-                        }
-                        for n in ninos
-                    ],
+                    'ninos': ninos_data,
                     'far_achieved': far_achieved
                 })
             else:
@@ -746,3 +754,810 @@ def registrar_salida(request):
             }, status=500)
     
     return JsonResponse({'success': False}, status=405)
+
+
+
+# ============================================
+# VISTAS DE COLONIAS (CÓDIGO POSTAL)
+# ============================================
+
+def buscar_colonias_cp(request):
+    """Busca colonias por código postal directamente desde el Excel"""
+    cp = request.GET.get('cp', '').strip()
+
+    if not cp or not cp.isdigit() or len(cp) != 5:
+        return JsonResponse({
+            "success": False,
+            "error": "Código postal inválido"
+        })
+
+    try:
+        archivo_excel = os.path.join(
+            settings.BASE_DIR,
+            'guarderia',
+            'data',
+            'Colonias.xlsx'
+        )
+        
+        if not os.path.exists(archivo_excel):
+            return JsonResponse({
+                "success": False,
+                "error": f"No se encontró el archivo Colonias.xlsx en guarderia/data/"
+            })
+        
+        # Leer el Excel
+        df = pd.read_excel(archivo_excel)
+        
+        # DEBUG
+        print("=== DEBUG COLONIAS ===")
+        print("Columnas del Excel:", df.columns.tolist())
+        print(f"Buscando CP: '{cp}'")
+        print("Primeros valores de d_codigo (raw):", df['d_codigo'].head(10).tolist())
+        print("Tipos de datos:", df['d_codigo'].dtype)
+        
+        # ⭐ LIMPIEZA MEJORADA ⭐
+        # Convertir a string manejando NaN y valores vacíos
+        df['d_codigo'] = df['d_codigo'].fillna(0)  # Reemplazar NaN con 0
+        df['d_codigo'] = df['d_codigo'].astype(int).astype(str)  # Convertir a int primero para eliminar decimales
+        
+        # Rellenar con ceros a la izquierda
+        df['d_codigo'] = df['d_codigo'].str.zfill(5)
+        
+        # Verificar si hay valores '00000' (que eran NaN) y filtrarlos
+        df = df[df['d_codigo'] != '00000']
+        
+        print(f"Primeros valores de d_codigo después de limpieza:", df['d_codigo'].head(10).tolist())
+        print(f"Total registros válidos: {len(df)}")
+        
+        # Buscar el CP específico
+        colonias_filtradas = df[df['d_codigo'] == cp]
+        
+        print(f"Registros encontrados para CP {cp}: {len(colonias_filtradas)}")
+        
+        # ⭐ DEBUG ADICIONAL ⭐
+        if colonias_filtradas.empty:
+            # Verificar si el CP existe en el archivo
+            existe_cp = cp in df['d_codigo'].values
+            print(f"¿Existe el CP {cp} en el archivo? {existe_cp}")
+            
+            # Buscar CPs cercanos
+            cp_num = int(cp)
+            cps_en_rango = df[(df['d_codigo'].astype(int) >= cp_num - 10) & 
+                              (df['d_codigo'].astype(int) <= cp_num + 10)]['d_codigo'].unique()[:10]
+            
+            print(f"CPs en rango ({cp_num-10} a {cp_num+10}): {cps_en_rango.tolist()}")
+            print("======================")
+            
+            return JsonResponse({
+                "success": False,
+                "error": f"No se encontraron colonias para el CP {cp}",
+                "debug": {
+                    "cp_buscado": cp,
+                    "existe_en_archivo": existe_cp,
+                    "total_registros": len(df),
+                    "cps_cercanos": cps_en_rango.tolist() if len(cps_en_rango) > 0 else []
+                }
+            })
+        
+        print("======================")
+        
+        # Preparar resultado
+        resultado = []
+        for index, row in colonias_filtradas.iterrows():
+            resultado.append({
+                "id": str(row['id_asenta_cpcons']),
+                "nombre": str(row['d_asenta']),
+                "tipo_asentamiento": str(row['d_tipo_asenta']),
+                "municipio": str(row['D_mnpio']),
+                "estado": str(row['d_estado']),
+                "ciudad": str(row['d_ciudad']) if pd.notna(row['d_ciudad']) else str(row['D_mnpio']),
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "fuente": "excel_local",
+            "colonias": resultado,
+            "total": len(resultado)
+        })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            "success": False,
+            "error": f"Error al leer el archivo: {str(e)}",
+            "traceback": traceback.format_exc()
+        })
+
+
+# ============================================
+# OPTIMIZACIÓN CON CACHÉ (OPCIONAL)
+# ============================================
+# Si el archivo es muy grande y quieres mejorar el rendimiento,
+# puedes cargar el Excel una sola vez en memoria:
+
+from functools import lru_cache
+
+@lru_cache(maxsize=1)
+def cargar_colonias_excel():
+    """Carga el Excel una sola vez y lo mantiene en memoria"""
+    archivo_excel = os.path.join(
+        settings.BASE_DIR,
+        'guarderia',
+        'data',
+        'Colonias.xlsx'
+    )
+    df = pd.read_excel(archivo_excel)
+    df['d_codigo'] = df['d_codigo'].astype(str).str.zfill(5)
+    return df
+
+
+def buscar_colonias_cp_optimizado(request):
+    """Versión optimizada que usa caché"""
+    cp = request.GET.get('cp', '').strip()
+
+    if not cp or not cp.isdigit() or len(cp) != 5:
+        return JsonResponse({
+            "success": False,
+            "error": "Código postal inválido"
+        })
+
+    try:
+        # Cargar Excel desde caché
+        df = cargar_colonias_excel()
+        
+        # Filtrar por código postal
+        colonias_filtradas = df[df['id_asenta_cpcons'] == cp]
+        
+        if colonias_filtradas.empty:
+            return JsonResponse({
+                "success": False,
+                "error": "No se encontraron colonias para este código postal"
+            })
+        
+        # Preparar resultado
+        resultado = []
+        for index, row in colonias_filtradas.iterrows():
+            resultado.append({
+                "id": str(row['id_asenta_cpcons']),
+                "nombre": str(row['d_asenta']),
+                "tipo_asentamiento": str(row['d_tipo_asenta']),
+                "municipio": str(row['D_mnpio']),
+                "estado": str(row['d_estado']),
+                "ciudad": str(row['d_ciudad']) if pd.notna(row['d_ciudad']) else str(row['D_mnpio']),
+            })
+        
+        return JsonResponse({
+            "success": True,
+            "fuente": "excel_local_cache",
+            "colonias": resultado,
+            "total": len(resultado)
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": f"Error: {str(e)}"
+        })
+
+# ============================================
+# VISTAS DE DEPENDENCIAS Y DEPARTAMENTOS
+# ============================================
+
+@login_required
+def lista_dependencias(request):
+    """Lista de dependencias"""
+    dependencias = Dependencia.objects.filter(activo=True).order_by('nombre')
+    return render(request, 'guarderia/dependencias/lista.html', {
+        'dependencias': dependencias
+    })
+
+
+@login_required
+def registrar_dependencia(request):
+    """Registrar nueva dependencia"""
+    if request.method == 'POST':
+        form = DependenciaForm(request.POST)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            dependencia = form.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Dependencia {dependencia.nombre} registrada',
+                    'dependencia_id': dependencia.id
+                })
+            else:
+                messages.success(request, f'Dependencia {dependencia.nombre} registrada')
+                return redirect('guarderia:lista_dependencias')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    else:
+        form = DependenciaForm()
+    
+    return render(request, 'guarderia/dependencias/registrar.html', {'form': form})
+
+@login_required
+def editar_dependencia(request, dependencia_id):
+    """Editar dependencia"""
+    dependencia = get_object_or_404(Dependencia, id=dependencia_id)
+    
+    if request.method == 'POST':
+        form = DependenciaForm(request.POST, instance=dependencia)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Dependencia {dependencia.nombre} actualizada')
+            return redirect('guarderia:lista_dependencias')
+    else:
+        form = DependenciaForm(instance=dependencia)
+    
+    return render(request, 'guarderia/dependencias/editar.html', {
+        'form': form,
+        'dependencia': dependencia
+    })
+
+
+@login_required
+def lista_departamentos(request):
+    """Lista de departamentos"""
+    departamentos = Departamento.objects.filter(activo=True).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
+    
+    return render(request, 'guarderia/departamentos/lista.html', {
+        'departamentos': departamentos
+    })
+
+
+@login_required
+def editar_departamento(request, departamento_id):
+    """Editar departamento"""
+    departamento = get_object_or_404(Departamento, id=departamento_id)
+    
+    if request.method == 'POST':
+        form = DepartamentoForm(request.POST, instance=departamento)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Departamento {departamento.nombre} actualizado')
+            return redirect('guarderia:lista_departamentos')
+    else:
+        form = DepartamentoForm(instance=departamento)
+    
+    return render(request, 'guarderia/departamentos/editar.html', {
+        'form': form,
+        'departamento': departamento
+    })
+
+
+
+@login_required
+@require_http_methods(["GET"])
+def obtener_departamentos_ajax(request):
+    """Obtener departamentos de una dependencia vía AJAX"""
+    dependencia_id = request.GET.get('dependencia_id')
+    
+    if not dependencia_id:
+        return JsonResponse({'departamentos': []})
+    
+    try:
+        departamentos = Departamento.objects.filter(
+            dependencia_id=dependencia_id,
+            activo=True
+        ).values('id', 'nombre')
+        
+        return JsonResponse({
+            'success': True,
+            'departamentos': list(departamentos)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def registrar_departamento(request):
+    """Registrar nuevo departamento"""
+    if request.method == 'POST':
+        form = DepartamentoForm(request.POST)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            departamento = form.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Departamento {departamento.nombre} registrado',
+                    'departamento_id': departamento.id
+                })
+            else:
+                messages.success(request, f'Departamento {departamento.nombre} registrado')
+                return redirect('guarderia:lista_dependencias')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    else:
+        form = DepartamentoForm()
+    
+    return render(request, 'guarderia/departamentos/registrar.html', {'form': form})
+
+@login_required
+def lista_servicios_medicos(request):
+    """Lista de servicios médicos"""
+    servicios = ServicioMedico.objects.filter(activo=True).order_by('nombre')
+    return render(request, 'guarderia/servicios_medicos/lista.html', {
+        'servicios': servicios
+    })
+
+
+@login_required
+def registrar_servicio_medico(request):
+    """Registrar nuevo servicio médico"""
+    if request.method == 'POST':
+        form = ServicioMedicoForm(request.POST)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            servicio = form.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Servicio médico {servicio.nombre} registrado',
+                    'servicio_id': servicio.id
+                })
+            else:
+                messages.success(request, f'Servicio médico {servicio.nombre} registrado')
+                return redirect('guarderia:lista_servicios_medicos')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    else:
+        form = ServicioMedicoForm()
+    
+    return render(request, 'guarderia/servicios_medicos/registrar.html', {'form': form})
+
+
+@login_required
+def editar_servicio_medico(request, servicio_id):
+    """Editar servicio médico"""
+    servicio = get_object_or_404(ServicioMedico, id=servicio_id)
+    
+    if request.method == 'POST':
+        form = ServicioMedicoForm(request.POST, instance=servicio)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Servicio médico {servicio.nombre} actualizado')
+            return redirect('guarderia:lista_servicios_medicos')
+    else:
+        form = ServicioMedicoForm(instance=servicio)
+    
+    return render(request, 'guarderia/servicios_medicos/editar.html', {
+        'form': form,
+        'servicio': servicio
+    })
+
+
+# ========== GRUPOS ==========
+
+@login_required
+def lista_grupos(request):
+    """Lista de grupos con estadísticas"""
+    grupos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+    
+    # Agregar estadísticas a cada grupo
+    grupos_con_stats = []
+    for grupo in grupos:
+        grupos_con_stats.append({
+            'grupo': grupo,
+            'ninos_asignados': grupo.ninos_asignados(),
+            'capacidad_disponible': grupo.capacidad_disponible(),
+            'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
+            'esta_lleno': grupo.esta_lleno()
+        })
+    
+    return render(request, 'guarderia/grupos/lista.html', {
+        'grupos': grupos_con_stats
+    })
+
+
+@login_required
+def registrar_grupo(request):
+    """Registrar nuevo grupo"""
+    if request.method == 'POST':
+        form = GrupoForm(request.POST)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            grupo = form.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Grupo {grupo.nombre} registrado',
+                    'grupo_id': grupo.id
+                })
+            else:
+                messages.success(request, f'Grupo {grupo.nombre} registrado exitosamente')
+                return redirect('guarderia:lista_grupos')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    else:
+        form = GrupoForm()
+    
+    return render(request, 'guarderia/grupos/registrar.html', {'form': form})
+
+
+@login_required
+def detalle_grupo(request, grupo_id):
+    """Ver detalles de un grupo"""
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    ninos = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    
+    return render(request, 'guarderia/grupos/detalle.html', {
+        'grupo': grupo,
+        'ninos': ninos,
+        'ninos_asignados': grupo.ninos_asignados(),
+        'capacidad_disponible': grupo.capacidad_disponible(),
+        'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
+        'esta_lleno': grupo.esta_lleno()
+    })
+
+
+@login_required
+def editar_grupo(request, grupo_id):
+    """Editar grupo"""
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    
+    if request.method == 'POST':
+        form = GrupoForm(request.POST, instance=grupo)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Grupo {grupo.nombre} actualizado')
+            return redirect('guarderia:detalle_grupo', grupo_id=grupo.id)
+    else:
+        form = GrupoForm(instance=grupo)
+    
+    return render(request, 'guarderia/grupos/editar.html', {
+        'form': form,
+        'grupo': grupo
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def obtener_grupos_disponibles_ajax(request):
+    """Obtener grupos con disponibilidad vía AJAX"""
+    tipo = request.GET.get('tipo')  # Filtrar por tipo si se proporciona
+    
+    grupos = Grupo.objects.filter(activo=True)
+    
+    if tipo:
+        grupos = grupos.filter(tipo=tipo)
+    
+    grupos_data = []
+    for grupo in grupos:
+        ninos_count = grupo.ninos_asignados()
+        disponible = ninos_count < grupo.capacidad_maxima
+        
+        grupos_data.append({
+            'id': grupo.id,
+            'nombre': str(grupo),
+            'tipo': grupo.get_tipo_display(),
+            'grado': grupo.grado,
+            'capacidad_maxima': grupo.capacidad_maxima,
+            'ninos_asignados': ninos_count,
+            'disponible': disponible,
+            'porcentaje_ocupacion': grupo.porcentaje_ocupacion()
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'grupos': grupos_data
+    })
+
+
+# ========== OBSERVACIONES DE NIÑOS ==========
+
+@login_required
+def lista_observaciones(request):
+    """Lista de todas las observaciones"""
+    # Filtros
+    nino_id = request.GET.get('nino')
+    tipo = request.GET.get('tipo')
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    importantes = request.GET.get('importantes')
+    
+    observaciones = ObservacionNino.objects.select_related('nino', 'registrado_por')
+    
+    if nino_id:
+        observaciones = observaciones.filter(nino_id=nino_id)
+    if tipo:
+        observaciones = observaciones.filter(tipo=tipo)
+    if fecha_desde:
+        observaciones = observaciones.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        observaciones = observaciones.filter(fecha__lte=fecha_hasta)
+    if importantes:
+        observaciones = observaciones.filter(importante=True)
+    
+    observaciones = observaciones.order_by('-fecha', '-hora')[:100]
+    
+    # Para el filtro
+    ninos = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    
+    return render(request, 'guarderia/observaciones/lista.html', {
+        'observaciones': observaciones,
+        'ninos': ninos,
+        'tipo_choices': ObservacionNino.TIPO_OBSERVACION_CHOICES
+    })
+
+
+@login_required
+def registrar_observacion(request):
+    """Registrar nueva observación"""
+    if request.method == 'POST':
+        form = ObservacionNinoForm(request.POST)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            observacion = form.save(commit=False)
+            observacion.registrado_por = request.user
+            observacion.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Observación registrada para {observacion.nino.nombre_completo()}',
+                    'observacion_id': observacion.id
+                })
+            else:
+                messages.success(request, f'Observación registrada para {observacion.nino.nombre_completo()}')
+                return redirect('guarderia:lista_observaciones')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    else:
+        # Si viene nino_id en GET, pre-seleccionar el niño
+        nino_id = request.GET.get('nino_id')
+        initial = {}
+        if nino_id:
+            initial['nino'] = nino_id
+        
+        form = ObservacionNinoForm(initial=initial)
+    
+    return render(request, 'guarderia/observaciones/registrar.html', {'form': form})
+
+
+@login_required
+def observaciones_nino(request, nino_id):
+    """Ver todas las observaciones de un niño específico"""
+    nino = get_object_or_404(Nino, id=nino_id)
+    observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')
+    
+    # Estadísticas
+    total = observaciones.count()
+    importantes = observaciones.filter(importante=True).count()
+    pendientes_notificar = observaciones.filter(notificar_tutor=True, notificado=False).count()
+    
+    return render(request, 'guarderia/observaciones/por_nino.html', {
+        'nino': nino,
+        'observaciones': observaciones,
+        'total': total,
+        'importantes': importantes,
+        'pendientes_notificar': pendientes_notificar
+    })
+
+
+@login_required
+def editar_observacion(request, observacion_id):
+    """Editar una observación"""
+    observacion = get_object_or_404(ObservacionNino, id=observacion_id)
+    
+    if request.method == 'POST':
+        form = ObservacionNinoForm(request.POST, instance=observacion)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Observación actualizada')
+            return redirect('guarderia:observaciones_nino', nino_id=observacion.nino.id)
+    else:
+        form = ObservacionNinoForm(instance=observacion)
+    
+    return render(request, 'guarderia/observaciones/editar.html', {
+        'form': form,
+        'observacion': observacion
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def marcar_observacion_notificada(request, observacion_id):
+    """Marcar una observación como notificada"""
+    observacion = get_object_or_404(ObservacionNino, id=observacion_id)
+    
+    observacion.notificado = True
+    observacion.fecha_notificacion = timezone.now()
+    observacion.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Observación marcada como notificada'
+    })
+    
+@login_required
+def dashboard(request):
+    """Dashboard principal con estadísticas de la guardería"""
+    
+    # ========== ESTADÍSTICAS GENERALES ==========
+    total_ninos = Nino.objects.filter(activo=True).count()
+    total_tutores = Tutor.objects.filter(activo=True).count()
+    total_grupos = Grupo.objects.filter(activo=True).count()
+    
+    # Tutores con huella registrada
+    tutores_con_huella = Tutor.objects.filter(
+        activo=True, 
+        huella_registrada=True
+    ).count()
+    porcentaje_huellas = round((tutores_con_huella / total_tutores * 100), 1) if total_tutores > 0 else 0
+    
+    # ========== NIÑOS POR GRUPO ==========
+    ninos_por_grupo = Grupo.objects.filter(activo=True).annotate(
+        total_ninos=Count('ninos', filter=Q(ninos__activo=True))
+    ).values('nombre', 'tipo', 'capacidad_maxima', 'total_ninos')
+    
+    # Calcular ocupación de grupos
+    grupos_stats = []
+    for grupo in ninos_por_grupo:
+        porcentaje = round((grupo['total_ninos'] / grupo['capacidad_maxima'] * 100), 1) if grupo['capacidad_maxima'] > 0 else 0
+        grupos_stats.append({
+            'nombre': grupo['nombre'],
+            'tipo': grupo['tipo'],
+            'total': grupo['total_ninos'],
+            'capacidad': grupo['capacidad_maxima'],
+            'porcentaje': porcentaje
+        })
+    
+    # ========== REGISTROS DE HOY ==========
+    hoy = datetime.now().date()
+    registros_hoy = RegistroAcceso.objects.filter(
+        fecha_hora__date=hoy
+    ).select_related('nino', 'tutor')
+    
+    entradas_hoy = registros_hoy.filter(tipo='ENTRADA').count()
+    salidas_hoy = registros_hoy.filter(tipo='SALIDA').count()
+    ninos_presentes = entradas_hoy - salidas_hoy
+    
+    # ========== ÚLTIMOS REGISTROS ==========
+    ultimos_registros = RegistroAcceso.objects.select_related(
+        'nino', 'tutor'
+    ).order_by('-fecha_hora')[:10]
+    
+    # ========== OBSERVACIONES RECIENTES ==========
+    observaciones_recientes = ObservacionNino.objects.select_related(
+        'nino', 'registrado_por'
+    ).order_by('-fecha', '-hora')[:5]
+    
+    # Observaciones importantes sin notificar
+    observaciones_pendientes = ObservacionNino.objects.filter(
+        importante=True,
+        notificar_tutor=True,
+        notificado=False
+    ).count()
+    
+    # ========== REGISTROS DE LA SEMANA ==========
+    hace_7_dias = hoy - timedelta(days=7)
+    registros_semana = []
+    
+    for i in range(7):
+        fecha = hoy - timedelta(days=6-i)
+        entradas = RegistroAcceso.objects.filter(
+            fecha_hora__date=fecha,
+            tipo='ENTRADA'
+        ).count()
+        salidas = RegistroAcceso.objects.filter(
+            fecha_hora__date=fecha,
+            tipo='SALIDA'
+        ).count()
+        
+        registros_semana.append({
+            'fecha': fecha.strftime('%d/%m'),
+            'entradas': entradas,
+            'salidas': salidas
+        })
+    
+    # ========== TUTORES POR DEPENDENCIA ==========
+    tutores_por_dependencia = Dependencia.objects.filter(
+        activo=True
+    ).annotate(
+        total_tutores=Count('trabajadores', filter=Q(trabajadores__activo=True))
+    ).order_by('-total_tutores')[:5]
+    
+    # ========== NIÑOS POR EDAD ==========
+    ninos_activos = Nino.objects.filter(activo=True)
+    
+    lactantes = 0  # 0-1 año
+    maternales = 0  # 1-3 años
+    preescolares = 0  # 3-6 años
+    
+    for nino in ninos_activos:
+        edad = nino.edad()
+        if edad < 1:
+            lactantes += 1
+        elif edad < 3:
+            maternales += 1
+        else:
+            preescolares += 1
+    
+    # ========== ALERTAS Y NOTIFICACIONES ==========
+    tutores_sin_huella = Tutor.objects.filter(
+        activo=True,
+        huella_registrada=False
+    ).count()
+    
+    ninos_sin_grupo = Nino.objects.filter(
+        activo=True,
+        grupo__isnull=True
+    ).count()
+    
+    context = {
+        # Estadísticas generales
+        'total_ninos': total_ninos,
+        'total_tutores': total_tutores,
+        'total_grupos': total_grupos,
+        'tutores_con_huella': tutores_con_huella,
+        'porcentaje_huellas': porcentaje_huellas,
+        
+        # Registros de hoy
+        'entradas_hoy': entradas_hoy,
+        'salidas_hoy': salidas_hoy,
+        'ninos_presentes': ninos_presentes,
+        
+        # Grupos
+        'grupos_stats': grupos_stats,
+        
+        # Registros recientes
+        'ultimos_registros': ultimos_registros,
+        
+        # Observaciones
+        'observaciones_recientes': observaciones_recientes,
+        'observaciones_pendientes': observaciones_pendientes,
+        
+        # Gráficas
+        'registros_semana': registros_semana,
+        'tutores_por_dependencia': tutores_por_dependencia,
+        
+        # Distribución por edad
+        'lactantes': lactantes,
+        'maternales': maternales,
+        'preescolares': preescolares,
+        
+        # Alertas
+        'tutores_sin_huella': tutores_sin_huella,
+        'ninos_sin_grupo': ninos_sin_grupo,
+    }
+    
+    return render(request, 'guarderia/dashboard.html', context)

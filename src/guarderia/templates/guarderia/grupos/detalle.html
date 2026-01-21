@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Grupo - {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">{{ grupo.nombre }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_grupos' %}">Grupos</a></li>
+          <li class="breadcrumb-item active">{{ grupo.nombre }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <!-- Información del Grupo -->
+    <div class="row">
+      <div class="col-md-3">
+        <div class="card card-success">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-info-circle"></i> Información del Grupo</h3>
+          </div>
+          <div class="card-body">
+            <strong><i class="fas fa-users mr-1"></i> Nombre</strong>
+            <p class="text-muted">{{ grupo.nombre }}</p>
+            <hr>
+
+            <strong><i class="fas fa-tag mr-1"></i> Tipo</strong>
+            <p class="text-muted">
+              <span class="badge badge-primary">{{ grupo.get_tipo_display }}</span>
+            </p>
+            <hr>
+
+            <strong><i class="fas fa-graduation-cap mr-1"></i> Grado</strong>
+            <p class="text-muted">{{ grupo.grado|default:"No especificado" }}</p>
+            <hr>
+
+            <strong><i class="fas fa-chart-line mr-1"></i> Capacidad</strong>
+            <p class="text-muted">
+              {{ ninos_asignados }} / {{ grupo.capacidad_maxima }} niños
+            </p>
+
+            <div class="progress mb-3" style="height: 25px;">
+              <div class="progress-bar {% if porcentaje_ocupacion >= 90 %}bg-danger{% elif porcentaje_ocupacion >= 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                   role="progressbar" 
+                   style="width: {{ porcentaje_ocupacion }}%"
+                   aria-valuenow="{{ porcentaje_ocupacion }}" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100">
+                {{ porcentaje_ocupacion }}%
+              </div>
+            </div>
+
+            <p class="text-muted">
+              <strong>Disponibles:</strong> {{ capacidad_disponible }} lugares
+            </p>
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'guarderia:editar_grupo' grupo.id %}" class="btn btn-warning btn-block">
+              <i class="fas fa-edit"></i> Editar Grupo
+            </a>
+            <a href="{% url 'guarderia:lista_grupos' %}" class="btn btn-default btn-block">
+              <i class="fas fa-arrow-left"></i> Volver a Grupos
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-9">
+        <!-- Estado del Grupo -->
+        <div class="row">
+          <div class="col-md-3">
+            <div class="small-box bg-info">
+              <div class="inner">
+                <h3>{{ ninos_asignados }}</h3>
+                <p>Niños Asignados</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-child"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="small-box bg-success">
+              <div class="inner">
+                <h3>{{ capacidad_disponible }}</h3>
+                <p>Lugares Disponibles</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-check-circle"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="small-box bg-warning">
+              <div class="inner">
+                <h3>{{ porcentaje_ocupacion }}%</h3>
+                <p>Ocupación</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="small-box {% if esta_lleno %}bg-danger{% else %}bg-primary{% endif %}">
+              <div class="inner">
+                <h3>{% if esta_lleno %}Lleno{% else %}Abierto{% endif %}</h3>
+                <p>Estado</p>
+              </div>
+              <div class="icon">
+                <i class="fas {% if esta_lleno %}fa-ban{% else %}fa-door-open{% endif %}"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de Niños -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-children"></i> Niños en el Grupo</h3>
+          </div>
+          <div class="card-body">
+            {% if ninos %}
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tablaNinos">
+                  <thead>
+                    <tr>
+                      <th style="width: 5%">#</th>
+                      <th style="width: 30%">Nombre Completo</th>
+                      <th style="width: 15%">Fecha de Nacimiento</th>
+                      <th style="width: 10%">Edad</th>
+                      <th style="width: 20%">Tutor</th>
+                      <th style="width: 20%" class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for nino in ninos %}
+                      <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                          <strong>{{ nino.nombre_completo }}</strong>
+                        </td>
+                        <td>{{ nino.fecha_nacimiento|date:"d/m/Y" }}</td>
+                        <td>{{ nino.edad }} años</td>
+                        <td>
+                          {% if nino.tutor %}
+                            {{ nino.tutor.nombre_completo }}
+                          {% else %}
+                            <span class="text-muted">-</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-center">
+                          <a href="{% url 'guarderia:detalle_nino' nino.id %}" 
+                             class="btn btn-info btn-sm" 
+                             title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                          <a href="{% url 'guarderia:observaciones_nino' nino.id %}" 
+                             class="btn btn-warning btn-sm" 
+                             title="Ver observaciones">
+                            <i class="fas fa-clipboard-list"></i>
+                          </a>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info">
+                <i class="icon fas fa-info-circle"></i>
+                Este grupo aún no tiene niños asignados. Los niños se pueden asignar desde su registro individual.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Inicializar DataTable
+  if ($.fn.DataTable) {
+    $('#tablaNinos').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[1, 'asc']]
+    });
+  }
+});
+</script>
+{% endblock scripts %}

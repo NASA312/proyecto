@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Observación{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Editar Observación</h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <div class="card card-warning">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-edit"></i> Editar Observación</h3>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="card-body">
+              <div class="form-group">
+                <label>Niño</label>
+                {{ form.nino }}
+              </div>
+              
+              <div class="form-group">
+                <label>Tipo</label>
+                {{ form.tipo }}
+              </div>
+              
+              <div class="form-group">
+                <label>Descripción</label>
+                {{ form.descripcion }}
+              </div>
+              
+              <div class="form-group">
+                <label>Fecha</label>
+                {{ form.fecha }}
+              </div>
+              
+              <!-- ⭐ CHECKBOXES CORREGIDOS -->
+              <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                  {{ form.importante }}
+                  <label class="custom-control-label" for="id_importante">
+                    Marcar como importante
+                  </label>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                  {{ form.notificar_tutor }}
+                  <label class="custom-control-label" for="id_notificar_tutor">
+                    Notificar al tutor
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <button type="submit" class="btn btn-warning">
+                <i class="fas fa-save"></i> Actualizar
+              </button>
+              <a href="{% url 'guarderia:observaciones_nino' observacion.nino.id %}" class="btn btn-default">
+                <i class="fas fa-times"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Mejorar el select de niños con Select2 (si está disponible)
+  if ($.fn.select2) {
+    $('#id_nino').select2({
+      placeholder: 'Seleccione un niño',
+      allowClear: true,
+      width: '100%'
+    });
+  }
+
+  // Limpiar errores anteriores al enviar
+  $('#formObservacion').on('submit', function(e) {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
+  });
+
+  // Si hay errores de Django en el template, mostrarlos
+  {% if form.errors %}
+    let errores = [];
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        errores.push("{{ field }}: {{ error }}");
+      {% endfor %}
+    {% endfor %}
+    
+    if (errores.length > 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Errores en el formulario',
+        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  {% endif %}
+});
+</script>
+{% endblock scripts %}

@@ -1,6 +1,123 @@
 from django.db import models
 from django.utils import timezone
 
+class Dependencia(models.Model):
+    """Dependencias de gobierno"""
+    nombre = models.CharField(max_length=200, unique=True)
+    siglas = models.CharField(max_length=20, blank=True, null=True)
+    direccion = models.TextField(blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Dependencia"
+        verbose_name_plural = "Dependencias"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.siglas} - {self.nombre}" if self.siglas else self.nombre
+
+
+class Departamento(models.Model):
+    """Departamentos dentro de las dependencias"""
+    dependencia = models.ForeignKey(Dependencia, on_delete=models.CASCADE, related_name='departamentos')
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Departamento"
+        verbose_name_plural = "Departamentos"
+        ordering = ['dependencia', 'nombre']
+        unique_together = ['dependencia', 'nombre']
+    
+    def __str__(self):
+        return f"{self.dependencia.siglas or self.dependencia.nombre} - {self.nombre}"
+
+
+class Colonia(models.Model):
+    """Colonias por código postal (se llenan automáticamente vía API)"""
+    codigo_postal = models.CharField(max_length=5, db_index=True)
+    nombre = models.CharField(max_length=200)
+    municipio = models.CharField(max_length=200)
+    estado = models.CharField(max_length=100)
+    ciudad = models.CharField(max_length=200, blank=True, null=True)
+    tipo_asentamiento = models.CharField(max_length=50, blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Colonia"
+        verbose_name_plural = "Colonias"
+        ordering = ['codigo_postal', 'nombre']
+        unique_together = ['codigo_postal', 'nombre']
+    
+    def __str__(self):
+        return f"{self.nombre} - CP {self.codigo_postal}"
+
+
+# ⭐ NUEVO MODELO ⭐
+class ServicioMedico(models.Model):
+    """Servicios médicos disponibles (ISSSTE, IMSS, etc.)"""
+    nombre = models.CharField(max_length=100, unique=True)
+    siglas = models.CharField(max_length=20, blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Servicio Médico"
+        verbose_name_plural = "Servicios Médicos"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.siglas} - {self.nombre}" if self.siglas else self.nombre
+
+
+# ⭐ NUEVO MODELO ⭐
+class Grupo(models.Model):
+    """Grupos/Salones de la guardería"""
+    TIPO_GRUPO_CHOICES = [
+        ('LACTANTE', 'Lactante'),
+        ('MATERNAL', 'Maternal'),
+        ('PREESCOLAR', 'Preescolar'),
+    ]
+    
+    nombre = models.CharField(max_length=100, help_text="Ej: Grupo A, Sala 1")
+    tipo = models.CharField(max_length=20, choices=TIPO_GRUPO_CHOICES)
+    grado = models.CharField(max_length=50, help_text="Ej: 1er año, 2do año")
+    capacidad_maxima = models.PositiveIntegerField(default=20, help_text="Número máximo de niños")
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Grupo"
+        verbose_name_plural = "Grupos"
+        ordering = ['tipo', 'grado', 'nombre']
+        unique_together = ['nombre', 'tipo', 'grado']
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.grado} - {self.nombre}"
+    
+    def ninos_asignados(self):
+        """Retorna la cantidad de niños asignados"""
+        return self.ninos.filter(activo=True).count()
+    
+    def capacidad_disponible(self):
+        """Retorna cuántos lugares quedan disponibles"""
+        return self.capacidad_maxima - self.ninos_asignados()
+    
+    def esta_lleno(self):
+        """Verifica si el grupo está lleno"""
+        return self.ninos_asignados() >= self.capacidad_maxima
+    
+    def porcentaje_ocupacion(self):
+        """Retorna el porcentaje de ocupación"""
+        if self.capacidad_maxima == 0:
+            return 0
+        return round((self.ninos_asignados() / self.capacidad_maxima) * 100, 1)
+
+
 class Tutor(models.Model):
     """Modelo para padres/tutores autorizados a recoger niños"""
     # Información personal
@@ -12,7 +129,14 @@ class Tutor(models.Model):
     telefono = models.CharField(max_length=20)
     telefono_emergencia = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
-    direccion = models.TextField(blank=True, null=True)
+    
+    # Dirección
+    codigo_postal = models.CharField(max_length=5, blank=True, null=True)
+    colonia = models.ForeignKey(Colonia, on_delete=models.SET_NULL, null=True, blank=True)
+    calle = models.CharField(max_length=200, blank=True, null=True)
+    numero_exterior = models.CharField(max_length=20, blank=True, null=True)
+    numero_interior = models.CharField(max_length=20, blank=True, null=True)
+    referencias = models.TextField(blank=True, null=True, help_text="Referencias para llegar")
     
     # Identificación
     TIPO_ID_CHOICES = [
@@ -34,6 +158,39 @@ class Tutor(models.Model):
         ('OTRO', 'Otro'),
     ]
     parentesco = models.CharField(max_length=20, choices=PARENTESCO_CHOICES)
+    
+    # ⭐ NUEVOS CAMPOS - Servicio Médico ⭐
+    servicio_medico = models.ForeignKey(
+        ServicioMedico, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='tutores',
+        help_text="Servicio médico del tutor (ISSSTE, IMSS, etc.)"
+    )
+    numero_seguro_social = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Número de seguro social (NSS)"
+    )
+    
+    # Información laboral
+    es_trabajador = models.BooleanField(default=False, help_text="¿Es trabajador de gobierno?")
+    dependencia = models.ForeignKey(Dependencia, on_delete=models.SET_NULL, null=True, blank=True, 
+                                    related_name='trabajadores')
+    departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='trabajadores')
+    
+    ESTATUS_LABORAL_CHOICES = [
+        ('ALTA', 'Alta'),
+        ('BAJA', 'Baja'),
+    ]
+    estatus_laboral = models.CharField(max_length=10, choices=ESTATUS_LABORAL_CHOICES, 
+                                      blank=True, null=True)
+    numero_empleado = models.CharField(max_length=50, blank=True, null=True)
+    fecha_alta = models.DateField(blank=True, null=True)
+    fecha_baja = models.DateField(blank=True, null=True)
     
     # Datos biométricos
     huella_template = models.BinaryField(blank=True, null=True, help_text="Template biométrico de la huella")
@@ -59,6 +216,24 @@ class Tutor(models.Model):
     
     def nombre_completo(self):
         return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''}".strip()
+    
+    def direccion_completa(self):
+        """Retorna la dirección completa formateada"""
+        partes = []
+        if self.calle:
+            direccion = self.calle
+            if self.numero_exterior:
+                direccion += f" #{self.numero_exterior}"
+            if self.numero_interior:
+                direccion += f" Int. {self.numero_interior}"
+            partes.append(direccion)
+        
+        if self.colonia:
+            partes.append(f"Col. {self.colonia.nombre}")
+            partes.append(f"{self.colonia.municipio}, {self.colonia.estado}")
+            partes.append(f"CP {self.colonia.codigo_postal}")
+        
+        return ", ".join(partes) if partes else "Sin dirección"
 
 
 class Nino(models.Model):
@@ -79,9 +254,18 @@ class Nino(models.Model):
     alergias = models.TextField(blank=True, null=True)
     medicamentos = models.TextField(blank=True, null=True)
     tipo_sangre = models.CharField(max_length=5, blank=True, null=True, help_text="Ej: O+, A-, AB+")
-    grupo = models.CharField(max_length=50, blank=True, null=True, help_text="Grupo o salón")
-    activo = models.BooleanField(default=True)
     
+    # ⭐ MODIFICADO: grupo ahora es ForeignKey ⭐
+    grupo = models.ForeignKey(
+        Grupo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ninos',
+        help_text="Grupo al que pertenece el niño"
+    )
+    
+    activo = models.BooleanField(default=True)
     fecha_ingreso = models.DateField(auto_now_add=True)
     
     class Meta:
@@ -101,6 +285,82 @@ class Nino(models.Model):
         return today.year - self.fecha_nacimiento.year - (
             (today.month, today.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
         )
+
+
+# ⭐ NUEVO MODELO ⭐
+class ObservacionNino(models.Model):
+    """Observaciones diarias sobre los niños"""
+    TIPO_OBSERVACION_CHOICES = [
+        ('GENERAL', 'General'),
+        ('CONDUCTA', 'Conducta'),
+        ('SALUD', 'Salud'),
+        ('HIGIENE', 'Higiene'),
+        ('MATERIAL', 'Material/Uniforme'),
+        ('ALIMENTACION', 'Alimentación'),
+        ('ACADEMICO', 'Académico'),
+        ('OTRO', 'Otro'),
+    ]
+    
+    nino = models.ForeignKey(
+        Nino,
+        on_delete=models.CASCADE,
+        related_name='observaciones',
+        help_text="Niño al que se refiere la observación"
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_OBSERVACION_CHOICES,
+        default='GENERAL',
+        help_text="Tipo de observación"
+    )
+    descripcion = models.TextField(
+        help_text="Descripción detallada de la observación"
+    )
+    fecha = models.DateField(
+        default=timezone.now,
+        help_text="Fecha de la observación"
+    )
+    hora = models.TimeField(
+        auto_now_add=True,
+        help_text="Hora de registro"
+    )
+    registrado_por = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='observaciones_registradas',
+        help_text="Usuario que registró la observación"
+    )
+    importante = models.BooleanField(
+        default=False,
+        help_text="Marcar si requiere atención especial"
+    )
+    notificar_tutor = models.BooleanField(
+        default=False,
+        help_text="Si se debe notificar al tutor"
+    )
+    notificado = models.BooleanField(
+        default=False,
+        help_text="Si ya se notificó al tutor"
+    )
+    fecha_notificacion = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Fecha y hora en que se notificó"
+    )
+    
+    class Meta:
+        verbose_name = "Observación"
+        verbose_name_plural = "Observaciones"
+        ordering = ['-fecha', '-hora']
+        indexes = [
+            models.Index(fields=['nino', '-fecha']),
+            models.Index(fields=['fecha', 'importante']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.nino.nombre_completo()} - {self.fecha}"
 
 
 class RegistroAcceso(models.Model):

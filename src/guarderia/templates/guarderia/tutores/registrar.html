@@ -24,8 +24,7 @@
 <section class="content">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-8 offset-md-2">
-        <!-- Mostrar mensajes de Django -->
+      <div class="col-md-10 offset-md-1">
         {% if messages %}
           {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -45,6 +44,7 @@
             {% csrf_token %}
             <div class="card-body">
               <!-- Información Personal -->
+              <h5 class="mb-3"><i class="fas fa-user"></i> Datos Personales</h5>
               <div class="row">
                 <div class="col-md-4">
                   <div class="form-group">
@@ -76,6 +76,7 @@
               </div>
 
               <!-- Contacto -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-phone"></i> Información de Contacto</h5>
               <div class="row">
                 <div class="col-md-4">
                   <div class="form-group">
@@ -107,13 +108,60 @@
               </div>
 
               <!-- Dirección -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-map-marker-alt"></i> Dirección</h5>
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Código Postal *</label>
+                    {{ form.codigo_postal }}
+                    <span class="text-danger error-codigo_postal"></span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Colonia *</label>
+                    {{ form.colonia }}
+                    <span class="text-danger error-colonia"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>Buscar Colonia</label>
+                    {{ form.buscar_colonia }}
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Calle *</label>
+                    {{ form.calle }}
+                    <span class="text-danger error-calle"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>No. Exterior *</label>
+                    {{ form.numero_exterior }}
+                    <span class="text-danger error-numero_exterior"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>No. Interior</label>
+                    {{ form.numero_interior }}
+                    <span class="text-danger error-numero_interior"></span>
+                  </div>
+                </div>
+              </div>
               <div class="form-group">
-                <label>Dirección</label>
-                {{ form.direccion }}
-                <span class="text-danger error-direccion"></span>
+                <label>Referencias</label>
+                {{ form.referencias }}
+                <span class="text-danger error-referencias"></span>
               </div>
 
               <!-- Identificación -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-id-card"></i> Identificación</h5>
               <div class="row">
                 <div class="col-md-6">
                   <div class="form-group">
@@ -138,8 +186,19 @@
               </div>
 
               <!-- Parentesco -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-users"></i> Relación con el Niño</h5>
               <div class="form-group">
-                <label>Parentesco con el niño *</label>
+                <label>Parentesco *</label>
+                {{ form.parentesco }}
+                <span class="text-danger error-parentesco"></span>
+                {% if form.parentesco.errors %}
+                  <span class="text-danger">{{ form.parentesco.errors.0 }}</span>
+                {% endif %}
+              </div>
+                            <!-- Parentesco y Servicio Médico -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-users"></i> Relación con el Niño</h5>
+              <div class="form-group">
+                <label>Parentesco *</label>
                 {{ form.parentesco }}
                 <span class="text-danger error-parentesco"></span>
                 {% if form.parentesco.errors %}
@@ -147,9 +206,93 @@
                 {% endif %}
               </div>
 
-              <!-- Notas -->
+              <!-- Información Médica -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-heartbeat"></i> Información de Servicio Médico</h5>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Servicio Médico</label>
+                    {{ form.servicio_medico }}
+                    <span class="text-danger error-servicio_medico"></span>
+                    <small class="form-text text-muted">Seleccione el servicio médico (IMSS, ISSSTE, etc.)</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Número de Seguro Social (NSS)</label>
+                    {{ form.numero_seguro_social }}
+                    <span class="text-danger error-numero_seguro_social"></span>
+                    <small class="form-text text-muted">Número de afiliación al servicio médico</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información Laboral -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-briefcase"></i> Información Laboral</h5>
               <div class="form-group">
-                <label>Notas Adicionales</label>
+                <div class="form-check">
+                  {{ form.es_trabajador }}
+                  <label class="form-check-label" for="id_es_trabajador" style="cursor: pointer; padding-left: 10px;">
+                    ¿Es trabajador de alguna dependencia?
+                  </label>
+                </div>
+              </div>
+
+              <div id="campos-laborales" style="display: none;">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Dependencia *</label>
+                      {{ form.dependencia }}
+                      <span class="text-danger error-dependencia"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Departamento</label>
+                      {{ form.departamento }}
+                      <span class="text-danger error-departamento"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <label>Estatus Laboral *</label>
+                      {{ form.estatus_laboral }}
+                      <span class="text-danger error-estatus_laboral"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <label>Número de Empleado</label>
+                      {{ form.numero_empleado }}
+                      <span class="text-danger error-numero_empleado"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Fecha de Alta</label>
+                      {{ form.fecha_alta }}
+                      <span class="text-danger error-fecha_alta"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Fecha de Baja</label>
+                      {{ form.fecha_baja }}
+                      <span class="text-danger error-fecha_baja"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notas -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-sticky-note"></i> Notas Adicionales</h5>
+              <div class="form-group">
+                <label>Observaciones</label>
                 {{ form.notas }}
                 <span class="text-danger error-notas"></span>
               </div>
@@ -176,61 +319,135 @@
 </section>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 $(document).ready(function() {
-  // El formulario ya se enviará por AJAX gracias a alertas.js
-  // Solo necesitamos personalizar el comportamiento del éxito/error
-  
-  // Guardar el handler original de alertas.js si existe
-  const formOriginal = $('#formTutor');
-  
-  // Limpiar errores anteriores al enviar
+  // ========================================
+  // TOGGLE CAMPOS LABORALES
+  // ========================================
+  function toggleCamposLaborales() {
+    const esTrabajador = $('#id_es_trabajador').is(':checked');
+    const camposLaborales = $('#campos-laborales');
+    
+    if (esTrabajador) {
+      camposLaborales.slideDown();
+      $('#id_dependencia').prop('disabled', false);
+      $('#id_departamento').prop('disabled', false);
+      $('#id_estatus_laboral').prop('disabled', false);
+      $('#id_numero_empleado').prop('disabled', false);
+      $('#id_fecha_alta').prop('disabled', false);
+      $('#id_fecha_baja').prop('disabled', false);
+    } else {
+      camposLaborales.slideUp();
+      $('#id_dependencia').prop('disabled', true);
+      $('#id_departamento').prop('disabled', true);
+      $('#id_estatus_laboral').prop('disabled', true);
+      $('#id_numero_empleado').prop('disabled', true);
+      $('#id_fecha_alta').prop('disabled', true);
+      $('#id_fecha_baja').prop('disabled', true);
+    }
+  }
+
+  // Ejecutar al cargar y al cambiar
+  toggleCamposLaborales();
+  $('#id_es_trabajador').on('change', toggleCamposLaborales);
+
+  // ========================================
+  // CARGAR DEPARTAMENTOS SEGÚN DEPENDENCIA
+  // ========================================
+  $('#id_dependencia').on('change', function() {
+    const dependenciaId = $(this).val();
+    const departamentoSelect = $('#id_departamento');
+    
+    if (dependenciaId) {
+      $.ajax({
+        url: '/guarderia/api/departamentos/',
+        data: { dependencia_id: dependenciaId },
+        success: function(data) {
+          departamentoSelect.empty();
+          departamentoSelect.append('<option value="">Seleccione un departamento</option>');
+          
+          data.departamentos.forEach(function(dept) {
+            departamentoSelect.append(
+              `<option value="${dept.id}">${dept.nombre}</option>`
+            );
+          });
+        }
+      });
+    } else {
+      departamentoSelect.empty();
+      departamentoSelect.append('<option value="">Seleccione primero una dependencia</option>');
+    }
+  });
+
+  // ========================================
+  // BÚSQUEDA DE COLONIAS POR CÓDIGO POSTAL
+  // ========================================
+  $('#id_codigo_postal').on('blur', function() {
+    const cp = $(this).val().trim();
+    const coloniaSelect = $('#id_colonia');
+    const buscarInput = $('[name="buscar_colonia"]');
+    
+    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
+      coloniaSelect.html('<option>Buscando colonias...</option>');
+      coloniaSelect.prop('disabled', true);
+      
+      $.ajax({
+        url: '/guarderia/api/colonias/buscar/',
+        data: { cp: cp },
+        success: function(data) {
+          coloniaSelect.empty();
+          coloniaSelect.append('<option value="">Seleccione una colonia</option>');
+          
+          if (data.success && data.colonias.length > 0) {
+            data.colonias.forEach(function(col) {
+              coloniaSelect.append(
+                `<option value="${col.id}">${col.nombre} - ${col.municipio}, ${col.estado}</option>`
+              );
+            });
+            coloniaSelect.prop('disabled', false);
+            buscarInput.prop('disabled', false);
+          } else {
+            coloniaSelect.append('<option value="">No se encontraron colonias</option>');
+          }
+        },
+        error: function() {
+          coloniaSelect.html('<option value="">Error al buscar colonias</option>');
+        }
+      });
+    } else {
+      coloniaSelect.html('<option value="">Ingrese un código postal válido</option>');
+      coloniaSelect.prop('disabled', true);
+      buscarInput.prop('disabled', true);
+    }
+  });
+
+  // Búsqueda dinámica de colonias
+  $('[name="buscar_colonia"]').on('input', function() {
+    const busqueda = $(this).val().toLowerCase();
+    const coloniaSelect = $('#id_colonia');
+    
+    coloniaSelect.find('option').each(function() {
+      if ($(this).val() === '') return;
+      
+      const texto = $(this).text().toLowerCase();
+      if (texto.includes(busqueda)) {
+        $(this).show();
+      } else {
+        $(this).hide();
+      }
+    });
+  });
+
+  // ========================================
+  // VALIDACIÓN Y ENVÍO DEL FORMULARIO
+  // ========================================
   $('#formTutor').on('submit', function() {
     $('.text-danger[class^="error-"]').text('');
     $('.form-control').removeClass('is-invalid');
   });
 
-  // Este código se ejecutará cuando alertas.js complete la petición
-  // Interceptar la respuesta exitosa
-  $(document).ajaxComplete(function(event, xhr, settings) {
-    // Verificar si es nuestra petición
-    if (settings.url && settings.url.includes('registrar')) {
-      try {
-        const response = JSON.parse(xhr.responseText);
-        
-        if (response.success && response.redirect_url) {
-          // Redirigir a la URL proporcionada
-          Swal.fire({
-            icon: 'success',
-            title: '¡Éxito!',
-            text: response.message,
-            timer: 2000,
-            showConfirmButton: false
-          }).then(() => {
-            window.location.href = response.redirect_url;
-          });
-        } else if (!response.success && response.errors) {
-          // Mostrar errores en los campos
-          for (let field in response.errors) {
-            $(`.error-${field}`).text(response.errors[field].join(', '));
-            $(`#id_${field}`).addClass('is-invalid');
-          }
-          
-          Swal.fire({
-            icon: 'error',
-            title: 'Error en el formulario',
-            text: response.message,
-            confirmButtonText: 'Entendido'
-          });
-        }
-      } catch (e) {
-        console.log('No es JSON o no es nuestra petición');
-      }
-    }
-  });
-
-  // Si hay errores de Django en el template, mostrarlos
+  // Mostrar errores del servidor
   {% if form.errors %}
     let errores = [];
     {% for field, errors in form.errors.items %}
@@ -250,4 +467,4 @@ $(document).ready(function() {
   {% endif %}
 });
 </script>
-{% endblock %}
+{% endblock scripts %}

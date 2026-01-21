@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Servicio Médico{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Editar Servicio Médico</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_servicios_medicos' %}">Servicios Médicos</a></li>
+          <li class="breadcrumb-item active">Editar</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <!-- Mostrar mensajes de Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-hospital"></i> Editando: {{ servicio.nombre }}
+            </h3>
+          </div>
+          <form method="post" id="formServicioMedico">
+            {% csrf_token %}
+            <div class="card-body">
+              <div class="form-group">
+                <label>Nombre del Servicio Médico *</label>
+                {{ form.nombre }}
+                <span class="text-danger error-nombre"></span>
+                {% if form.nombre.errors %}
+                  <span class="text-danger">{{ form.nombre.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label>Siglas</label>
+                {{ form.siglas }}
+                <span class="text-danger error-siglas"></span>
+                {% if form.siglas.errors %}
+                  <span class="text-danger">{{ form.siglas.errors.0 }}</span>
+                {% endif %}
+                <small class="form-text text-muted">
+                  Abreviatura del servicio médico (Ej: IMSS, ISSSTE)
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label>Descripción</label>
+                {{ form.descripcion }}
+                <span class="text-danger error-descripcion"></span>
+                {% if form.descripcion.errors %}
+                  <span class="text-danger">{{ form.descripcion.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button type="submit" class="btn btn-primary" id="btnGuardar">
+                <i class="fas fa-save"></i> Actualizar Servicio Médico
+              </button>
+              <a href="{% url 'guarderia:lista_servicios_medicos' %}" class="btn btn-default">
+                <i class="fas fa-arrow-left"></i> Volver
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Limpiar errores anteriores al enviar
+  $('#formServicioMedico').on('submit', function(e) {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
+  });
+
+  // Si hay errores de Django en el template, mostrarlos
+  {% if form.errors %}
+    let errores = [];
+    {% for field, errors in form.errors.items %}
+      {% for error in errors %}
+        errores.push("{{ field }}: {{ error }}");
+      {% endfor %}
+    {% endfor %}
+    
+    if (errores.length > 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Errores en el formulario',
+        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        confirmButtonText: 'Entendido'
+      });
+    }
+  {% endif %}
+});
+</script>
+{% endblock scripts %}

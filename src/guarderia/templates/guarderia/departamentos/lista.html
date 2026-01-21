@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Departamentos{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Departamentos</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Departamentos</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Lista de Departamentos</h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_departamento' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Departamento
+              </a>
+            </div>
+          </div>
+          <div class="card-body table-responsive p-0">
+            <table class="table table-hover text-nowrap">
+              <thead>
+                <tr>
+                  <th>Dependencia</th>
+                  <th>Nombre</th>
+                  <th>Descripción</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for departamento in departamentos %}
+                <tr>
+                  <td>{{ departamento.dependencia }}</td>
+                  <td>{{ departamento.nombre }}</td>
+                  <td>{{ departamento.descripcion|truncatewords:10 }}</td>
+                  <td>
+                    <a href="{% url 'guarderia:editar_departamento' departamento.id %}" class="btn btn-sm btn-warning">
+                      <i class="fas fa-edit"></i> Editar
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center">No hay departamentos registrados</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

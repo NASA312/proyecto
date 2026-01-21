@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Guardería{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Dashboard de Guardería</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Dashboard</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    
+    <!-- ========== TARJETAS DE ESTADÍSTICAS ========== -->
+    <div class="row">
+      <!-- Total Niños -->
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+          <div class="inner">
+            <h3>{{ total_ninos }}</h3>
+            <p>Niños Activos</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-child"></i>
+          </div>
+          <a href="{% url 'guarderia:lista_ninos' %}" class="small-box-footer">
+            Ver más <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Total Tutores -->
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+          <div class="inner">
+            <h3>{{ total_tutores }}</h3>
+            <p>Tutores Registrados</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-user-friends"></i>
+          </div>
+          <a href="{% url 'guarderia:lista_tutores' %}" class="small-box-footer">
+            Ver más <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Niños Presentes Hoy -->
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+          <div class="inner">
+            <h3>{{ ninos_presentes }}</h3>
+            <p>Niños Presentes Hoy</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <a href="{% url 'guarderia:historial_accesos' %}" class="small-box-footer">
+            Ver registros <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Huellas Registradas -->
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+          <div class="inner">
+            <h3>{{ porcentaje_huellas }}%</h3>
+            <p>Huellas Registradas ({{ tutores_con_huella }}/{{ total_tutores }})</p>
+          </div>
+          <div class="icon">
+            <i class="fas fa-fingerprint"></i>
+          </div>
+          <a href="{% url 'guarderia:lista_tutores' %}" class="small-box-footer">
+            Ver tutores <i class="fas fa-arrow-circle-right"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ALERTAS ========== -->
+    {% if tutores_sin_huella > 0 or ninos_sin_grupo > 0 or observaciones_pendientes > 0 %}
+    <div class="row">
+      <div class="col-12">
+        {% if tutores_sin_huella > 0 %}
+        <div class="alert alert-warning alert-dismissible">
+          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+          <h5><i class="icon fas fa-exclamation-triangle"></i> Atención!</h5>
+          Hay {{ tutores_sin_huella }} tutor(es) sin huella dactilar registrada.
+          <a href="{% url 'guarderia:lista_tutores' %}" class="alert-link">Ver tutores</a>
+        </div>
+        {% endif %}
+
+        {% if ninos_sin_grupo > 0 %}
+        <div class="alert alert-info alert-dismissible">
+          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+          <h5><i class="icon fas fa-info-circle"></i> Información</h5>
+          Hay {{ ninos_sin_grupo }} niño(s) sin grupo asignado.
+          <a href="{% url 'guarderia:lista_ninos' %}" class="alert-link">Ver niños</a>
+        </div>
+        {% endif %}
+
+        {% if observaciones_pendientes > 0 %}
+        <div class="alert alert-danger alert-dismissible">
+          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+          <h5><i class="icon fas fa-bell"></i> Urgente!</h5>
+          Hay {{ observaciones_pendientes }} observación(es) importante(s) pendiente(s) de notificar.
+          <a href="{% url 'guarderia:lista_observaciones' %}?importantes=1" class="alert-link">Ver observaciones</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ========== FILA PRINCIPAL ========== -->
+    <div class="row">
+      
+      <!-- Gráfica de Registros de la Semana -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header border-0">
+            <div class="d-flex justify-content-between">
+              <h3 class="card-title">Registros de Entrada/Salida - Últimos 7 Días</h3>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="graficoRegistros" style="height: 300px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribución por Edad -->
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header border-0">
+            <h3 class="card-title">Distribución por Edad</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="graficoEdades" style="height: 300px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== SEGUNDA FILA ========== -->
+    <div class="row">
+      
+      <!-- Últimos Registros de Acceso -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-clock"></i> Últimos Registros de Acceso
+            </h3>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Niño</th>
+                    <th>Tutor</th>
+                    <th>Tipo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for registro in ultimos_registros %}
+                  <tr>
+                    <td>{{ registro.fecha_hora|date:"H:i" }}</td>
+                    <td>{{ registro.nino.nombre_completo }}</td>
+                    <td>{{ registro.tutor.nombre_completo }}</td>
+                    <td>
+                      {% if registro.tipo == 'ENTRADA' %}
+                        <span class="badge badge-success">Entrada</span>
+                      {% else %}
+                        <span class="badge badge-warning">Salida</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No hay registros recientes</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer text-center">
+            <a href="{% url 'guarderia:historial_accesos' %}" class="btn btn-sm btn-primary">
+              Ver Historial Completo
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observaciones Recientes -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-clipboard-list"></i> Observaciones Recientes
+            </h3>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Niño</th>
+                    <th>Tipo</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for obs in observaciones_recientes %}
+                  <tr>
+                    <td>{{ obs.fecha|date:"d/m" }}</td>
+                    <td>
+                      {{ obs.nino.nombre }} {{ obs.nino.apellido_paterno }}
+                      {% if obs.importante %}
+                        <i class="fas fa-exclamation-circle text-danger" title="Importante"></i>
+                      {% endif %}
+                    </td>
+                    <td><span class="badge badge-info">{{ obs.get_tipo_display }}</span></td>
+                    <td>{{ obs.descripcion|truncatewords:8 }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No hay observaciones recientes</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer text-center">
+            <a href="{% url 'guarderia:lista_observaciones' %}" class="btn btn-sm btn-primary">
+              Ver Todas las Observaciones
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== TERCERA FILA ========== -->
+    <div class="row">
+      
+      <!-- Ocupación por Grupo -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-users"></i> Ocupación por Grupo
+            </h3>
+          </div>
+          <div class="card-body">
+            {% for grupo in grupos_stats %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span><strong>{{ grupo.nombre }}</strong> - {{ grupo.tipo }}</span>
+                <span class="text-muted">{{ grupo.total }}/{{ grupo.capacidad }} niños ({{ grupo.porcentaje }}%)</span>
+              </div>
+              <div class="progress">
+                {% if grupo.porcentaje < 50 %}
+                  <div class="progress-bar bg-success" role="progressbar" style="width: {{ grupo.porcentaje }}%" aria-valuenow="{{ grupo.porcentaje }}" aria-valuemin="0" aria-valuemax="100"></div>
+                {% elif grupo.porcentaje < 80 %}
+                  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ grupo.porcentaje }}%" aria-valuenow="{{ grupo.porcentaje }}" aria-valuemin="0" aria-valuemax="100"></div>
+                {% else %}
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: {{ grupo.porcentaje }}%" aria-valuenow="{{ grupo.porcentaje }}" aria-valuemin="0" aria-valuemax="100"></div>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <p class="text-center text-muted">No hay grupos registrados</p>
+            {% endfor %}
+          </div>
+          <div class="card-footer text-center">
+            <a href="{% url 'guarderia:lista_grupos' %}" class="btn btn-sm btn-primary">
+              Ver Todos los Grupos
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tutores por Dependencia -->
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-building"></i> Top Dependencias
+            </h3>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-sm">
+              <tbody>
+                {% for dep in tutores_por_dependencia %}
+                <tr>
+                  <td>{{ dep.siglas|default:dep.nombre|truncatewords:3 }}</td>
+                  <td class="text-right">
+                    <span class="badge badge-primary badge-pill">{{ dep.total_tutores }}</span>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center text-muted">No hay datos</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="card-footer text-center">
+            <a href="{% url 'guarderia:lista_dependencias' %}" class="btn btn-sm btn-primary">
+              Ver Todas las Dependencias
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+$(document).ready(function() {
+  
+  // ========== DATOS PARA LAS GRÁFICAS ==========
+  const registrosSemana = {{ registros_semana|safe }};
+  const fechas = registrosSemana.map(r => r.fecha);
+  const entradas = registrosSemana.map(r => r.entradas);
+  const salidas = registrosSemana.map(r => r.salidas);
+  
+  // ========== GRÁFICO DE REGISTROS SEMANALES ==========
+  const ctxRegistros = document.getElementById('graficoRegistros').getContext('2d');
+  new Chart(ctxRegistros, {
+    type: 'line',
+    data: {
+      labels: fechas,
+      datasets: [
+        {
+          label: 'Entradas',
+          data: entradas,
+          borderColor: 'rgb(40, 167, 69)',
+          backgroundColor: 'rgba(40, 167, 69, 0.1)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Salidas',
+          data: salidas,
+          borderColor: 'rgb(255, 193, 7)',
+          backgroundColor: 'rgba(255, 193, 7, 0.1)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      }
+    }
+  });
+
+  // ========== GRÁFICO DE EDADES ==========
+  const ctxEdades = document.getElementById('graficoEdades').getContext('2d');
+  new Chart(ctxEdades, {
+    type: 'doughnut',
+    data: {
+      labels: ['Lactantes (0-1 año)', 'Maternales (1-3 años)', 'Preescolares (3-6 años)'],
+      datasets: [{
+        data: [{{ lactantes }}, {{ maternales }}, {{ preescolares }}],
+        backgroundColor: [
+          'rgb(255, 99, 132)',
+          'rgb(54, 162, 235)',
+          'rgb(255, 205, 86)'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom'
+        }
+      }
+    }
+  });
+
+});
+</script>
+{% endblock %}
