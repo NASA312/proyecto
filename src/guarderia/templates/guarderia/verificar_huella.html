@@ -60,7 +60,7 @@
                 <p><i class="fas fa-phone"></i> <span id="tutor-telefono"></span></p>
               </div>
               <div class="col-md-8">
-                <h5 class="mb-3"><i class="fas fa-child"></i> Seleccione al niño a recoger:</h5>
+                <h5 class="mb-3"><i class="fas fa-child"></i> Seleccione el niño:</h5>
                 <div id="lista-ninos"></div>
               </div>
             </div>
@@ -99,6 +99,7 @@
 let verificando = false;
 let intervalPolling = null;
 let tutorActualId = null;
+let ninosEstados = {}; // Guardar estados de los niños
 
 // Iniciar verificación automáticamente al cargar
 document.addEventListener('DOMContentLoaded', function() {
@@ -127,7 +128,6 @@ function iniciarVerificacion() {
   .then(data => {
     console.log('Respuesta inicio:', data);
     if (data.success) {
-      // Iniciar polling para verificar estado
       iniciarPolling();
     } else {
       mostrarError(data.mensaje || 'Error al iniciar captura');
@@ -141,12 +141,11 @@ function iniciarVerificacion() {
 
 function iniciarPolling() {
   let intentos = 0;
-  const maxIntentos = 30; // 30 segundos máximo
+  const maxIntentos = 30;
   
   intervalPolling = setInterval(function() {
     intentos++;
     
-    // Actualizar mensaje
     const puntos = '.'.repeat((intentos % 3) + 1);
     document.getElementById('mensaje-estado').textContent = `Procesando${puntos}`;
     document.getElementById('barra-progreso').textContent = `Procesando (${intentos}s)`;
@@ -157,7 +156,6 @@ function iniciarPolling() {
       return;
     }
     
-    // Consultar estado
     fetch("{% url 'guarderia:verificar_huella_estado' %}")
       .then(response => response.json())
       .then(data => {
@@ -177,7 +175,7 @@ function iniciarPolling() {
         console.error('Error en polling:', error);
       });
       
-  }, 1000); // Cada segundo
+  }, 1000);
 }
 
 function mostrarTutorVerificado(data) {
@@ -187,12 +185,10 @@ function mostrarTutorVerificado(data) {
   document.getElementById('card-error').style.display = 'none';
   document.getElementById('card-verificado').style.display = 'block';
 
-  // Mostrar datos del tutor
   document.getElementById('tutor-nombre').textContent = data.tutor.nombre;
   document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
   document.getElementById('tutor-telefono').textContent = data.tutor.telefono;
   
-  // Mostrar foto si existe
   if (data.tutor.foto_url) {
     document.getElementById('tutor-foto').src = data.tutor.foto_url;
     document.getElementById('tutor-foto').style.display = 'block';
@@ -204,34 +200,23 @@ function mostrarTutorVerificado(data) {
   
   tutorActualId = data.tutor.id;
 
-  // Mostrar lista de niños
+  // Mostrar lista de niños CON ESTADO
   let listaNinos = document.getElementById('lista-ninos');
-  listaNinos.innerHTML = '';
+  listaNinos.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Cargando niños...</div>';
 
   if (data.ninos && data.ninos.length > 0) {
-    data.ninos.forEach(nino => {
-      let fotoHtml = nino.foto_url 
-        ? `<img src="${nino.foto_url}" class="rounded-circle mr-2" style="width: 40px; height: 40px; object-fit: cover;">` 
-        : '<i class="fas fa-child fa-2x text-muted mr-2"></i>';
-      
-      let card = `
-        <div class="card mb-2">
-          <div class="card-body d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-              ${fotoHtml}
-              <div>
-                <h6 class="mb-0">${nino.nombre}</h6>
-                <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
-              </div>
-            </div>
-            <button class="btn btn-success" onclick="registrarSalida(${nino.id})">
-              <i class="fas fa-sign-out-alt"></i> Registrar Salida
-            </button>
-          </div>
-        </div>
-      `;
-      listaNinos.innerHTML += card;
-    });
+    // Obtener estado de cada niño
+    Promise.all(data.ninos.map(nino => obtenerEstadoNino(nino.id)))
+      .then(estados => {
+        listaNinos.innerHTML = '';
+        
+        data.ninos.forEach((nino, index) => {
+          const estado = estados[index];
+          ninosEstados[nino.id] = estado.estado;
+          
+          mostrarTarjetaNino(nino, estado.estado);
+        });
+      });
   } else {
     listaNinos.innerHTML = '<div class="alert alert-warning">No hay niños asignados a este tutor</div>';
   }
@@ -239,47 +224,100 @@ function mostrarTutorVerificado(data) {
   verificando = false;
 }
 
-function mostrarError(mensaje) {
-  console.log('❌ Error:', mensaje);
-  
-  document.getElementById('card-inicial').style.display = 'none';
-  document.getElementById('card-verificado').style.display = 'none';
-  document.getElementById('card-error').style.display = 'block';
-  document.getElementById('mensaje-error').textContent = mensaje;
-  
-  verificando = false;
-  
-  // Reiniciar automáticamente después de 5 segundos
-  setTimeout(function() {
-    reiniciar();
-  }, 5000);
+function obtenerEstadoNino(ninoId) {
+  return fetch(`/guarderia/api/nino/${ninoId}/estado/`)
+    .then(response => response.json())
+    .catch(error => {
+      console.error('Error obteniendo estado:', error);
+      return { estado: 'DESCONOCIDO' };
+    });
 }
 
-function registrarSalida(ninoId) {
-  if (!tutorActualId) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'No se pudo identificar al tutor'
-    });
-    return;
+function mostrarTarjetaNino(nino, estado) {
+  let fotoHtml = nino.foto_url 
+    ? `<img src="${nino.foto_url}" class="rounded-circle mr-2" style="width: 50px; height: 50px; object-fit: cover;">` 
+    : '<i class="fas fa-child fa-2x text-muted mr-2"></i>';
+  
+  let badgeEstado = '';
+  let botonesAccion = '';
+  
+  if (estado === 'DENTRO') {
+    badgeEstado = '<span class="badge badge-success"><i class="fas fa-check-circle"></i> DENTRO</span>';
+    botonesAccion = `
+      <button class="btn btn-info" onclick="registrarAccion(${nino.id}, 'SALIDA')">
+        <i class="fas fa-sign-out-alt"></i> Registrar Salida
+      </button>
+    `;
+  } else if (estado === 'FUERA' || estado === 'SIN_REGISTROS') {
+    badgeEstado = '<span class="badge badge-secondary"><i class="fas fa-times-circle"></i> FUERA</span>';
+    botonesAccion = `
+      <button class="btn btn-success" onclick="registrarAccion(${nino.id}, 'ENTRADA')">
+        <i class="fas fa-sign-in-alt"></i> Registrar Entrada
+      </button>
+    `;
+  } else {
+    badgeEstado = '<span class="badge badge-warning">Estado Desconocido</span>';
+    botonesAccion = `
+      <button class="btn btn-success mr-1" onclick="registrarAccion(${nino.id}, 'ENTRADA')">
+        <i class="fas fa-sign-in-alt"></i> Entrada
+      </button>
+      <button class="btn btn-info" onclick="registrarAccion(${nino.id}, 'SALIDA')">
+        <i class="fas fa-sign-out-alt"></i> Salida
+      </button>
+    `;
   }
   
-  // Confirmar
+  let card = `
+    <div class="card mb-2" id="card-nino-${nino.id}">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-md-2 text-center">
+            ${fotoHtml}
+          </div>
+          <div class="col-md-5">
+            <h6 class="mb-0">${nino.nombre}</h6>
+            <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
+            <br>${badgeEstado}
+          </div>
+          <div class="col-md-5 text-right">
+            ${botonesAccion}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('lista-ninos').insertAdjacentHTML('beforeend', card);
+}
+
+function registrarAccion(ninoId, tipoAccion) {
+  const botonCard = document.querySelector(`#card-nino-${ninoId} button`);
+  
   Swal.fire({
-    title: '¿Registrar Salida?',
-    text: '¿Está seguro de registrar esta salida?',
+    title: `¿Registrar ${tipoAccion}?`,
+    html: `
+      <p>¿Desea agregar alguna observación?</p>
+      <textarea id="swal-observaciones" class="swal2-input" placeholder="Observaciones (opcional)" style="height: 80px;"></textarea>
+    `,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'Sí, registrar',
-    cancelButtonText: 'Cancelar'
+    confirmButtonText: `Sí, registrar ${tipoAccion.toLowerCase()}`,
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      return document.getElementById('swal-observaciones').value;
+    }
   }).then((result) => {
     if (result.isConfirmed) {
-      // Deshabilitar botón
-      event.target.disabled = true;
-      event.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+      const observaciones = result.value || '';
       
-      fetch("{% url 'guarderia:registrar_salida' %}", {
+      botonCard.disabled = true;
+      botonCard.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+      
+      const url = tipoAccion === 'ENTRADA' 
+        ? "{% url 'guarderia:registrar_entrada' %}" 
+        : "{% url 'guarderia:registrar_salida' %}";
+      
+      fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +325,8 @@ function registrarSalida(ninoId) {
         },
         body: JSON.stringify({
           nino_id: ninoId,
-          tutor_id: tutorActualId
+          tutor_id: tutorActualId,
+          observaciones: observaciones
         })
       })
       .then(response => response.json())
@@ -295,7 +334,7 @@ function registrarSalida(ninoId) {
         if (data.success) {
           Swal.fire({
             icon: 'success',
-            title: '¡Salida Registrada!',
+            title: `¡${tipoAccion} Registrada!`,
             text: data.mensaje,
             timer: 3000,
             showConfirmButton: false
@@ -308,8 +347,10 @@ function registrarSalida(ninoId) {
             title: 'Error',
             text: data.mensaje
           });
-          event.target.disabled = false;
-          event.target.innerHTML = '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
+          botonCard.disabled = false;
+          botonCard.innerHTML = tipoAccion === 'ENTRADA' 
+            ? '<i class="fas fa-sign-in-alt"></i> Registrar Entrada'
+            : '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
         }
       })
       .catch(error => {
@@ -317,43 +358,52 @@ function registrarSalida(ninoId) {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'No se pudo registrar la salida'
+          text: 'No se pudo registrar la acción'
         });
-        event.target.disabled = false;
-        event.target.innerHTML = '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
+        botonCard.disabled = false;
       });
     }
   });
 }
 
+function mostrarError(mensaje) {
+  console.log('❌ Error:', mensaje);
+  
+  document.getElementById('card-inicial').style.display = 'none';
+  document.getElementById('card-verificado').style.display = 'none';
+  document.getElementById('card-error').style.display = 'block';
+  document.getElementById('mensaje-error').textContent = mensaje;
+  
+  verificando = false;
+  
+  setTimeout(function() {
+    reiniciar();
+  }, 5000);
+}
+
 function reiniciar() {
   console.log('🔄 Reiniciando...');
   
-  // Limpiar polling si existe
   if (intervalPolling) {
     clearInterval(intervalPolling);
     intervalPolling = null;
   }
   
-  // Resetear variables
   verificando = false;
   tutorActualId = null;
+  ninosEstados = {};
   
-  // Mostrar card inicial
   document.getElementById('card-inicial').style.display = 'block';
   document.getElementById('card-verificado').style.display = 'none';
   document.getElementById('card-error').style.display = 'none';
   
-  // Resetear mensajes
   document.getElementById('mensaje-estado').textContent = 'Esperando lectura de huella...';
   document.getElementById('barra-progreso').textContent = 'Escaneando...';
   document.getElementById('icono-mano').className = 'fas fa-hand-paper fa-5x text-primary';
   
-  // Iniciar nueva verificación después de 2 segundos
   setTimeout(iniciarVerificacion, 2000);
 }
 </script>
 
-<!-- SweetAlert2 para alertas bonitas -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock scripts %}
