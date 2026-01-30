@@ -41,6 +41,8 @@ urlpatterns = [
     # =====================================
     path('registros/historial/', views.historial_accesos, name='historial_accesos'),
     path('registros/salida/', views.registrar_salida, name='registrar_salida'),
+    path('registrar-entrada/', views.registrar_entrada, name='registrar_entrada'),
+
 
     # =====================================
     # APIs HUELLAS

@@ -330,42 +330,237 @@ def historial_accesos(request):
     ctx = {'registros': registros}
     return render(request, 'guarderia/registros/historial.html', ctx)
 
-@csrf_exempt
-def registrar_salida(request):
-    """Registrar salida después de verificar huella"""
+# Agregar esta nueva función en views.py
+
+@csrf_exempt  
+def registrar_entrada(request):
+    """Registrar entrada de un niño"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             nino_id = data.get('nino_id')
             tutor_id = data.get('tutor_id')
+            observaciones = data.get('observaciones', '').strip()
             
-            if nino_id and tutor_id:
-                nino = Nino.objects.get(id=nino_id)
-                tutor = Tutor.objects.get(id=tutor_id)
+            if not nino_id or not tutor_id:
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': 'Faltan datos'
+                }, status=400)
+            
+            nino = Nino.objects.get(id=nino_id, activo=True)
+            tutor = Tutor.objects.get(id=tutor_id, activo=True)
+            
+            # Verificar autorización
+            if tutor not in nino.tutores.all():
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': f'{tutor.nombre_completo()} no está autorizado para este niño'
+                }, status=403)
+            
+            # Verificar si ya hay una entrada sin salida
+            ultima_entrada = RegistroAcceso.objects.filter(
+                nino=nino,
+                tipo='ENTRADA'
+            ).order_by('-fecha_hora').first()
+            
+            if ultima_entrada:
+                # Buscar si hay una salida posterior
+                salida_posterior = RegistroAcceso.objects.filter(
+                    nino=nino,
+                    tipo='SALIDA',
+                    fecha_hora__gt=ultima_entrada.fecha_hora
+                ).exists()
                 
-                # Verificar que el tutor esté autorizado
-                if tutor in nino.tutores.all():
-                    registro = RegistroAcceso.objects.create(
-                        nino=nino,
-                        tutor=tutor,
-                        tipo='SALIDA',
-                        verificacion_exitosa=True,
-                        metodo_verificacion='HUELLA'
-                    )
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'mensaje': f'{nino.nombre_completo()} entregado a {tutor.nombre_completo()}'
-                    })
-                else:
+                if not salida_posterior:
                     return JsonResponse({
                         'success': False,
-                        'mensaje': 'Este tutor no está autorizado para recoger a este niño'
-                    })
+                        'mensaje': f'{nino.nombre_completo()} ya tiene una entrada registrada sin salida. Debe registrar primero la salida.'
+                    }, status=400)
+            
+            # Registrar entrada
+            registro = RegistroAcceso.objects.create(
+                nino=nino,
+                tutor=tutor,
+                tipo='ENTRADA',
+                verificacion_exitosa=True,
+                metodo_verificacion='HUELLA',
+                observaciones=observaciones if observaciones else None
+            )
+            
+            print(f"✅ ENTRADA REGISTRADA:")
+            print(f"   Niño: {nino.nombre_completo()}")
+            print(f"   Tutor: {tutor.nombre_completo()}")
+            print(f"   Hora: {registro.fecha_hora}")
+            print(f"   Observaciones: {observaciones or 'Sin observaciones'}")
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'{nino.nombre_completo()} ingresado por {tutor.nombre_completo()}',
+                'registro_id': registro.id
+            })
+            
+        except Nino.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Niño no encontrado'
+            }, status=404)
+        except Tutor.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Tutor no encontrado'
+            }, status=404)
         except Exception as e:
-            return JsonResponse({'success': False, 'mensaje': str(e)})
+            print(f"❌ Error registrando entrada: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'Error: {str(e)}'
+            }, status=500)
     
-    return JsonResponse({'success': False, 'mensaje': 'Método no permitido'}, status=405)
+    return JsonResponse({'success': False}, status=405)
+
+
+# MODIFICAR la función registrar_salida existente para agregar validaciones
+
+@csrf_exempt  
+def registrar_salida(request):
+    """Registrar salida de un niño"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nino_id = data.get('nino_id')
+            tutor_id = data.get('tutor_id')
+            observaciones = data.get('observaciones', '').strip()
+            
+            if not nino_id or not tutor_id:
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': 'Faltan datos'
+                }, status=400)
+            
+            nino = Nino.objects.get(id=nino_id, activo=True)
+            tutor = Tutor.objects.get(id=tutor_id, activo=True)
+            
+            # Verificar autorización
+            if tutor not in nino.tutores.all():
+                return JsonResponse({
+                    'success': False,
+                    'mensaje': f'{tutor.nombre_completo()} no está autorizado para recoger a {nino.nombre_completo()}'
+                }, status=403)
+            
+            # Verificar si hay una entrada previa
+            ultima_entrada = RegistroAcceso.objects.filter(
+                nino=nino,
+                tipo='ENTRADA'
+            ).order_by('-fecha_hora').first()
+            
+            if ultima_entrada:
+                # Verificar si ya tiene una salida posterior
+                salida_posterior = RegistroAcceso.objects.filter(
+                    nino=nino,
+                    tipo='SALIDA',
+                    fecha_hora__gt=ultima_entrada.fecha_hora
+                ).exists()
+                
+                if salida_posterior:
+                    return JsonResponse({
+                        'success': False,
+                        'mensaje': f'{nino.nombre_completo()} ya tiene una salida registrada. Debe registrar primero una nueva entrada.'
+                    }, status=400)
+            else:
+                # Si no hay entrada previa, advertir pero permitir
+                observaciones = (observaciones + " | " if observaciones else "") + "SALIDA SIN ENTRADA PREVIA REGISTRADA"
+            
+            # Registrar salida
+            registro = RegistroAcceso.objects.create(
+                nino=nino,
+                tutor=tutor,
+                tipo='SALIDA',
+                verificacion_exitosa=True,
+                metodo_verificacion='HUELLA',
+                observaciones=observaciones if observaciones else None
+            )
+            
+            print(f"✅ SALIDA REGISTRADA:")
+            print(f"   Niño: {nino.nombre_completo()}")
+            print(f"   Tutor: {tutor.nombre_completo()}")
+            print(f"   Hora: {registro.fecha_hora}")
+            print(f"   Observaciones: {observaciones or 'Sin observaciones'}")
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'{nino.nombre_completo()} entregado a {tutor.nombre_completo()}',
+                'registro_id': registro.id
+            })
+            
+        except Nino.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Niño no encontrado'
+            }, status=404)
+        except Tutor.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Tutor no encontrado'
+            }, status=404)
+        except Exception as e:
+            print(f"❌ Error registrando salida: {e}")
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'Error: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'success': False}, status=405)
+
+
+# AGREGAR función para obtener el estado actual de un niño
+
+@login_required
+def obtener_estado_nino(request, nino_id):
+    """Obtener el estado actual de un niño (dentro o fuera)"""
+    try:
+        nino = Nino.objects.get(id=nino_id, activo=True)
+        
+        # Buscar el último registro
+        ultimo_registro = RegistroAcceso.objects.filter(
+            nino=nino
+        ).order_by('-fecha_hora').first()
+        
+        estado_actual = None
+        if ultimo_registro:
+            if ultimo_registro.tipo == 'ENTRADA':
+                # Verificar si hay salida posterior
+                tiene_salida = RegistroAcceso.objects.filter(
+                    nino=nino,
+                    tipo='SALIDA',
+                    fecha_hora__gt=ultimo_registro.fecha_hora
+                ).exists()
+                
+                estado_actual = 'FUERA' if tiene_salida else 'DENTRO'
+            else:
+                estado_actual = 'FUERA'
+        else:
+            estado_actual = 'SIN_REGISTROS'
+        
+        return JsonResponse({
+            'success': True,
+            'nino_id': nino.id,
+            'nombre': nino.nombre_completo(),
+            'estado': estado_actual,
+            'ultimo_registro': {
+                'tipo': ultimo_registro.tipo if ultimo_registro else None,
+                'fecha_hora': ultimo_registro.fecha_hora.isoformat() if ultimo_registro else None,
+                'tutor': ultimo_registro.tutor.nombre_completo() if ultimo_registro else None
+            } if ultimo_registro else None
+        })
+        
+    except Nino.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Niño no encontrado'
+        }, status=404)
 
 # ============================================
 # APIs para .NET - MÉTODO DE CONSULTA
@@ -762,7 +957,7 @@ def registrar_salida(request):
 # ============================================
 
 def buscar_colonias_cp(request):
-    """Busca colonias por código postal directamente desde el Excel"""
+    """Busca colonias por código postal desde la base de datos"""
     cp = request.GET.get('cp', '').strip()
 
     if not cp or not cp.isdigit() or len(cp) != 5:
@@ -772,90 +967,30 @@ def buscar_colonias_cp(request):
         })
 
     try:
-        archivo_excel = os.path.join(
-            settings.BASE_DIR,
-            'guarderia',
-            'data',
-            'Colonias.xlsx'
-        )
+        # Buscar directamente en la BD
+        colonias = Colonia.objects.filter(d_codigo=cp).order_by('d_asenta')
         
-        if not os.path.exists(archivo_excel):
+        if not colonias.exists():
             return JsonResponse({
                 "success": False,
-                "error": f"No se encontró el archivo Colonias.xlsx en guarderia/data/"
+                "error": f"No se encontraron colonias para el CP {cp}"
             })
-        
-        # Leer el Excel
-        df = pd.read_excel(archivo_excel)
-        
-        # DEBUG
-        print("=== DEBUG COLONIAS ===")
-        print("Columnas del Excel:", df.columns.tolist())
-        print(f"Buscando CP: '{cp}'")
-        print("Primeros valores de d_codigo (raw):", df['d_codigo'].head(10).tolist())
-        print("Tipos de datos:", df['d_codigo'].dtype)
-        
-        # ⭐ LIMPIEZA MEJORADA ⭐
-        # Convertir a string manejando NaN y valores vacíos
-        df['d_codigo'] = df['d_codigo'].fillna(0)  # Reemplazar NaN con 0
-        df['d_codigo'] = df['d_codigo'].astype(int).astype(str)  # Convertir a int primero para eliminar decimales
-        
-        # Rellenar con ceros a la izquierda
-        df['d_codigo'] = df['d_codigo'].str.zfill(5)
-        
-        # Verificar si hay valores '00000' (que eran NaN) y filtrarlos
-        df = df[df['d_codigo'] != '00000']
-        
-        print(f"Primeros valores de d_codigo después de limpieza:", df['d_codigo'].head(10).tolist())
-        print(f"Total registros válidos: {len(df)}")
-        
-        # Buscar el CP específico
-        colonias_filtradas = df[df['d_codigo'] == cp]
-        
-        print(f"Registros encontrados para CP {cp}: {len(colonias_filtradas)}")
-        
-        # ⭐ DEBUG ADICIONAL ⭐
-        if colonias_filtradas.empty:
-            # Verificar si el CP existe en el archivo
-            existe_cp = cp in df['d_codigo'].values
-            print(f"¿Existe el CP {cp} en el archivo? {existe_cp}")
-            
-            # Buscar CPs cercanos
-            cp_num = int(cp)
-            cps_en_rango = df[(df['d_codigo'].astype(int) >= cp_num - 10) & 
-                              (df['d_codigo'].astype(int) <= cp_num + 10)]['d_codigo'].unique()[:10]
-            
-            print(f"CPs en rango ({cp_num-10} a {cp_num+10}): {cps_en_rango.tolist()}")
-            print("======================")
-            
-            return JsonResponse({
-                "success": False,
-                "error": f"No se encontraron colonias para el CP {cp}",
-                "debug": {
-                    "cp_buscado": cp,
-                    "existe_en_archivo": existe_cp,
-                    "total_registros": len(df),
-                    "cps_cercanos": cps_en_rango.tolist() if len(cps_en_rango) > 0 else []
-                }
-            })
-        
-        print("======================")
         
         # Preparar resultado
         resultado = []
-        for index, row in colonias_filtradas.iterrows():
+        for col in colonias:
             resultado.append({
-                "id": str(row['id_asenta_cpcons']),
-                "nombre": str(row['d_asenta']),
-                "tipo_asentamiento": str(row['d_tipo_asenta']),
-                "municipio": str(row['D_mnpio']),
-                "estado": str(row['d_estado']),
-                "ciudad": str(row['d_ciudad']) if pd.notna(row['d_ciudad']) else str(row['D_mnpio']),
+                "id": col.id,  # Usar el ID de Django
+                "nombre": col.d_asenta,
+                "tipo_asentamiento": col.d_tipo_asenta,
+                "municipio": col.D_mnpio,
+                "estado": col.d_estado,
+                "ciudad": col.d_ciudad if col.d_ciudad else col.D_mnpio,
             })
         
         return JsonResponse({
             "success": True,
-            "fuente": "excel_local",
+            "fuente": "base_de_datos",
             "colonias": resultado,
             "total": len(resultado)
         })
@@ -864,7 +999,7 @@ def buscar_colonias_cp(request):
         import traceback
         return JsonResponse({
             "success": False,
-            "error": f"Error al leer el archivo: {str(e)}",
+            "error": f"Error al consultar: {str(e)}",
             "traceback": traceback.format_exc()
         })
 
