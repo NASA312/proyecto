@@ -12,7 +12,7 @@
       </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
           <li class="breadcrumb-item active">Grupos</li>
         </ol>
       </div>
@@ -24,9 +24,21 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-12">
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-users"></i> Lista de Grupos</h3>
+            <h3 class="card-title"><i class="fas fa-users"></i> Gestión de Grupos</h3>
             <div class="card-tools">
               <a href="{% url 'guarderia:registrar_grupo' %}" class="btn btn-success btn-sm">
                 <i class="fas fa-plus"></i> Nuevo Grupo
@@ -34,75 +46,146 @@
             </div>
           </div>
           <div class="card-body">
-            {% if grupos %}
-              <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover" id="tablaGrupos">
-                  <thead>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#tabActivos" role="tab">
+                  <i class="fas fa-check-circle text-success"></i> Activos
+                  <span class="badge badge-success ml-1">{{ grupos_activos|length }}</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tabPapelera" role="tab">
+                  <i class="fas fa-trash text-danger"></i> Papelera
+                  <span class="badge badge-danger ml-1">{{ grupos_inactivos|length }}</span>
+                </a>
+              </li>
+            </ul>
+
+            <div class="tab-content pt-3">
+
+              <!-- TAB ACTIVOS — 8 columnas: Nombre|Tipo|Grado|Capacidad|Ocupación|Estado|Acciones -->
+              <div class="tab-pane fade show active" id="tabActivos" role="tabpanel">
+                <table id="tablaActivos" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
                     <tr>
-                      <th style="width: 5%">#</th>
-                      <th style="width: 20%">Nombre</th>
-                      <th style="width: 15%">Tipo</th>
-                      <th style="width: 10%">Grado</th>
-                      <th style="width: 15%">Capacidad</th>
-                      <th style="width: 15%">Ocupación</th>
-                      <th style="width: 10%" class="text-center">Estado</th>
-                      <th style="width: 10%" class="text-center">Acciones</th>
+                      <th>Nombre</th>
+                      <th style="width:120px;">Tipo</th>
+                      <th style="width:100px;">Grado</th>
+                      <th style="width:160px;">Capacidad</th>
+                      <th style="width:150px;">Ocupación</th>
+                      <th class="text-center" style="width:100px;">Estado</th>
+                      <th class="text-center" style="width:120px;">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for item in grupos %}
-                      <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td><strong>{{ item.grupo.nombre }}</strong></td>
-                        <td><span class="badge badge-primary">{{ item.grupo.get_tipo_display }}</span></td>
-                        <td>{{ item.grupo.grado|default:"-" }}</td>
-                        <td>
-                          {{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima }}
-                          <small class="text-muted">({{ item.capacidad_disponible }} disponibles)</small>
-                        </td>
-                        <td>
-                          <div class="progress" style="height: 20px;">
-                            <div class="progress-bar {% if item.porcentaje_ocupacion >= 90 %}bg-danger{% elif item.porcentaje_ocupacion >= 75 %}bg-warning{% else %}bg-success{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ item.porcentaje_ocupacion }}%"
-                                 aria-valuenow="{{ item.porcentaje_ocupacion }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
-                              {{ item.porcentaje_ocupacion }}%
-                            </div>
+                    {% for item in grupos_activos %}
+                    <tr>
+                      <td>{{ item.grupo.nombre }}</td>
+                      <td><span class="badge badge-primary">{{ item.grupo.get_tipo_display }}</span></td>
+                      <td>{{ item.grupo.grado|default:"—" }}</td>
+                      <td>
+                        {{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima }}
+                        <small class="text-muted">({{ item.capacidad_disponible }} disp.)</small>
+                      </td>
+                      <td>
+                        <div class="progress" style="height:20px;">
+                          <div class="progress-bar
+                            {% if item.porcentaje_ocupacion >= 90 %}bg-danger
+                            {% elif item.porcentaje_ocupacion >= 75 %}bg-warning
+                            {% else %}bg-success{% endif %}"
+                               role="progressbar"
+                               style="width:{{ item.porcentaje_ocupacion }}%"
+                               aria-valuenow="{{ item.porcentaje_ocupacion }}"
+                               aria-valuemin="0" aria-valuemax="100">
+                            {{ item.porcentaje_ocupacion }}%
                           </div>
-                        </td>
-                        <td class="text-center">
-                          {% if item.esta_lleno %}
-                            <span class="badge badge-danger">Lleno</span>
-                          {% else %}
-                            <span class="badge badge-success">Disponible</span>
-                          {% endif %}
-                        </td>
-                        <td class="text-center">
-                          <a href="{% url 'guarderia:detalle_grupo' item.grupo.id %}" 
-                             class="btn btn-info btn-sm" 
-                             title="Ver detalles">
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        {% if item.esta_lleno %}
+                          <span class="badge badge-danger">Lleno</span>
+                        {% else %}
+                          <span class="badge badge-success">Disponible</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                          <a href="{% url 'guarderia:detalle_grupo' item.grupo.id %}"
+                             class="btn btn-info" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                           </a>
-                          <a href="{% url 'guarderia:editar_grupo' item.grupo.id %}" 
-                             class="btn btn-warning btn-sm" 
-                             title="Editar">
+                          <a href="{% url 'guarderia:editar_grupo' item.grupo.id %}"
+                             class="btn btn-warning" title="Editar">
                             <i class="fas fa-edit"></i>
                           </a>
-                        </td>
-                      </tr>
+                          <button type="button" class="btn btn-danger"
+                                  onclick="enviarAPapelera({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
+                                  title="Enviar a papelera">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                     {% endfor %}
                   </tbody>
                 </table>
               </div>
-            {% else %}
-              <div class="alert alert-info">
-                <i class="icon fas fa-info-circle"></i>
-                No hay grupos registrados. 
-                <a href="{% url 'guarderia:registrar_grupo' %}">Haga clic aquí para agregar uno.</a>
+
+              <!-- TAB PAPELERA — mismas 7 columnas -->
+              <div class="tab-pane fade" id="tabPapelera" role="tabpanel">
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Papelera:</strong> Estos grupos están inactivos y no aparecen en los formularios de registro.
+                </div>
+                <table id="tablaPapelera" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Nombre</th>
+                      <th style="width:120px;">Tipo</th>
+                      <th style="width:100px;">Grado</th>
+                      <th style="width:160px;">Capacidad</th>
+                      <th style="width:150px;">Ocupación</th>
+                      <th class="text-center" style="width:100px;">Estado</th>
+                      <th class="text-center" style="width:120px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in grupos_inactivos %}
+                    <tr class="table-secondary">
+                      <td><del>{{ item.grupo.nombre }}</del></td>
+                      <td><span class="badge badge-secondary">{{ item.grupo.get_tipo_display }}</span></td>
+                      <td><small class="text-muted">{{ item.grupo.grado|default:"—" }}</small></td>
+                      <td><small class="text-muted">{{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima }}</small></td>
+                      <td>
+                        <div class="progress" style="height:20px;">
+                          <div class="progress-bar bg-secondary"
+                               role="progressbar"
+                               style="width:{{ item.porcentaje_ocupacion }}%"
+                               aria-valuenow="{{ item.porcentaje_ocupacion }}"
+                               aria-valuemin="0" aria-valuemax="100">
+                            {{ item.porcentaje_ocupacion }}%
+                          </div>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        <span class="badge badge-secondary">Inactivo</span>
+                      </td>
+                      <td class="text-center">
+                        <button type="button" class="btn btn-success btn-sm"
+                                onclick="restaurar({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
+                                title="Restaurar">
+                          <i class="fas fa-undo"></i> Restaurar
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
-            {% endif %}
+
+            </div>
           </div>
         </div>
       </div>
@@ -113,18 +196,84 @@
 
 {% block scripts %}
 <script>
-$(document).ready(function() {
-  // Inicializar DataTable si existe
-  if ($.fn.DataTable) {
-    $('#tablaGrupos').DataTable({
-      "language": {
-        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
-      },
-      "responsive": true,
-      "autoWidth": false,
-      "order": [[2, 'asc'], [1, 'asc']]
-    });
-  }
+$(document).ready(function () {
+
+  var opts = function (emptyMsg) {
+    return {
+      responsive: true, autoWidth: false, pageLength: 25,
+      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+      // Columnas con barras de progreso/badges: sin ordenar por HTML
+      columnDefs: [
+        { orderable: false, searchable: false, targets: [4, 5, 6] }
+      ],
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        emptyTable: emptyMsg
+      }
+    };
+  };
+
+  $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay grupos activos</span>'));
+  $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
+
+  $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
+  });
 });
+
+function enviarAPapelera(id, nombre) {
+  Swal.fire({
+    title: '¿Enviar a papelera?',
+    html: 'El grupo <strong>' + nombre + '</strong> quedará inactivo.',
+    icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Sí, enviar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/guarderia/grupos/' + id + '/enviar-papelera/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ icon: 'success', title: '¡Enviado!', text: res.message, timer: 2000, showConfirmButton: false });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar a papelera.' }); });
+    }
+  });
+}
+
+function restaurar(id, nombre) {
+  Swal.fire({
+    title: '¿Restaurar grupo?',
+    html: '¿Desea restaurar el grupo <strong>' + nombre + '</strong>?',
+    icon: 'question', showCancelButton: true,
+    confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-undo"></i> Sí, restaurar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/guarderia/grupos/' + id + '/restaurar/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ icon: 'success', title: '¡Restaurado!', text: res.message, timer: 2000, showConfirmButton: false });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo restaurar.' }); });
+    }
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function (c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
 </script>
 {% endblock scripts %}

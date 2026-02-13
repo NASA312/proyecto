@@ -115,7 +115,22 @@ def editar_tutor(request, tutor_id):
     else:
         form = TutorForm(instance=tutor)
     
-    return render(request, 'guarderia/tutores/editar.html', {'form': form, 'tutor': tutor})
+    # Pasar datos de la colonia si existe
+    context = {
+        'form': form,
+        'tutor': tutor,
+    }
+    
+    # Si tiene colonia, pasarla al contexto
+    if tutor.colonia:
+        context['colonia_actual'] = {
+            'id': tutor.colonia.id,
+            'nombre': tutor.colonia.d_asenta,
+            'municipio': tutor.colonia.D_mnpio,
+            'estado': tutor.colonia.d_estado,
+        }
+    
+    return render(request, 'guarderia/tutores/editar.html', context)
 
 @login_required
 def registrar_huella_tutor(request, tutor_id):
@@ -1696,3 +1711,276 @@ def dashboard(request):
     }
     
     return render(request, 'guarderia/dashboard.html', context)
+
+# ============================================
+# FUNCIONES DE PAPELERA - Agregar a views.py
+# ============================================
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_departamento_papelera(request, departamento_id):
+    """Enviar departamento a papelera (marcar como inactivo)"""
+    try:
+        departamento = get_object_or_404(Departamento, id=departamento_id)
+        departamento.activo = False
+        departamento.save()
+        
+        messages.success(request, f'Departamento {departamento.nombre} enviado a papelera')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Departamento {departamento.nombre} enviado a papelera'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_departamento(request, departamento_id):
+    """Restaurar departamento desde papelera (marcar como activo)"""
+    try:
+        departamento = get_object_or_404(Departamento, id=departamento_id)
+        departamento.activo = True
+        departamento.save()
+        
+        messages.success(request, f'Departamento {departamento.nombre} restaurado exitosamente')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Departamento {departamento.nombre} restaurado'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_dependencia_papelera(request, dependencia_id):
+    """Enviar dependencia a papelera (marcar como inactivo)"""
+    try:
+        dependencia = get_object_or_404(Dependencia, id=dependencia_id)
+        dependencia.activo = False
+        dependencia.save()
+        
+        messages.success(request, f'Dependencia {dependencia.nombre} enviada a papelera')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Dependencia {dependencia.nombre} enviada a papelera'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_dependencia(request, dependencia_id):
+    """Restaurar dependencia desde papelera (marcar como activo)"""
+    try:
+        dependencia = get_object_or_404(Dependencia, id=dependencia_id)
+        dependencia.activo = True
+        dependencia.save()
+        
+        messages.success(request, f'Dependencia {dependencia.nombre} restaurada exitosamente')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Dependencia {dependencia.nombre} restaurada'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# VISTAS ACTUALIZADAS CON FILTROS
+# ============================================
+
+@login_required
+def lista_departamentos(request):
+    """Lista de departamentos activos e inactivos"""
+    departamentos_activos = Departamento.objects.filter(activo=True).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
+    departamentos_inactivos = Departamento.objects.filter(activo=False).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
+    
+    return render(request, 'guarderia/departamentos/lista.html', {
+        'departamentos_activos': departamentos_activos,
+        'departamentos_inactivos': departamentos_inactivos
+    })
+
+
+@login_required
+def lista_dependencias(request):
+    """Lista de dependencias activas e inactivas"""
+    dependencias_activas = Dependencia.objects.filter(activo=True).order_by('nombre')
+    dependencias_inactivas = Dependencia.objects.filter(activo=False).order_by('nombre')
+    
+    return render(request, 'guarderia/dependencias/lista.html', {
+        'dependencias_activas': dependencias_activas,
+        'dependencias_inactivas': dependencias_inactivas
+    })
+    
+    
+# ============================================
+# AGREGAR A views.py — Funciones de papelera
+# para ServicioMedico, Grupo, Tutor, Nino
+# ============================================
+
+# ── Servicios Médicos ──────────────────────
+
+@login_required
+def lista_servicios_medicos(request):
+    servicios_activos   = ServicioMedico.objects.filter(activo=True).order_by('nombre')
+    servicios_inactivos = ServicioMedico.objects.filter(activo=False).order_by('nombre')
+    return render(request, 'guarderia/servicios_medicos/lista.html', {
+        'servicios_activos':   servicios_activos,
+        'servicios_inactivos': servicios_inactivos,
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_servicio_papelera(request, servicio_id):
+    try:
+        servicio = get_object_or_404(ServicioMedico, id=servicio_id)
+        servicio.activo = False
+        servicio.save()
+        return JsonResponse({'success': True, 'message': f'Servicio {servicio.nombre} enviado a papelera'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_servicio(request, servicio_id):
+    try:
+        servicio = get_object_or_404(ServicioMedico, id=servicio_id)
+        servicio.activo = True
+        servicio.save()
+        return JsonResponse({'success': True, 'message': f'Servicio {servicio.nombre} restaurado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ── Grupos ─────────────────────────────────
+
+@login_required
+def lista_grupos(request):
+    def enriquecer(qs):
+        resultado = []
+        for grupo in qs:
+            resultado.append({
+                'grupo':                grupo,
+                'ninos_asignados':      grupo.ninos_asignados(),
+                'capacidad_disponible': grupo.capacidad_disponible(),
+                'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
+                'esta_lleno':           grupo.esta_lleno(),
+            })
+        return resultado
+
+    grupos_activos   = enriquecer(Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre'))
+    grupos_inactivos = enriquecer(Grupo.objects.filter(activo=False).order_by('tipo', 'grado', 'nombre'))
+
+    return render(request, 'guarderia/grupos/lista.html', {
+        'grupos_activos':   grupos_activos,
+        'grupos_inactivos': grupos_inactivos,
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_grupo_papelera(request, grupo_id):
+    try:
+        grupo = get_object_or_404(Grupo, id=grupo_id)
+        grupo.activo = False
+        grupo.save()
+        return JsonResponse({'success': True, 'message': f'Grupo {grupo.nombre} enviado a papelera'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_grupo(request, grupo_id):
+    try:
+        grupo = get_object_or_404(Grupo, id=grupo_id)
+        grupo.activo = True
+        grupo.save()
+        return JsonResponse({'success': True, 'message': f'Grupo {grupo.nombre} restaurado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ── Tutores ────────────────────────────────
+
+@login_required
+def lista_tutores(request):
+    tutores_activos   = Tutor.objects.filter(activo=True).order_by('-fecha_registro')
+    tutores_inactivos = Tutor.objects.filter(activo=False).order_by('-fecha_registro')
+    return render(request, 'guarderia/tutores/lista.html', {
+        'tutores_activos':   tutores_activos,
+        'tutores_inactivos': tutores_inactivos,
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_tutor_papelera(request, tutor_id):
+    try:
+        tutor = get_object_or_404(Tutor, id=tutor_id)
+        tutor.activo = False
+        tutor.save()
+        return JsonResponse({'success': True, 'message': f'Tutor {tutor.nombre_completo()} enviado a papelera'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_tutor(request, tutor_id):
+    try:
+        tutor = get_object_or_404(Tutor, id=tutor_id)
+        tutor.activo = True
+        tutor.save()
+        return JsonResponse({'success': True, 'message': f'Tutor {tutor.nombre_completo()} restaurado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ── Niños ──────────────────────────────────
+
+@login_required
+def lista_ninos(request):
+    ninos_activos   = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
+    ninos_inactivos = Nino.objects.filter(activo=False).order_by('grupo', 'apellido_paterno')
+    return render(request, 'guarderia/ninos/lista.html', {
+        'ninos_activos':   ninos_activos,
+        'ninos_inactivos': ninos_inactivos,
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_nino_papelera(request, nino_id):
+    try:
+        nino = get_object_or_404(Nino, id=nino_id)
+        nino.activo = False
+        nino.save()
+        return JsonResponse({'success': True, 'message': f'{nino.nombre_completo()} enviado a papelera'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_nino(request, nino_id):
+    try:
+        nino = get_object_or_404(Nino, id=nino_id)
+        nino.activo = True
+        nino.save()
+        return JsonResponse({'success': True, 'message': f'{nino.nombre_completo()} restaurado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

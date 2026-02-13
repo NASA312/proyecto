@@ -12,7 +12,7 @@
       </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
           <li class="breadcrumb-item active">Tutores</li>
         </ol>
       </div>
@@ -24,9 +24,21 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-12">
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Tutores Registrados</h3>
+            <h3 class="card-title">Gestión de Tutores</h3>
             <div class="card-tools">
               <a href="{% url 'guarderia:registrar_tutor' %}" class="btn btn-primary btn-sm">
                 <i class="fas fa-user-plus"></i> Registrar Nuevo Tutor
@@ -34,62 +46,127 @@
             </div>
           </div>
           <div class="card-body">
-            <table id="tablaTutores" class="table table-bordered table-striped">
-              <thead>
-                <tr>
-                  <th>Nombre Completo</th>
-                  <th>Parentesco</th>
-                  <th>Teléfono</th>
-                  <th>Email</th>
-                  <th>Identificación</th>
-                  <th>Huella</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for tutor in tutores %}
-                <tr>
-                  <td>{{ tutor.nombre_completo }}</td>
-                  <td>
-                    <span class="badge badge-info">{{ tutor.get_parentesco_display }}</span>
-                  </td>
-                  <td>{{ tutor.telefono }}</td>
-                  <td>{{ tutor.email|default:"N/A" }}</td>
-                  <td>{{ tutor.numero_identificacion }}</td>
-                  <td>
-                    {% if tutor.huella_registrada %}
-                      <span class="badge badge-success">
-                        <i class="fas fa-check"></i> Registrada
-                      </span>
-                    {% else %}
-                      <span class="badge badge-warning">
-                        <i class="fas fa-exclamation-triangle"></i> Pendiente
-                      </span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <div class="btn-group">
-                      <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-info btn-sm" title="Ver Detalles">
-                        <i class="fas fa-eye"></i>
-                      </a>
-                      <a href="{% url 'guarderia:editar_tutor' tutor.id %}" class="btn btn-warning btn-sm" title="Editar">
-                        <i class="fas fa-edit"></i>
-                      </a>
-                      {% if not tutor.huella_registrada %}
-                      <a href="{% url 'guarderia:registrar_huella_tutor' tutor.id %}" class="btn btn-primary btn-sm" title="Registrar Huella">
-                        <i class="fas fa-fingerprint"></i>
-                      </a>
-                      {% endif %}
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="7" class="text-center">No hay tutores registrados</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#tabActivos" role="tab">
+                  <i class="fas fa-check-circle text-success"></i> Activos
+                  <span class="badge badge-success ml-1">{{ tutores_activos|length }}</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tabPapelera" role="tab">
+                  <i class="fas fa-trash text-danger"></i> Papelera
+                  <span class="badge badge-danger ml-1">{{ tutores_inactivos|length }}</span>
+                </a>
+              </li>
+            </ul>
+
+            <div class="tab-content pt-3">
+
+              <!-- TAB ACTIVOS — 7 columnas -->
+              <div class="tab-pane fade show active" id="tabActivos" role="tabpanel">
+                <table id="tablaActivos" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Nombre Completo</th>
+                      <th style="width:120px;">Parentesco</th>
+                      <th style="width:130px;">Teléfono</th>
+                      <th>Email</th>
+                      <th>Identificación</th>
+                      <th class="text-center" style="width:100px;">Huella</th>
+                      <th class="text-center" style="width:130px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for tutor in tutores_activos %}
+                    <tr>
+                      <td>{{ tutor.nombre_completo }}</td>
+                      <td><span class="badge badge-info">{{ tutor.get_parentesco_display }}</span></td>
+                      <td>{{ tutor.telefono }}</td>
+                      <td>{{ tutor.email|default:"—" }}</td>
+                      <td>{{ tutor.numero_identificacion }}</td>
+                      <td class="text-center">
+                        {% if tutor.huella_registrada %}
+                          <span class="badge badge-success"><i class="fas fa-check"></i> Registrada</span>
+                        {% else %}
+                          <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Pendiente</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                          <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-info" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                          <a href="{% url 'guarderia:editar_tutor' tutor.id %}" class="btn btn-warning" title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                          {% if not tutor.huella_registrada %}
+                          <a href="{% url 'guarderia:registrar_huella_tutor' tutor.id %}" class="btn btn-primary" title="Registrar huella">
+                            <i class="fas fa-fingerprint"></i>
+                          </a>
+                          {% endif %}
+                          <button type="button" class="btn btn-danger"
+                                  onclick="enviarAPapelera({{ tutor.id }}, '{{ tutor.nombre_completo|escapejs }}')"
+                                  title="Enviar a papelera">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- TAB PAPELERA — mismas 7 columnas -->
+              <div class="tab-pane fade" id="tabPapelera" role="tabpanel">
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Papelera:</strong> Estos tutores están inactivos y no pueden recoger niños.
+                </div>
+                <table id="tablaPapelera" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Nombre Completo</th>
+                      <th style="width:120px;">Parentesco</th>
+                      <th style="width:130px;">Teléfono</th>
+                      <th>Email</th>
+                      <th>Identificación</th>
+                      <th class="text-center" style="width:100px;">Huella</th>
+                      <th class="text-center" style="width:130px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for tutor in tutores_inactivos %}
+                    <tr class="table-secondary">
+                      <td><del>{{ tutor.nombre_completo }}</del></td>
+                      <td><span class="badge badge-secondary">{{ tutor.get_parentesco_display }}</span></td>
+                      <td><small class="text-muted">{{ tutor.telefono }}</small></td>
+                      <td><small class="text-muted">{{ tutor.email|default:"—" }}</small></td>
+                      <td><small class="text-muted">{{ tutor.numero_identificacion }}</small></td>
+                      <td class="text-center">
+                        {% if tutor.huella_registrada %}
+                          <span class="badge badge-secondary"><i class="fas fa-check"></i> Registrada</span>
+                        {% else %}
+                          <span class="badge badge-secondary">Pendiente</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <button type="button" class="btn btn-success btn-sm"
+                                onclick="restaurar({{ tutor.id }}, '{{ tutor.nombre_completo|escapejs }}')"
+                                title="Restaurar">
+                          <i class="fas fa-undo"></i> Restaurar
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
@@ -100,14 +177,83 @@
 
 {% block scripts %}
 <script>
-  $(document).ready(function() {
-    $('#tablaTutores').DataTable({
-      "language": {
-        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
-      },
-      "responsive": true,
-      "autoWidth": false
-    });
+$(document).ready(function () {
+
+  var opts = function (emptyMsg) {
+    return {
+      responsive: true, autoWidth: false, pageLength: 25,
+      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+      columnDefs: [
+        { orderable: false, searchable: false, targets: [5, 6] }
+      ],
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        emptyTable: emptyMsg
+      }
+    };
+  };
+
+  $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay tutores activos</span>'));
+  $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
+
+  $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
   });
+});
+
+function enviarAPapelera(id, nombre) {
+  Swal.fire({
+    title: '¿Enviar a papelera?',
+    html: 'El tutor <strong>' + nombre + '</strong> quedará inactivo y no podrá recoger niños.',
+    icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Sí, enviar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/guarderia/tutores/' + id + '/enviar-papelera/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ icon: 'success', title: '¡Enviado!', text: res.message, timer: 2000, showConfirmButton: false });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar a papelera.' }); });
+    }
+  });
+}
+
+function restaurar(id, nombre) {
+  Swal.fire({
+    title: '¿Restaurar tutor?',
+    html: '¿Desea restaurar a <strong>' + nombre + '</strong>?',
+    icon: 'question', showCancelButton: true,
+    confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-undo"></i> Sí, restaurar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/guarderia/tutores/' + id + '/restaurar/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ icon: 'success', title: '¡Restaurado!', text: res.message, timer: 2000, showConfirmButton: false });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo restaurar.' }); });
+    }
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function (c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
 </script>
 {% endblock scripts %}

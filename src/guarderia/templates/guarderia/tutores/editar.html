@@ -26,11 +26,22 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-10 offset-md-1">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
         <div class="card card-warning">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-edit"></i> Modificar Información del Tutor</h3>
           </div>
-          <form method="post">
+          <form method="post" id="formEditarTutor">
             {% csrf_token %}
             <div class="card-body">
               <!-- Información Personal -->
@@ -40,8 +51,9 @@
                   <div class="form-group">
                     <label>Nombre(s) *</label>
                     {{ form.nombre }}
+                    <span class="text-danger error-nombre"></span>
                     {% if form.nombre.errors %}
-                      <span class="text-danger">{{ form.nombre.errors }}</span>
+                      <span class="text-danger">{{ form.nombre.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -49,8 +61,9 @@
                   <div class="form-group">
                     <label>Apellido Paterno *</label>
                     {{ form.apellido_paterno }}
+                    <span class="text-danger error-apellido_paterno"></span>
                     {% if form.apellido_paterno.errors %}
-                      <span class="text-danger">{{ form.apellido_paterno.errors }}</span>
+                      <span class="text-danger">{{ form.apellido_paterno.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -58,6 +71,7 @@
                   <div class="form-group">
                     <label>Apellido Materno</label>
                     {{ form.apellido_materno }}
+                    <span class="text-danger error-apellido_materno"></span>
                   </div>
                 </div>
               </div>
@@ -69,8 +83,9 @@
                   <div class="form-group">
                     <label>Teléfono Principal *</label>
                     {{ form.telefono }}
+                    <span class="text-danger error-telefono"></span>
                     {% if form.telefono.errors %}
-                      <span class="text-danger">{{ form.telefono.errors }}</span>
+                      <span class="text-danger">{{ form.telefono.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -78,12 +93,17 @@
                   <div class="form-group">
                     <label>Teléfono Emergencia</label>
                     {{ form.telefono_emergencia }}
+                    <span class="text-danger error-telefono_emergencia"></span>
                   </div>
                 </div>
                 <div class="col-md-4">
                   <div class="form-group">
                     <label>Email</label>
                     {{ form.email }}
+                    <span class="text-danger error-email"></span>
+                    {% if form.email.errors %}
+                      <span class="text-danger">{{ form.email.errors.0 }}</span>
+                    {% endif %}
                   </div>
                 </div>
               </div>
@@ -101,26 +121,44 @@
                 <div class="col-md-6">
                   <div class="form-group">
                     <label>Colonia *</label>
-                    <select name="colonia" id="id_colonia" class="form-control">
-                      {% if form.colonia.value %}
-                        <option value="{{ form.colonia.value }}" selected>{{ form.colonia.initial }}</option>
-                      {% else %}
-                        <option value="">Primero ingrese el código postal</option>
-                      {% endif %}
-                    </select>
+                    {{ form.colonia }}
                     <span class="text-danger error-colonia"></span>
                   </div>
                 </div>
                 <div class="col-md-3">
                   <div class="form-group">
                     <label>Buscar Colonia</label>
-                    <input type="text" name="buscar_colonia" class="form-control" placeholder="Filtrar...">
+                    {{ form.buscar_colonia }}
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Calle *</label>
+                    {{ form.calle }}
+                    <span class="text-danger error-calle"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>No. Exterior *</label>
+                    {{ form.numero_exterior }}
+                    <span class="text-danger error-numero_exterior"></span>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label>No. Interior</label>
+                    {{ form.numero_interior }}
+                    <span class="text-danger error-numero_interior"></span>
                   </div>
                 </div>
               </div>
               <div class="form-group">
-                <label>Dirección (Calle, Número, Referencias)</label>
-                {{ form.direccion }}
+                <label>Referencias</label>
+                {{ form.referencias }}
+                <span class="text-danger error-referencias"></span>
               </div>
 
               <!-- Identificación -->
@@ -130,8 +168,9 @@
                   <div class="form-group">
                     <label>Tipo de Identificación *</label>
                     {{ form.tipo_identificacion }}
+                    <span class="text-danger error-tipo_identificacion"></span>
                     {% if form.tipo_identificacion.errors %}
-                      <span class="text-danger">{{ form.tipo_identificacion.errors }}</span>
+                      <span class="text-danger">{{ form.tipo_identificacion.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -139,8 +178,9 @@
                   <div class="form-group">
                     <label>Número de Identificación *</label>
                     {{ form.numero_identificacion }}
+                    <span class="text-danger error-numero_identificacion"></span>
                     {% if form.numero_identificacion.errors %}
-                      <span class="text-danger">{{ form.numero_identificacion.errors }}</span>
+                      <span class="text-danger">{{ form.numero_identificacion.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
@@ -149,17 +189,103 @@
               <!-- Parentesco -->
               <h5 class="mb-3 mt-3"><i class="fas fa-users"></i> Relación con el Niño</h5>
               <div class="form-group">
-                <label>Parentesco con el niño *</label>
+                <label>Parentesco *</label>
                 {{ form.parentesco }}
+                <span class="text-danger error-parentesco"></span>
                 {% if form.parentesco.errors %}
-                  <span class="text-danger">{{ form.parentesco.errors }}</span>
+                  <span class="text-danger">{{ form.parentesco.errors.0 }}</span>
                 {% endif %}
               </div>
 
-              <!-- Notas -->
+              <!-- Información Médica -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-heartbeat"></i> Información de Servicio Médico</h5>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Servicio Médico</label>
+                    {{ form.servicio_medico }}
+                    <span class="text-danger error-servicio_medico"></span>
+                    <small class="form-text text-muted">Seleccione el servicio médico (IMSS, ISSSTE, etc.)</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Número de Seguro Social (NSS)</label>
+                    {{ form.numero_seguro_social }}
+                    <span class="text-danger error-numero_seguro_social"></span>
+                    <small class="form-text text-muted">Número de afiliación al servicio médico</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información Laboral -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-briefcase"></i> Información Laboral</h5>
               <div class="form-group">
-                <label>Notas Adicionales</label>
+                <div class="form-check">
+                  {{ form.es_trabajador }}
+                  <label class="form-check-label" for="id_es_trabajador" style="cursor: pointer; padding-left: 10px;">
+                    ¿Es trabajador de alguna dependencia?
+                  </label>
+                </div>
+              </div>
+
+              <div id="campos-laborales" style="display: none;">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Dependencia *</label>
+                      {{ form.dependencia }}
+                      <span class="text-danger error-dependencia"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Departamento</label>
+                      {{ form.departamento }}
+                      <span class="text-danger error-departamento"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <label>Estatus Laboral *</label>
+                      {{ form.estatus_laboral }}
+                      <span class="text-danger error-estatus_laboral"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <label>Número de Empleado</label>
+                      {{ form.numero_empleado }}
+                      <span class="text-danger error-numero_empleado"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Fecha de Alta</label>
+                      {{ form.fecha_alta }}
+                      <span class="text-danger error-fecha_alta"></span>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label>Fecha de Baja</label>
+                      {{ form.fecha_baja }}
+                      <span class="text-danger error-fecha_baja"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notas -->
+              <h5 class="mb-3 mt-3"><i class="fas fa-sticky-note"></i> Notas Adicionales</h5>
+              <div class="form-group">
+                <label>Observaciones</label>
                 {{ form.notas }}
+                <span class="text-danger error-notas"></span>
               </div>
             </div>
 
@@ -183,81 +309,149 @@
 <script>
 $(document).ready(function() {
   // ========================================
-  // BÚSQUEDA DE COLONIAS POR CÓDIGO POSTAL
+  // TOGGLE CAMPOS LABORALES
   // ========================================
-  const cpInput = document.getElementById('id_codigo_postal');
-  const coloniaSelect = document.getElementById('id_colonia');
-  const buscarInput = document.querySelector('[name="buscar_colonia"]');
-
-  // Si hay un código postal al cargar, buscar las colonias
-  if (cpInput.value.trim().length === 5) {
-    cargarColonias(cpInput.value.trim());
+  function toggleCamposLaborales() {
+    const esTrabajador = $('#id_es_trabajador').is(':checked');
+    const camposLaborales = $('#campos-laborales');
+    
+    if (esTrabajador) {
+      camposLaborales.slideDown();
+      $('#id_dependencia').prop('disabled', false);
+      $('#id_departamento').prop('disabled', false);
+      $('#id_estatus_laboral').prop('disabled', false);
+      $('#id_numero_empleado').prop('disabled', false);
+      $('#id_fecha_alta').prop('disabled', false);
+      $('#id_fecha_baja').prop('disabled', false);
+    } else {
+      camposLaborales.slideUp();
+      $('#id_dependencia').prop('disabled', true);
+      $('#id_departamento').prop('disabled', true);
+      $('#id_estatus_laboral').prop('disabled', true);
+      $('#id_numero_empleado').prop('disabled', true);
+      $('#id_fecha_alta').prop('disabled', true);
+      $('#id_fecha_baja').prop('disabled', true);
+    }
   }
 
-  cpInput.addEventListener('blur', function() {
-    const cp = this.value.trim();
-    cargarColonias(cp);
+  // Ejecutar al cargar y al cambiar
+  toggleCamposLaborales();
+  $('#id_es_trabajador').on('change', toggleCamposLaborales);
+
+  // ========================================
+  // CARGAR DEPARTAMENTOS SEGÚN DEPENDENCIA
+  // ========================================
+  $('#id_dependencia').on('change', function() {
+    const dependenciaId = $(this).val();
+    const departamentoSelect = $('#id_departamento');
+    
+    if (dependenciaId) {
+      $.ajax({
+        url: '/guarderia/api/departamentos/',
+        data: { dependencia_id: dependenciaId },
+        success: function(data) {
+          departamentoSelect.empty();
+          departamentoSelect.append('<option value="">Seleccione un departamento</option>');
+          
+          data.departamentos.forEach(function(dept) {
+            departamentoSelect.append(
+              `<option value="${dept.id}">${dept.nombre}</option>`
+            );
+          });
+        }
+      });
+    } else {
+      departamentoSelect.empty();
+      departamentoSelect.append('<option value="">Seleccione primero una dependencia</option>');
+    }
   });
 
-  function cargarColonias(cp) {
+  // ========================================
+  // BÚSQUEDA DE COLONIAS POR CÓDIGO POSTAL
+  // ========================================
+  const cpInput = $('#id_codigo_postal');
+  const coloniaSelect = $('#id_colonia');
+  const buscarInput = $('[name="buscar_colonia"]');
+  
+  // Guardar el valor inicial de la colonia
+  const coloniaInicial = coloniaSelect.val();
+
+  // Si hay un código postal al cargar, buscar las colonias
+  if (cpInput.val().trim().length === 5) {
+    cargarColonias(cpInput.val().trim(), coloniaInicial);
+  }
+
+  cpInput.on('blur', function() {
+    const cp = $(this).val().trim();
+    cargarColonias(cp, coloniaSelect.val());
+  });
+
+  function cargarColonias(cp, coloniaSeleccionada) {
     if (cp.length === 5 && /^\d{5}$/.test(cp)) {
-      const valorActual = coloniaSelect.value;
+      coloniaSelect.html('<option>Buscando colonias...</option>');
+      coloniaSelect.prop('disabled', true);
       
-      coloniaSelect.innerHTML = '<option>Buscando colonias...</option>';
-      coloniaSelect.disabled = true;
-      
-      fetch(`/guarderia/api/colonias/buscar/?cp=${cp}`)
-        .then(response => response.json())
-        .then(data => {
-          coloniaSelect.innerHTML = '<option value="">Seleccione una colonia</option>';
+      $.ajax({
+        url: '/guarderia/api/colonias/buscar/',
+        data: { cp: cp },
+        success: function(data) {
+          coloniaSelect.empty();
+          coloniaSelect.append('<option value="">Seleccione una colonia</option>');
           
           if (data.success && data.colonias.length > 0) {
-            data.colonias.forEach(col => {
-              const option = document.createElement('option');
-              option.value = col.id;
-              option.textContent = `${col.nombre} - ${col.municipio}, ${col.estado}`;
+            data.colonias.forEach(function(col) {
+              const option = $('<option></option>')
+                .val(col.id)
+                .text(`${col.nombre} - ${col.municipio}, ${col.estado}`);
               
-              // Mantener la colonia seleccionada si existe
-              if (col.id == valorActual) {
-                option.selected = true;
+              // Mantener la colonia seleccionada
+              if (col.id == coloniaSeleccionada) {
+                option.prop('selected', true);
               }
               
-              coloniaSelect.appendChild(option);
+              coloniaSelect.append(option);
             });
-            coloniaSelect.disabled = false;
-            buscarInput.disabled = false;
+            coloniaSelect.prop('disabled', false);
+            buscarInput.prop('disabled', false);
           } else {
-            coloniaSelect.innerHTML = '<option value="">No se encontraron colonias</option>';
-            buscarInput.disabled = true;
+            coloniaSelect.append('<option value="">No se encontraron colonias</option>');
+            buscarInput.prop('disabled', true);
           }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          coloniaSelect.innerHTML = '<option value="">Error al buscar colonias</option>';
-          buscarInput.disabled = true;
-        });
+        },
+        error: function() {
+          coloniaSelect.html('<option value="">Error al buscar colonias</option>');
+          buscarInput.prop('disabled', true);
+        }
+      });
     } else if (cp.length > 0) {
-      coloniaSelect.innerHTML = '<option value="">Ingrese un código postal válido (5 dígitos)</option>';
-      coloniaSelect.disabled = true;
-      buscarInput.disabled = true;
+      coloniaSelect.html('<option value="">Ingrese un código postal válido (5 dígitos)</option>');
+      coloniaSelect.prop('disabled', true);
+      buscarInput.prop('disabled', true);
     }
   }
 
   // Búsqueda dinámica de colonias
-  buscarInput.addEventListener('input', function() {
-    const busqueda = this.value.toLowerCase();
-    const options = coloniaSelect.querySelectorAll('option');
+  buscarInput.on('input', function() {
+    const busqueda = $(this).val().toLowerCase();
     
-    options.forEach(option => {
-      if (option.value === '') return;
+    coloniaSelect.find('option').each(function() {
+      if ($(this).val() === '') return;
       
-      const texto = option.textContent.toLowerCase();
+      const texto = $(this).text().toLowerCase();
       if (texto.includes(busqueda)) {
-        option.style.display = '';
+        $(this).show();
       } else {
-        option.style.display = 'none';
+        $(this).hide();
       }
     });
+  });
+
+  // ========================================
+  // VALIDACIÓN Y ENVÍO DEL FORMULARIO
+  // ========================================
+  $('#formEditarTutor').on('submit', function() {
+    $('.text-danger[class^="error-"]').text('');
+    $('.form-control').removeClass('is-invalid');
   });
 });
 </script>

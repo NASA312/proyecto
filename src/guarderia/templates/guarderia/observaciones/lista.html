@@ -12,7 +12,7 @@
       </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
           <li class="breadcrumb-item active">Observaciones</li>
         </ol>
       </div>
@@ -22,6 +22,7 @@
 
 <section class="content">
   <div class="container-fluid">
+
     <!-- Filtros -->
     <div class="row">
       <div class="col-12">
@@ -43,7 +44,8 @@
                     <select name="nino" class="form-control" id="filtroNino">
                       <option value="">Todos los niños</option>
                       {% for nino in ninos %}
-                        <option value="{{ nino.id }}" {% if request.GET.nino == nino.id|stringformat:"s" %}selected{% endif %}>
+                        <option value="{{ nino.id }}"
+                          {% if request.GET.nino == nino.id|stringformat:"s" %}selected{% endif %}>
                           {{ nino.apellido_paterno }} {{ nino.apellido_materno }}, {{ nino.nombre }}
                         </option>
                       {% endfor %}
@@ -56,7 +58,8 @@
                     <select name="tipo" class="form-control">
                       <option value="">Todos los tipos</option>
                       {% for value, label in tipo_choices %}
-                        <option value="{{ value }}" {% if request.GET.tipo == value %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}"
+                          {% if request.GET.tipo == value %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
                     </select>
                   </div>
@@ -64,13 +67,15 @@
                 <div class="col-md-2">
                   <div class="form-group">
                     <label>Fecha Desde</label>
-                    <input type="date" name="fecha_desde" class="form-control" value="{{ request.GET.fecha_desde }}">
+                    <input type="date" name="fecha_desde" class="form-control"
+                           value="{{ request.GET.fecha_desde }}">
                   </div>
                 </div>
                 <div class="col-md-2">
                   <div class="form-group">
                     <label>Fecha Hasta</label>
-                    <input type="date" name="fecha_hasta" class="form-control" value="{{ request.GET.fecha_hasta }}">
+                    <input type="date" name="fecha_hasta" class="form-control"
+                           value="{{ request.GET.fecha_hasta }}">
                   </div>
                 </div>
                 <div class="col-md-2">
@@ -78,7 +83,9 @@
                     <label>Solo Importantes</label>
                     <select name="importantes" class="form-control">
                       <option value="">Todas</option>
-                      <option value="1" {% if request.GET.importantes == "1" %}selected{% endif %}>Solo importantes</option>
+                      <option value="1" {% if request.GET.importantes == "1" %}selected{% endif %}>
+                        Solo importantes
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -110,83 +117,77 @@
             </div>
           </div>
           <div class="card-body">
-            {% if observaciones %}
-              <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="tablaObservaciones">
-                  <thead>
-                    <tr>
-                      <th style="width: 5%">#</th>
-                      <th style="width: 10%">Fecha</th>
-                      <th style="width: 20%">Niño</th>
-                      <th style="width: 10%">Tipo</th>
-                      <th style="width: 35%">Descripción</th>
-                      <th style="width: 10%" class="text-center">Estado</th>
-                      <th style="width: 10%" class="text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for obs in observaciones %}
-                      <tr {% if obs.importante %}class="table-warning"{% endif %}>
-                        <td>{{ forloop.counter }}</td>
-                        <td>
-                          {{ obs.fecha|date:"d/m/Y" }}<br>
-                          <small class="text-muted">{{ obs.hora|time:"H:i" }}</small>
-                        </td>
-                        <td>
-                          <a href="{% url 'guarderia:observaciones_nino' obs.nino.id %}">
-                            <strong>{{ obs.nino.nombre_completo }}</strong>
-                          </a>
-                        </td>
-                        <td>
-                          <span class="badge badge-secondary">{{ obs.get_tipo_display }}</span>
-                        </td>
-                        <td>
-                          {{ obs.descripcion|truncatewords:20 }}
-                          {% if obs.importante %}
-                            <i class="fas fa-exclamation-triangle text-warning" title="Importante"></i>
-                          {% endif %}
-                        </td>
-                        <td class="text-center">
-                          {% if obs.notificar_tutor %}
-                            {% if obs.notificado %}
-                              <span class="badge badge-success">
-                                <i class="fas fa-check"></i> Notificado
-                              </span>
-                            {% else %}
-                              <span class="badge badge-danger">
-                                <i class="fas fa-clock"></i> Pendiente
-                              </span>
-                            {% endif %}
-                          {% else %}
-                            <span class="badge badge-secondary">-</span>
-                          {% endif %}
-                        </td>
-                        <td class="text-center">
-                          <a href="{% url 'guarderia:editar_observacion' obs.id %}" 
-                             class="btn btn-warning btn-sm" 
-                             title="Editar">
-                            <i class="fas fa-edit"></i>
-                          </a>
-                          {% if obs.notificar_tutor and not obs.notificado %}
-                            <button class="btn btn-success btn-sm btnMarcarNotificado" 
-                                    data-id="{{ obs.id }}"
-                                    title="Marcar como notificado">
-                              <i class="fas fa-check"></i>
-                            </button>
-                          {% endif %}
-                        </td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            {% else %}
-              <div class="alert alert-info">
-                <i class="icon fas fa-info-circle"></i>
-                No hay observaciones registradas con los filtros seleccionados. 
-                <a href="{% url 'guarderia:registrar_observacion' %}">Haga clic aquí para agregar una.</a>
-              </div>
-            {% endif %}
+
+            <!-- 7 columnas: # | Fecha | Niño | Tipo | Descripción | Estado | Acciones -->
+            <table id="tablaObservaciones" class="table table-striped table-bordered table-hover w-100">
+              <thead class="thead-light">
+                <tr>
+                  <th style="width:5%">#</th>
+                  <th style="width:10%">Fecha</th>
+                  <th style="width:20%">Niño</th>
+                  <th style="width:10%">Tipo</th>
+                  <th>Descripción</th>
+                  <th class="text-center" style="width:110px;">Estado</th>
+                  <th class="text-center" style="width:100px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for obs in observaciones %}
+                <tr {% if obs.importante %}class="table-warning"{% endif %}>
+                  <td>{{ forloop.counter }}</td>
+                  <td>
+                    {{ obs.fecha|date:"d/m/Y" }}<br>
+                    <small class="text-muted">{{ obs.hora|time:"H:i" }}</small>
+                  </td>
+                  <td>
+                    <a href="{% url 'guarderia:observaciones_nino' obs.nino.id %}">
+                      <strong>{{ obs.nino.nombre_completo }}</strong>
+                    </a>
+                  </td>
+                  <td>
+                    <span class="badge badge-secondary">{{ obs.get_tipo_display }}</span>
+                  </td>
+                  <td>
+                    {{ obs.descripcion|truncatewords:20 }}
+                    {% if obs.importante %}
+                      <i class="fas fa-exclamation-triangle text-warning" title="Importante"></i>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if obs.notificar_tutor %}
+                      {% if obs.notificado %}
+                        <span class="badge badge-success">
+                          <i class="fas fa-check"></i> Notificado
+                        </span>
+                      {% else %}
+                        <span class="badge badge-danger">
+                          <i class="fas fa-clock"></i> Pendiente
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge badge-secondary">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <a href="{% url 'guarderia:editar_observacion' obs.id %}"
+                         class="btn btn-warning" title="Editar">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      {% if obs.notificar_tutor and not obs.notificado %}
+                        <button class="btn btn-success btnMarcarNotificado"
+                                data-id="{{ obs.id }}"
+                                title="Marcar como notificado">
+                          <i class="fas fa-check"></i>
+                        </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
           </div>
         </div>
       </div>
@@ -197,73 +198,64 @@
 
 {% block scripts %}
 <script>
-$(document).ready(function() {
-  // Inicializar Select2 para el filtro de niños
+$(document).ready(function () {
+
+  // Select2 para filtro de niños
   if ($.fn.select2) {
-    $('#filtroNino').select2({
-      placeholder: 'Seleccione un niño',
-      allowClear: true,
-      width: '100%'
-    });
+    $('#filtroNino').select2({ placeholder: 'Seleccione un niño', allowClear: true, width: '100%' });
   }
 
-  // Inicializar DataTable
-  if ($.fn.DataTable) {
-    $('#tablaObservaciones').DataTable({
-      "language": {
-        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
-      },
-      "responsive": true,
-      "autoWidth": false,
-      "order": [[1, 'desc']],
-      "pageLength": 25
-    });
-  }
+  // DataTable — 7 columnas, sin ordenar las dos últimas (5 y 6)
+  $('#tablaObservaciones').DataTable({
+    responsive: true, autoWidth: false, pageLength: 25,
+    lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+    order: [[1, 'desc']],
+    columnDefs: [
+      { orderable: false, searchable: false, targets: [0, 5, 6] }
+    ],
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay observaciones registradas con los filtros seleccionados</span>'
+    }
+  });
 
-  // Marcar observación como notificada
-  $('.btnMarcarNotificado').on('click', function() {
-    const observacionId = $(this).data('id');
-    const btn = $(this);
-    
+  // Marcar como notificado
+  $(document).on('click', '.btnMarcarNotificado', function () {
+    var obsId = $(this).data('id');
     Swal.fire({
       title: '¿Marcar como notificado?',
       text: 'Esta observación se marcará como notificada al tutor',
-      icon: 'question',
-      showCancelButton: true,
+      icon: 'question', showCancelButton: true,
       confirmButtonText: 'Sí, marcar',
       cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    }).then(function (result) {
       if (result.isConfirmed) {
         $.ajax({
-          url: `/guarderia/observaciones/${observacionId}/marcar-notificada/`,
+          url: '/guarderia/observaciones/' + obsId + '/marcar-notificada/',
           method: 'POST',
-          headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-          },
-          success: function(response) {
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          success: function (response) {
             if (response.success) {
-              Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: response.message,
-                timer: 1500,
-                showConfirmButton: false
-              }).then(() => {
-                location.reload();
-              });
+              Swal.fire({ icon: 'success', title: '¡Éxito!', text: response.message, timer: 1500, showConfirmButton: false });
+              setTimeout(function () { location.reload(); }, 1500);
             }
           },
-          error: function() {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudo marcar la observación'
-            });
+          error: function () {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo marcar la observación' });
           }
         });
       }
     });
   });
 });
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function (c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
 </script>
 {% endblock scripts %}

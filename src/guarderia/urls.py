@@ -93,4 +93,47 @@ urlpatterns = [
     path('observaciones/registrar/', views.registrar_observacion, name='registrar_observacion'),
     path('observaciones/<int:observacion_id>/editar/', views.editar_observacion, name='editar_observacion'),
     path('observaciones/<int:observacion_id>/notificar/', views.marcar_observacion_notificada, name='marcar_observacion_notificada'),
+        # ========== PAPELERA DEPARTAMENTOS ==========
+    path('departamentos/<int:departamento_id>/enviar-papelera/', 
+         views.enviar_departamento_papelera, 
+         name='enviar_departamento_papelera'),
+    
+    path('departamentos/<int:departamento_id>/restaurar/', 
+         views.restaurar_departamento, 
+         name='restaurar_departamento'),
+    
+    # ========== PAPELERA DEPENDENCIAS ==========
+    path('dependencias/<int:dependencia_id>/enviar-papelera/', 
+         views.enviar_dependencia_papelera, 
+         name='enviar_dependencia_papelera'),
+    
+    path('dependencias/<int:dependencia_id>/restaurar/', 
+         views.restaurar_dependencia, 
+         name='restaurar_dependencia'),
+    
+    # Servicios Médicos
+     path('servicios-medicos/<int:servicio_id>/enviar-papelera/',
+          views.enviar_servicio_papelera, name='enviar_servicio_papelera'),
+     path('servicios-medicos/<int:servicio_id>/restaurar/',
+          views.restaurar_servicio, name='restaurar_servicio'),
+
+     # Grupos
+     path('grupos/<int:grupo_id>/enviar-papelera/',
+          views.enviar_grupo_papelera, name='enviar_grupo_papelera'),
+     path('grupos/<int:grupo_id>/restaurar/',
+          views.restaurar_grupo, name='restaurar_grupo'),
+
+     # Tutores
+     path('tutores/<int:tutor_id>/enviar-papelera/',
+          views.enviar_tutor_papelera, name='enviar_tutor_papelera'),
+     path('tutores/<int:tutor_id>/restaurar/',
+          views.restaurar_tutor, name='restaurar_tutor'),
+
+     # Niños
+     path('ninos/<int:nino_id>/enviar-papelera/',
+          views.enviar_nino_papelera, name='enviar_nino_papelera'),
+     path('ninos/<int:nino_id>/restaurar/',
+          views.restaurar_nino, name='restaurar_nino'),
+    
+    
 ]
