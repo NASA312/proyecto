@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Usuarios{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Lista de Usuarios</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Usuarios</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Usuarios del Sistema</h3>
+            <div class="card-tools">
+              <a href="{% url 'auth:registrar_usuario' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus"></i> Registrar Nuevo Usuario
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <table id="tablaUsuarios" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Usuario</th>
+                  <th>Nombre Completo</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Teléfono</th>
+                  <th>Fecha Registro</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                  <td class="text-center">
+                    {% if usuario.perfil.foto_perfil %}
+                      <img src="{{ usuario.perfil.foto_perfil.url }}" class="img-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ usuario.get_full_name }}">
+                    {% else %}
+                      <div class="img-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-user"></i>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <strong>{{ usuario.username }}</strong>
+                    {% if usuario.is_superuser %}
+                      <span class="badge badge-danger ml-1">Superadmin</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ usuario.get_full_name|default:"—" }}</td>
+                  <td>{{ usuario.email|default:"—" }}</td>
+                  <td>
+                    {% if usuario.perfil.rol %}
+                      {% if usuario.perfil.rol.nombre == 'ADMIN' %}
+                        <span class="badge badge-primary">{{ usuario.perfil.rol }}</span>
+                      {% elif usuario.perfil.rol.nombre == 'OBSERVADOR' %}
+                        <span class="badge badge-info">{{ usuario.perfil.rol }}</span>
+                      {% elif usuario.perfil.rol.nombre == 'EMPLEADO' %}
+                        <span class="badge badge-success">{{ usuario.perfil.rol }}</span>
+                      {% else %}
+                        <span class="badge badge-secondary">{{ usuario.perfil.rol }}</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge badge-secondary">Sin rol</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ usuario.perfil.telefono|default:"—" }}</td>
+                  <td>{{ usuario.date_joined|date:"d/m/Y" }}</td>
+                  <td>
+                    {% if usuario.is_active %}
+                      <span class="badge badge-success">Activo</span>
+                    {% else %}
+                      <span class="badge badge-danger">Inactivo</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <a href="{% url 'auth:detalle_usuario' usuario.id %}" 
+                         class="btn btn-info btn-sm" 
+                         title="Ver Detalles">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      <a href="{% url 'auth:editar_usuario' usuario.id %}" 
+                         class="btn btn-warning btn-sm" 
+                         title="Editar">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      {% if usuario.id != request.user.id %}
+                        <a href="{% url 'auth:desactivar_usuario' usuario.id %}" 
+                           class="btn btn-{% if usuario.is_active %}danger{% else %}success{% endif %} btn-sm"
+                           onclick="return confirm('¿Estás seguro de {% if usuario.is_active %}desactivar{% else %}activar{% endif %} este usuario?')"
+                           title="{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}">
+                          <i class="fas fa-{% if usuario.is_active %}ban{% else %}check{% endif %}"></i>
+                        </a>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="9" class="text-center">No hay usuarios registrados</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    $('#tablaUsuarios').DataTable({
+      "language": {
+        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+      },
+      "responsive": true,
+      "autoWidth": false,
+      "order": [[6, 'desc']]  // Ordenar por fecha de registro descendente
+    });
+  });
+</script>
+{% endblock %}
