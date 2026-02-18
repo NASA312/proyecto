@@ -107,58 +107,86 @@
                 </div>
               </div>
 
-              <!-- Dirección -->
-              <h5 class="mb-3 mt-3"><i class="fas fa-map-marker-alt"></i> Dirección</h5>
-              <div class="row">
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>Código Postal *</label>
-                    {{ form.codigo_postal }}
-                    <span class="text-danger error-codigo_postal"></span>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label>Colonia *</label>
-                    {{ form.colonia }}
-                    <span class="text-danger error-colonia"></span>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>Buscar Colonia</label>
-                    {{ form.buscar_colonia }}
-                  </div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label>Calle *</label>
-                    {{ form.calle }}
-                    <span class="text-danger error-calle"></span>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>No. Exterior *</label>
-                    {{ form.numero_exterior }}
-                    <span class="text-danger error-numero_exterior"></span>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>No. Interior</label>
-                    {{ form.numero_interior }}
-                    <span class="text-danger error-numero_interior"></span>
-                  </div>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Referencias</label>
-                {{ form.referencias }}
-                <span class="text-danger error-referencias"></span>
-              </div>
+<!-- Dirección -->
+<h5 class="mb-3 mt-3"><i class="fas fa-map-marker-alt"></i> Dirección</h5>
+
+{{ form.colonia }} 
+
+<div class="row">
+  <div class="col-md-3">
+    <div class="form-group">
+      <label>Código Postal</label>
+      {{ form.codigo_postal }}
+      <span class="text-danger error-codigo_postal"></span>
+    </div>
+  </div>
+  <div class="col-md-9">
+    <div class="form-group">
+      <label>Colonia *</label>
+      <div class="input-group">
+        <input type="text"
+               id="colonia_search"
+               class="form-control"
+               placeholder="Escribe CP, colonia o municipio..."
+               autocomplete="off">
+        <div class="input-group-append">
+          <span class="input-group-text">
+            <i class="fas fa-search" id="icono_busqueda"></i>
+          </span>
+        </div>
+      </div>
+      <span class="text-danger error-colonia"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Resultados del autocomplete -->
+<div class="row">
+  <div class="col-12">
+    <div id="colonia_resultados"
+         class="list-group shadow-sm"
+         style="display:none; max-height:200px; overflow-y:auto; position:relative; z-index:1050;">
+    </div>
+<div id="colonia_seleccionada" class="alert alert-success py-2 mb-2" style="display:none;">
+  <i class="fas fa-map-marker-alt mr-1"></i>
+  <span id="colonia_seleccionada_texto"></span>
+  <button type="button" id="btn_limpiar_colonia"
+          class="badge badge-light float-right"
+          style="font-size: 1.1rem; padding: 4px 10px; cursor: pointer; border: 1px solid #ddd;">
+    ×
+  </button>
+</div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="form-group">
+      <label>Calle *</label>
+      {{ form.calle }}
+      <span class="text-danger error-calle"></span>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="form-group">
+      <label>No. Exterior *</label>
+      {{ form.numero_exterior }}
+      <span class="text-danger error-numero_exterior"></span>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="form-group">
+      <label>No. Interior</label>
+      {{ form.numero_interior }}
+      <span class="text-danger error-numero_interior"></span>
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label>Referencias</label>
+  {{ form.referencias }}
+  <span class="text-danger error-referencias"></span>
+</div>
 
               <!-- Identificación -->
               <h5 class="mb-3 mt-3"><i class="fas fa-id-card"></i> Identificación</h5>
@@ -311,150 +339,207 @@
 
 {% block scripts %}
 <script>
-$(document).ready(function() {
-  // ========================================
-  // TOGGLE CAMPOS LABORALES
-  // ========================================
-  function toggleCamposLaborales() {
-    const esTrabajador = $('#id_es_trabajador').is(':checked');
-    const camposLaborales = $('#campos-laborales');
-    
-    if (esTrabajador) {
-      camposLaborales.slideDown();
-      $('#id_dependencia').prop('disabled', false);
-      $('#id_departamento').prop('disabled', false);
-      $('#id_estatus_laboral').prop('disabled', false);
-      $('#id_numero_empleado').prop('disabled', false);
-      $('#id_fecha_alta').prop('disabled', false);
-      $('#id_fecha_baja').prop('disabled', false);
-    } else {
-      camposLaborales.slideUp();
-      $('#id_dependencia').prop('disabled', true);
-      $('#id_departamento').prop('disabled', true);
-      $('#id_estatus_laboral').prop('disabled', true);
-      $('#id_numero_empleado').prop('disabled', true);
-      $('#id_fecha_alta').prop('disabled', true);
-      $('#id_fecha_baja').prop('disabled', true);
-    }
+$(document).ready(function () {
+
+  // ══════════════════════════════════════════
+  // AUTOCOMPLETE DE COLONIAS
+  // ══════════════════════════════════════════
+  let debounceTimer  = null;
+
+  const cpInput       = $('#id_codigo_postal');
+  const searchInput   = $('#colonia_search');
+  const hiddenColonia = $('#id_colonia');
+  const resultados    = $('#colonia_resultados');
+  const infoOk        = $('#colonia_seleccionada');
+  const textoOk       = $('#colonia_seleccionada_texto');
+  const icono         = $('#icono_busqueda');
+
+  // Modo editar: restaurar colonia guardada
+  if (window._coloniaInicial && window._coloniaInicial.id) {
+    hiddenColonia.val(window._coloniaInicial.id);
+    mostrarSeleccion(window._coloniaInicial.texto);
   }
 
-  // Ejecutar al cargar y al cambiar
-  toggleCamposLaborales();
+  // Escribir en el campo de búsqueda
+  searchInput.on('input', function () {
+    clearTimeout(debounceTimer);
+    const val = $(this).val().trim();
+
+    if (val.length < 3) {
+      ocultarResultados();
+      return;
+    }
+
+    debounceTimer = setTimeout(function () {
+      const params = (val.length === 5 && /^\d{5}$/.test(val))
+        ? { cp: val }
+        : { q:  val };
+      buscar(params);
+    }, 350);
+  });
+
+  // Escribir en el campo CP dispara búsqueda automática
+  cpInput.on('input', function () {
+    const cp = $(this).val().trim();
+    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
+      searchInput.val(cp).trigger('input');
+    }
+  });
+
+  // Limpiar selección
+  $('#btn_limpiar_colonia').on('click', function () {
+    hiddenColonia.val('');
+    infoOk.hide();
+    textoOk.text('');
+    searchInput.prop('disabled', false).val('').focus();
+  });
+
+  // Cerrar al hacer clic fuera
+  $(document).on('click', function (e) {
+    if (!$(e.target).closest('#colonia_search, #colonia_resultados').length) {
+      ocultarResultados();
+    }
+  });
+
+  function buscar(params) {
+    icono.removeClass('fa-search').addClass('fa-spinner fa-spin');
+
+    $.ajax({
+      url: '/guarderia/api/colonias/buscar/',
+      data: params,
+      success: function (data) {
+        icono.removeClass('fa-spinner fa-spin').addClass('fa-search');
+        if (data.success && data.colonias.length > 0) {
+          renderResultados(data.colonias);
+        } else {
+          resultados
+            .html('<div class="list-group-item text-muted py-2">' +
+                  '<i class="fas fa-info-circle mr-1"></i>No se encontraron colonias</div>')
+            .show();
+        }
+      },
+      error: function () {
+        icono.removeClass('fa-spinner fa-spin').addClass('fa-search');
+        ocultarResultados();
+      }
+    });
+  }
+
+  function renderResultados(colonias) {
+    resultados.empty();
+
+    colonias.forEach(function (col) {
+      const btn = $(
+        `<button type="button" class="list-group-item list-group-item-action py-2">
+          <strong>${col.nombre}</strong>
+          <small class="text-muted d-block">
+            ${col.municipio}, ${col.estado} &nbsp;·&nbsp; CP ${col.cp}
+          </small>
+        </button>`
+      );
+      btn.on('click', function () {
+        hiddenColonia.val(col.id);
+        cpInput.val(col.cp);  // ← siempre actualiza el CP con la colonia seleccionada
+        const texto = `${col.nombre} — ${col.municipio}, ${col.estado} (CP ${col.cp})`;
+        mostrarSeleccion(texto);
+        ocultarResultados();
+        searchInput.val('');
+        $('.error-colonia').text('');
+      });
+      resultados.append(btn);
+    });
+
+    resultados.show();
+  }
+
+  function mostrarSeleccion(texto) {
+    textoOk.text(texto);
+    infoOk.show();
+    searchInput.prop('disabled', true);
+  }
+
+  function ocultarResultados() {
+    resultados.hide().empty();
+  }
+
+  // ══════════════════════════════════════════
+  // TOGGLE CAMPOS LABORALES
+  // ══════════════════════════════════════════
+  const camposLaborales = ['dependencia','departamento','estatus_laboral',
+                            'numero_empleado','fecha_alta','fecha_baja'];
+
+  function toggleCamposLaborales() {
+    const activo = $('#id_es_trabajador').is(':checked');
+    $('#campos-laborales').slideToggle(activo);  // slideDown si true, slideUp si false
+    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', !activo));
+  }
+
+  // Inicializar estado correcto
+  const esTrabajador = $('#id_es_trabajador').is(':checked');
+  if (esTrabajador) {
+    $('#campos-laborales').show();
+    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', false));
+  } else {
+    $('#campos-laborales').hide();
+    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', true));
+  }
   $('#id_es_trabajador').on('change', toggleCamposLaborales);
 
-  // ========================================
-  // CARGAR DEPARTAMENTOS SEGÚN DEPENDENCIA
-  // ========================================
-  $('#id_dependencia').on('change', function() {
-    const dependenciaId = $(this).val();
-    const departamentoSelect = $('#id_departamento');
-    
-    if (dependenciaId) {
-      $.ajax({
-        url: '/guarderia/api/departamentos/',
-        data: { dependencia_id: dependenciaId },
-        success: function(data) {
-          departamentoSelect.empty();
-          departamentoSelect.append('<option value="">Seleccione un departamento</option>');
-          
-          data.departamentos.forEach(function(dept) {
-            departamentoSelect.append(
-              `<option value="${dept.id}">${dept.nombre}</option>`
-            );
-          });
-        }
-      });
-    } else {
-      departamentoSelect.empty();
-      departamentoSelect.append('<option value="">Seleccione primero una dependencia</option>');
+  // ══════════════════════════════════════════
+  // CARGAR DEPARTAMENTOS POR DEPENDENCIA
+  // ══════════════════════════════════════════
+  $('#id_dependencia').on('change', function () {
+    const id   = $(this).val();
+    const dept = $('#id_departamento');
+    if (!id) {
+      dept.html('<option value="">Seleccione primero una dependencia</option>');
+      return;
     }
-  });
-
-  // ========================================
-  // BÚSQUEDA DE COLONIAS POR CÓDIGO POSTAL
-  // ========================================
-  $('#id_codigo_postal').on('blur', function() {
-    const cp = $(this).val().trim();
-    const coloniaSelect = $('#id_colonia');
-    const buscarInput = $('[name="buscar_colonia"]');
-    
-    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
-      coloniaSelect.html('<option>Buscando colonias...</option>');
-      coloniaSelect.prop('disabled', true);
-      
-      $.ajax({
-        url: '/guarderia/api/colonias/buscar/',
-        data: { cp: cp },
-        success: function(data) {
-          coloniaSelect.empty();
-          coloniaSelect.append('<option value="">Seleccione una colonia</option>');
-          
-          if (data.success && data.colonias.length > 0) {
-            data.colonias.forEach(function(col) {
-              coloniaSelect.append(
-                `<option value="${col.id}">${col.nombre} - ${col.municipio}, ${col.estado}</option>`
-              );
-            });
-            coloniaSelect.prop('disabled', false);
-            buscarInput.prop('disabled', false);
-          } else {
-            coloniaSelect.append('<option value="">No se encontraron colonias</option>');
-          }
-        },
-        error: function() {
-          coloniaSelect.html('<option value="">Error al buscar colonias</option>');
-        }
-      });
-    } else {
-      coloniaSelect.html('<option value="">Ingrese un código postal válido</option>');
-      coloniaSelect.prop('disabled', true);
-      buscarInput.prop('disabled', true);
-    }
-  });
-
-  // Búsqueda dinámica de colonias
-  $('[name="buscar_colonia"]').on('input', function() {
-    const busqueda = $(this).val().toLowerCase();
-    const coloniaSelect = $('#id_colonia');
-    
-    coloniaSelect.find('option').each(function() {
-      if ($(this).val() === '') return;
-      
-      const texto = $(this).text().toLowerCase();
-      if (texto.includes(busqueda)) {
-        $(this).show();
-      } else {
-        $(this).hide();
+    $.ajax({
+      url: '/guarderia/api/departamentos/',
+      data: { dependencia_id: id },
+      success: function (data) {
+        dept.html('<option value="">Seleccione un departamento</option>');
+        data.departamentos.forEach(d =>
+          dept.append(`<option value="${d.id}">${d.nombre}</option>`)
+        );
       }
     });
   });
 
-  // ========================================
-  // VALIDACIÓN Y ENVÍO DEL FORMULARIO
-  // ========================================
-  $('#formTutor').on('submit', function() {
-    $('.text-danger[class^="error-"]').text('');
-    $('.form-control').removeClass('is-invalid');
+  // ══════════════════════════════════════════
+  // VALIDACIÓN AL ENVIAR
+  // ══════════════════════════════════════════
+  $('form').on('submit', function (e) {
+    // Si hay CP pero no colonia seleccionada, bloquear
+    if (cpInput.val().trim() && !hiddenColonia.val()) {
+      e.preventDefault();
+      $('.error-colonia').text('Selecciona una colonia de la lista.');
+      $('html, body').animate({
+        scrollTop: $('.error-colonia:first').offset().top - 120
+      }, 400);
+      return false;
+    }
   });
 
-  // Mostrar errores del servidor
+  // Errores del servidor via SweetAlert (solo en registrar)
   {% if form.errors %}
-    let errores = [];
+    const errores = [];
     {% for field, errors in form.errors.items %}
       {% for error in errors %}
         errores.push("{{ field }}: {{ error }}");
       {% endfor %}
     {% endfor %}
-    
-    if (errores.length > 0) {
+    if (errores.length) {
       Swal.fire({
         icon: 'error',
         title: 'Errores en el formulario',
-        html: '<ul class="text-left">' + errores.map(e => '<li>' + e + '</li>').join('') + '</ul>',
+        html: '<ul class="text-left">' + errores.map(e => `<li>${e}</li>`).join('') + '</ul>',
         confirmButtonText: 'Entendido'
       });
     }
   {% endif %}
+
 });
 </script>
 {% endblock scripts %}

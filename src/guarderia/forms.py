@@ -4,91 +4,69 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
 
 class TutorForm(forms.ModelForm):
-    """Formulario para registrar tutores/padres"""
-    
-    # Campo personalizado para búsqueda dinámica de colonias
-    buscar_colonia = forms.CharField(
+    # Campo colonia: queryset vacío, se llena via AJAX
+    colonia = forms.ModelChoiceField(
+        queryset=Colonia.objects.none(),  # ← CLAVE: no carga nada al inicio
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Buscar colonia...',
-            'disabled': 'disabled'
-        }),
-        label="Buscar Colonia"
+        widget=forms.HiddenInput(),       # ← oculto, el usuario usa el autocomplete
     )
-    
+
     class Meta:
         model = Tutor
-        fields = [
-            'nombre', 'apellido_paterno', 'apellido_materno',
-            'telefono', 'telefono_emergencia', 'email',
-            'codigo_postal', 'colonia', 'calle', 'numero_exterior', 
-            'numero_interior', 'referencias',
-            'tipo_identificacion', 'numero_identificacion',
-            'parentesco',
-            'servicio_medico', 'numero_seguro_social',  # ⭐ NUEVOS ⭐
-            'es_trabajador', 'dependencia', 'departamento', 
-            'estatus_laboral', 'numero_empleado', 'fecha_alta', 'fecha_baja',
-            'notas'
-        ]
+        exclude = ['huella_template', 'huella_imagen', 'huella_registrada', 
+                   'fecha_registro_huella', 'fecha_registro', 'fecha_modificacion','activo']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre(s)'}),
-            'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
-            'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(123) 456-7890'}),
-            'telefono_emergencia': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono de emergencia'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
-            
-            # Dirección
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'apellido_paterno': forms.TextInput(attrs={'class': 'form-control'}),
+            'apellido_materno': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono_emergencia': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'codigo_postal': forms.TextInput(attrs={
-                'class': 'form-control', 
-                'placeholder': '12345',
+                'class': 'form-control',
                 'maxlength': '5',
-                'pattern': '[0-9]{5}',
-                'id': 'id_codigo_postal'
+                'placeholder': '00000',
             }),
-            'colonia': forms.Select(attrs={
-                'class': 'form-control',
-                'id': 'id_colonia',
-                'disabled': 'disabled'
-            }),
-            'calle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la calle'}),
-            'numero_exterior': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'No. Ext.'}),
-            'numero_interior': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'No. Int. (opcional)'}),
-            'referencias': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Referencias para llegar'}),
-            
-            # Identificación
+            'calle': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero_exterior': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero_interior': forms.TextInput(attrs={'class': 'form-control'}),
+            'referencias': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'tipo_identificacion': forms.Select(attrs={'class': 'form-control'}),
-            'numero_identificacion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de identificación'}),
+            'numero_identificacion': forms.TextInput(attrs={'class': 'form-control'}),
             'parentesco': forms.Select(attrs={'class': 'form-control'}),
-            
-            # ⭐ NUEVOS WIDGETS - Servicio Médico ⭐
             'servicio_medico': forms.Select(attrs={'class': 'form-control'}),
-            'numero_seguro_social': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: 12345678901',
-                'maxlength': '20'
-            }),
-            
-            # Información laboral
-            'es_trabajador': forms.CheckboxInput(attrs={
-                'class': 'form-check-input',
-                'id': 'id_es_trabajador',
-                'style': 'width: 20px; height: 20px; cursor: pointer;'
-            }),
-            'dependencia': forms.Select(attrs={'class': 'form-control', 'id': 'id_dependencia', 'disabled': 'disabled'}),
-            'departamento': forms.Select(attrs={'class': 'form-control', 'id': 'id_departamento', 'disabled': 'disabled'}),
-            'estatus_laboral': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
-            'numero_empleado': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de empleado', 'disabled': 'disabled'}),
-            'fecha_alta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'disabled': 'disabled'}),
-            'fecha_baja': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'disabled': 'disabled'}),
-            
-            # Notas
-            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones adicionales'}),
+            'numero_seguro_social': forms.TextInput(attrs={'class': 'form-control'}),
+            'es_trabajador': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'dependencia': forms.Select(attrs={'class': 'form-control'}),
+            'departamento': forms.Select(attrs={'class': 'form-control'}),
+            'estatus_laboral': forms.Select(attrs={'class': 'form-control'}),
+            'numero_empleado': forms.TextInput(attrs={'class': 'form-control'}),
+            'fecha_alta': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_baja': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Si viene un POST con colonia_id, incluirla en el queryset para que valide
+        colonia_id = None
+        if args and hasattr(args[0], 'get'):          # args[0] es el QueryDict del POST
+            colonia_id = args[0].get('colonia')
+        
+        if colonia_id:
+            # Validar solo la colonia que viene en el POST
+            self.fields['colonia'].queryset = Colonia.objects.filter(pk=colonia_id)
+        elif self.instance and self.instance.pk and self.instance.colonia_id:
+            # Modo editar sin cambios: mantener la colonia guardada
+            self.fields['colonia'].queryset = Colonia.objects.filter(
+                pk=self.instance.colonia_id
+            )
+        else:
+            self.fields['colonia'].queryset = Colonia.objects.none()
+        
+        self.fields['colonia'].widget = forms.HiddenInput()
+        self.fields['colonia'].required = False
         
         # Filtrar departamentos según la dependencia seleccionada
         if 'dependencia' in self.data:

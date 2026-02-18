@@ -39,7 +39,10 @@ def registrar_tutor(request):
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
         if form.is_valid():
-            tutor = form.save()
+            tutor = form.save(commit=False)
+            tutor.activo = True    # ← siempre activo al crear
+            tutor.save()
+            form.save_m2m()
             
             if is_ajax:
                 return JsonResponse({
@@ -972,122 +975,92 @@ def registrar_salida(request):
 # ============================================
 
 def buscar_colonias_cp(request):
-    """Busca colonias por código postal desde la base de datos"""
+    """Busca colonias por código postal o por nombre desde la base de datos"""
     cp = request.GET.get('cp', '').strip()
+    q  = request.GET.get('q', '').strip()   # ← NUEVO
 
-    if not cp or not cp.isdigit() or len(cp) != 5:
-        return JsonResponse({
-            "success": False,
-            "error": "Código postal inválido"
-        })
+    # ── Búsqueda por CP (lógica existente, sin tocar) ──
+    if cp:
+        if not cp.isdigit() or len(cp) != 5:
+            return JsonResponse({"success": False, "error": "Código postal inválido"})
 
-    try:
-        # Buscar directamente en la BD
-        colonias = Colonia.objects.filter(d_codigo=cp).order_by('d_asenta')
-        
-        if not colonias.exists():
+        try:
+            colonias = Colonia.objects.filter(d_codigo=cp).order_by('d_asenta')
+
+            if not colonias.exists():
+                return JsonResponse({
+                    "success": False,
+                    "error": f"No se encontraron colonias para el CP {cp}"
+                })
+
+            resultado = []
+            for col in colonias:
+                resultado.append({
+                    "id":                col.id,
+                    "nombre":            col.d_asenta,
+                    "tipo_asentamiento": col.d_tipo_asenta,
+                    "municipio":         col.D_mnpio,
+                    "estado":            col.d_estado,
+                    "ciudad":            col.d_ciudad if col.d_ciudad else col.D_mnpio,
+                    "cp":                col.d_codigo,   # ← NUEVO (lo necesita el JS)
+                })
+
+            return JsonResponse({
+                "success": True,
+                "fuente":  "base_de_datos",
+                "colonias": resultado,
+                "total":    len(resultado)
+            })
+
+        except Exception as e:
+            import traceback
             return JsonResponse({
                 "success": False,
-                "error": f"No se encontraron colonias para el CP {cp}"
+                "error":     f"Error al consultar: {str(e)}",
+                "traceback": traceback.format_exc()
             })
-        
-        # Preparar resultado
-        resultado = []
-        for col in colonias:
-            resultado.append({
-                "id": col.id,  # Usar el ID de Django
-                "nombre": col.d_asenta,
-                "tipo_asentamiento": col.d_tipo_asenta,
-                "municipio": col.D_mnpio,
-                "estado": col.d_estado,
-                "ciudad": col.d_ciudad if col.d_ciudad else col.D_mnpio,
+
+    # ── NUEVO: Búsqueda por texto libre ──
+    elif q and len(q) >= 3:
+        try:
+            from django.db.models import Q
+            colonias = (
+                Colonia.objects
+                .filter(Q(d_asenta__icontains=q) | Q(D_mnpio__icontains=q))
+                .values('id', 'd_asenta', 'd_tipo_asenta', 'D_mnpio',
+                        'd_estado', 'd_ciudad', 'd_codigo')
+                .order_by('d_asenta')[:40]
+            )
+
+            resultado = [
+                {
+                    "id":                col['id'],
+                    "nombre":            col['d_asenta'],
+                    "tipo_asentamiento": col['d_tipo_asenta'],
+                    "municipio":         col['D_mnpio'],
+                    "estado":            col['d_estado'],
+                    "ciudad":            col['d_ciudad'] if col['d_ciudad'] else col['D_mnpio'],
+                    "cp":                col['d_codigo'],
+                }
+                for col in colonias
+            ]
+
+            return JsonResponse({
+                "success": True,
+                "fuente":  "base_de_datos",
+                "colonias": resultado,
+                "total":    len(resultado)
             })
-        
-        return JsonResponse({
-            "success": True,
-            "fuente": "base_de_datos",
-            "colonias": resultado,
-            "total": len(resultado)
-        })
-    
-    except Exception as e:
-        import traceback
-        return JsonResponse({
-            "success": False,
-            "error": f"Error al consultar: {str(e)}",
-            "traceback": traceback.format_exc()
-        })
 
-
-# ============================================
-# OPTIMIZACIÓN CON CACHÉ (OPCIONAL)
-# ============================================
-# Si el archivo es muy grande y quieres mejorar el rendimiento,
-# puedes cargar el Excel una sola vez en memoria:
-
-from functools import lru_cache
-
-@lru_cache(maxsize=1)
-def cargar_colonias_excel():
-    """Carga el Excel una sola vez y lo mantiene en memoria"""
-    archivo_excel = os.path.join(
-        settings.BASE_DIR,
-        'guarderia',
-        'data',
-        'Colonias.xlsx'
-    )
-    df = pd.read_excel(archivo_excel)
-    df['d_codigo'] = df['d_codigo'].astype(str).str.zfill(5)
-    return df
-
-
-def buscar_colonias_cp_optimizado(request):
-    """Versión optimizada que usa caché"""
-    cp = request.GET.get('cp', '').strip()
-
-    if not cp or not cp.isdigit() or len(cp) != 5:
-        return JsonResponse({
-            "success": False,
-            "error": "Código postal inválido"
-        })
-
-    try:
-        # Cargar Excel desde caché
-        df = cargar_colonias_excel()
-        
-        # Filtrar por código postal
-        colonias_filtradas = df[df['id_asenta_cpcons'] == cp]
-        
-        if colonias_filtradas.empty:
+        except Exception as e:
+            import traceback
             return JsonResponse({
                 "success": False,
-                "error": "No se encontraron colonias para este código postal"
+                "error":     f"Error al consultar: {str(e)}",
+                "traceback": traceback.format_exc()
             })
-        
-        # Preparar resultado
-        resultado = []
-        for index, row in colonias_filtradas.iterrows():
-            resultado.append({
-                "id": str(row['id_asenta_cpcons']),
-                "nombre": str(row['d_asenta']),
-                "tipo_asentamiento": str(row['d_tipo_asenta']),
-                "municipio": str(row['D_mnpio']),
-                "estado": str(row['d_estado']),
-                "ciudad": str(row['d_ciudad']) if pd.notna(row['d_ciudad']) else str(row['D_mnpio']),
-            })
-        
-        return JsonResponse({
-            "success": True,
-            "fuente": "excel_local_cache",
-            "colonias": resultado,
-            "total": len(resultado)
-        })
-    
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": f"Error: {str(e)}"
-        })
+
+    return JsonResponse({"success": False, "error": "Proporciona cp o q (mínimo 3 caracteres)"})
 
 # ============================================
 # VISTAS DE DEPENDENCIAS Y DEPARTAMENTOS
