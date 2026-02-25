@@ -134,6 +134,10 @@ urlpatterns = [
           views.enviar_nino_papelera, name='enviar_nino_papelera'),
      path('ninos/<int:nino_id>/restaurar/',
           views.restaurar_nino, name='restaurar_nino'),
+
+     path('grupos/finalizar-ciclo/', 
+     views.finalizar_ciclo_escolar, 
+     name='finalizar_ciclo_escolar'),
     
     
 ]

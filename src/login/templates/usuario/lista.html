@@ -24,6 +24,18 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-12">
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Usuarios del Sistema</h3>
@@ -34,94 +46,168 @@
             </div>
           </div>
           <div class="card-body">
-            <table id="tablaUsuarios" class="table table-bordered table-hover">
-              <thead>
-                <tr>
-                  <th>Foto</th>
-                  <th>Usuario</th>
-                  <th>Nombre Completo</th>
-                  <th>Email</th>
-                  <th>Rol</th>
-                  <th>Teléfono</th>
-                  <th>Fecha Registro</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for usuario in usuarios %}
-                <tr>
-                  <td class="text-center">
-                    {% if usuario.perfil.foto_perfil %}
-                      <img src="{{ usuario.perfil.foto_perfil.url }}" class="img-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ usuario.get_full_name }}">
-                    {% else %}
-                      <div class="img-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                        <i class="fas fa-user"></i>
-                      </div>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <strong>{{ usuario.username }}</strong>
-                    {% if usuario.is_superuser %}
-                      <span class="badge badge-danger ml-1">Superadmin</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ usuario.get_full_name|default:"—" }}</td>
-                  <td>{{ usuario.email|default:"—" }}</td>
-                  <td>
-                    {% if usuario.perfil.rol %}
-                      {% if usuario.perfil.rol.nombre == 'ADMIN' %}
-                        <span class="badge badge-primary">{{ usuario.perfil.rol }}</span>
-                      {% elif usuario.perfil.rol.nombre == 'OBSERVADOR' %}
-                        <span class="badge badge-info">{{ usuario.perfil.rol }}</span>
-                      {% elif usuario.perfil.rol.nombre == 'EMPLEADO' %}
-                        <span class="badge badge-success">{{ usuario.perfil.rol }}</span>
-                      {% else %}
-                        <span class="badge badge-secondary">{{ usuario.perfil.rol }}</span>
-                      {% endif %}
-                    {% else %}
-                      <span class="badge badge-secondary">Sin rol</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ usuario.perfil.telefono|default:"—" }}</td>
-                  <td>{{ usuario.date_joined|date:"d/m/Y" }}</td>
-                  <td>
-                    {% if usuario.is_active %}
-                      <span class="badge badge-success">Activo</span>
-                    {% else %}
-                      <span class="badge badge-danger">Inactivo</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <div class="btn-group">
-                      <a href="{% url 'auth:detalle_usuario' usuario.id %}" 
-                         class="btn btn-info btn-sm" 
-                         title="Ver Detalles">
-                        <i class="fas fa-eye"></i>
-                      </a>
-                      <a href="{% url 'auth:editar_usuario' usuario.id %}" 
-                         class="btn btn-warning btn-sm" 
-                         title="Editar">
-                        <i class="fas fa-edit"></i>
-                      </a>
-                      {% if usuario.id != request.user.id %}
-                        <a href="{% url 'auth:desactivar_usuario' usuario.id %}" 
-                           class="btn btn-{% if usuario.is_active %}danger{% else %}success{% endif %} btn-sm"
-                           onclick="return confirm('¿Estás seguro de {% if usuario.is_active %}desactivar{% else %}activar{% endif %} este usuario?')"
-                           title="{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}">
-                          <i class="fas fa-{% if usuario.is_active %}ban{% else %}check{% endif %}"></i>
-                        </a>
-                      {% endif %}
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="9" class="text-center">No hay usuarios registrados</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#tabActivos" role="tab">
+                  <i class="fas fa-check-circle text-success"></i> Activos
+                  <span class="badge badge-success ml-1">{{ usuarios_activos|length }}</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tabPapelera" role="tab">
+                  <i class="fas fa-trash text-danger"></i> Papelera
+                  <span class="badge badge-danger ml-1">{{ usuarios_inactivos|length }}</span>
+                </a>
+              </li>
+            </ul>
+
+            <div class="tab-content pt-3">
+
+              <!-- TAB ACTIVOS -->
+              <div class="tab-pane fade show active" id="tabActivos" role="tabpanel">
+                <table id="tablaActivos" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
+                    <tr>
+                      <th class="text-center" style="width:60px;">Foto</th>
+                      <th>Usuario</th>
+                      <th>Nombre Completo</th>
+                      <th>Email</th>
+                      <th style="width:120px;">Rol</th>
+                      <th style="width:120px;">Teléfono</th>
+                      <th style="width:110px;">Fecha Registro</th>
+                      <th class="text-center" style="width:160px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for usuario in usuarios_activos %}
+                    <tr>
+                      <td class="text-center">
+                        {% if usuario.perfil.foto_perfil %}
+                          <img src="{{ usuario.perfil.foto_perfil.url }}" class="img-circle" 
+                               style="width:40px;height:40px;object-fit:cover;" 
+                               alt="{{ usuario.get_full_name }}">
+                        {% else %}
+                          <div class="img-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" 
+                               style="width:40px;height:40px;">
+                            <i class="fas fa-user"></i>
+                          </div>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <strong>{{ usuario.username }}</strong>
+                        {% if usuario.is_superuser %}
+                          <span class="badge badge-danger ml-1">Superadmin</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ usuario.get_full_name|default:"—" }}</td>
+                      <td>{{ usuario.email|default:"—" }}</td>
+                      <td>
+                        {% if usuario.perfil.rol %}
+                          {% if usuario.perfil.rol.nombre == 'ADMIN' %}
+                            <span class="badge badge-primary">{{ usuario.perfil.rol }}</span>
+                          {% elif usuario.perfil.rol.nombre == 'OBSERVADOR' %}
+                            <span class="badge badge-info">{{ usuario.perfil.rol }}</span>
+                          {% elif usuario.perfil.rol.nombre == 'EMPLEADO' %}
+                            <span class="badge badge-success">{{ usuario.perfil.rol }}</span>
+                          {% else %}
+                            <span class="badge badge-secondary">{{ usuario.perfil.rol }}</span>
+                          {% endif %}
+                        {% else %}
+                          <span class="badge badge-secondary">Sin rol</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ usuario.perfil.telefono|default:"—" }}</td>
+                      <td>{{ usuario.date_joined|date:"d/m/Y" }}</td>
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                          <a href="{% url 'auth:detalle_usuario' usuario.id %}" class="btn btn-info" title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                          <a href="{% url 'auth:editar_usuario' usuario.id %}" class="btn btn-warning" title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                          {% if usuario.id != request.user.id and not usuario.is_superuser %}
+                            <button type="button" class="btn btn-danger" 
+                                    onclick="enviarAPapelera({{ usuario.id }}, '{{ usuario.username|escapejs }}')" 
+                                    title="Enviar a papelera">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- TAB PAPELERA -->
+              <div class="tab-pane fade" id="tabPapelera" role="tabpanel">
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Papelera:</strong> Estos usuarios están inactivos y no pueden iniciar sesión en el sistema.
+                </div>
+                <table id="tablaPapelera" class="table table-striped table-bordered table-hover w-100">
+                  <thead class="thead-light">
+                    <tr>
+                      <th class="text-center" style="width:60px;">Foto</th>
+                      <th>Usuario</th>
+                      <th>Nombre Completo</th>
+                      <th>Email</th>
+                      <th style="width:120px;">Rol</th>
+                      <th style="width:120px;">Teléfono</th>
+                      <th style="width:110px;">Fecha Registro</th>
+                      <th class="text-center" style="width:160px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for usuario in usuarios_inactivos %}
+                    <tr class="table-secondary">
+                      <td class="text-center">
+                        {% if usuario.perfil.foto_perfil %}
+                          <img src="{{ usuario.perfil.foto_perfil.url }}" class="img-circle" 
+                               style="width:40px;height:40px;object-fit:cover;opacity:0.5;" 
+                               alt="{{ usuario.get_full_name }}">
+                        {% else %}
+                          <div class="img-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" 
+                               style="width:40px;height:40px;">
+                            <i class="fas fa-user"></i>
+                          </div>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <del>{{ usuario.username }}</del>
+                        {% if usuario.is_superuser %}
+                          <span class="badge badge-secondary ml-1">Superadmin</span>
+                        {% endif %}
+                      </td>
+                      <td><small class="text-muted">{{ usuario.get_full_name|default:"—" }}</small></td>
+                      <td><small class="text-muted">{{ usuario.email|default:"—" }}</small></td>
+                      <td>
+                        {% if usuario.perfil.rol %}
+                          <span class="badge badge-secondary">{{ usuario.perfil.rol }}</span>
+                        {% else %}
+                          <span class="badge badge-secondary">Sin rol</span>
+                        {% endif %}
+                      </td>
+                      <td><small class="text-muted">{{ usuario.perfil.telefono|default:"—" }}</small></td>
+                      <td><small class="text-muted">{{ usuario.date_joined|date:"d/m/Y" }}</small></td>
+                      <td class="text-center">
+                        <button type="button" class="btn btn-success btn-sm" 
+                                onclick="restaurar({{ usuario.id }}, '{{ usuario.username|escapejs }}')" 
+                                title="Restaurar">
+                          <i class="fas fa-undo"></i> Restaurar
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
@@ -130,17 +216,116 @@
 </section>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
-  $(document).ready(function() {
-    $('#tablaUsuarios').DataTable({
-      "language": {
-        "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
-      },
-      "responsive": true,
-      "autoWidth": false,
-      "order": [[6, 'desc']]  // Ordenar por fecha de registro descendente
-    });
+$(document).ready(function () {
+
+  var opts = function (emptyMsg) {
+    return {
+      responsive: true, 
+      autoWidth: false, 
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+      // Foto (0) y Acciones (7) sin ordenar
+      columnDefs: [
+        { orderable: false, searchable: false, targets: [0, 7] }
+      ],
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        emptyTable: emptyMsg
+      }
+    };
+  };
+
+  $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay usuarios activos</span>'));
+  $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
+
+  $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
   });
+});
+
+function enviarAPapelera(id, username) {
+  Swal.fire({
+    title: '¿Enviar a papelera?',
+    html: 'El usuario <strong>' + username + '</strong> quedará inactivo y no podrá iniciar sesión.',
+    icon: 'warning', 
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545', 
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Sí, enviar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/auth/usuarios/' + id + '/enviar-papelera/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ 
+              icon: 'success', 
+              title: '¡Enviado!', 
+              text: res.message, 
+              timer: 2000, 
+              showConfirmButton: false 
+            });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { 
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: 'No se pudo enviar a papelera.' 
+        }); 
+      });
+    }
+  });
+}
+
+function restaurar(id, username) {
+  Swal.fire({
+    title: '¿Restaurar usuario?',
+    html: '¿Desea restaurar a <strong>' + username + '</strong>?',
+    icon: 'question', 
+    showCancelButton: true,
+    confirmButtonColor: '#28a745', 
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-undo"></i> Sí, restaurar',
+    cancelButtonText: 'Cancelar'
+  }).then(function (r) {
+    if (r.isConfirmed) {
+      $.post('/auth/usuarios/' + id + '/restaurar/',
+        { csrfmiddlewaretoken: getCookie('csrftoken') },
+        function (res) {
+          if (res.success) {
+            Swal.fire({ 
+              icon: 'success', 
+              title: '¡Restaurado!', 
+              text: res.message, 
+              timer: 2000, 
+              showConfirmButton: false 
+            });
+            setTimeout(function () { location.reload(); }, 1500);
+          }
+        }
+      ).fail(function () { 
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: 'No se pudo restaurar.' 
+        }); 
+      });
+    }
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function (c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
 </script>
-{% endblock %}
+{% endblock scripts %}

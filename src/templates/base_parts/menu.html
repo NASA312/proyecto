@@ -20,6 +20,15 @@
         <a href="#" class="d-block">
           <strong class="font-bold">{{ user.first_name }} {{ user.last_name }}</strong>
         </a>
+        {% if user.perfil.rol %}
+          <small class="badge 
+            {% if user.perfil.rol.nombre == 'ADMIN' %}badge-danger
+            {% elif user.perfil.rol.nombre == 'EMPLEADO' %}badge-success
+            {% elif user.perfil.rol.nombre == 'OBSERVADOR' %}badge-info
+            {% else %}badge-secondary{% endif %}">
+            {{ user.perfil.rol.nombre }}
+          </small>
+        {% endif %}
       </div>
     </div>
 
@@ -28,8 +37,9 @@
       <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
         
         <!-- ============================================ -->
-        <!-- USUARIOS DEL SISTEMA -->
+        <!-- USUARIOS DEL SISTEMA (SOLO ADMIN) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-users-cog"></i>
@@ -53,10 +63,12 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- TUTORES -->
+        <!-- TUTORES (ADMIN y EMPLEADO) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-user-friends"></i>
@@ -80,9 +92,10 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- NIÑOS -->
+        <!-- NIÑOS (TODOS pueden ver, solo ADMIN y EMPLEADO pueden registrar) -->
         <!-- ============================================ -->
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
@@ -99,18 +112,21 @@
                 <p>Lista de Niños</p>
               </a>
             </li>
+            {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
             <li class="nav-item">
               <a href="{% url 'guarderia:registrar_nino' %}" class="nav-link">
                 <i class="fas fa-plus-circle nav-icon"></i>
                 <p>Registrar Niño</p>
               </a>
             </li>
+            {% endif %}
           </ul>
         </li>
 
         <!-- ============================================ -->
-        <!-- CONTROL DE ACCESO -->
+        <!-- CONTROL DE ACCESO (ADMIN y EMPLEADO) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-fingerprint"></i>
@@ -134,10 +150,12 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- DEPENDENCIAS -->
+        <!-- DEPENDENCIAS (SOLO ADMIN) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-building"></i>
@@ -161,10 +179,12 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- DEPARTAMENTOS -->
+        <!-- DEPARTAMENTOS (SOLO ADMIN) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-sitemap"></i>
@@ -188,10 +208,12 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- SERVICIOS MÉDICOS -->
+        <!-- SERVICIOS MÉDICOS (SOLO ADMIN) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-user-md"></i>
@@ -215,10 +237,12 @@
             </li>
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- GRUPOS -->
+        <!-- GRUPOS (ADMIN y EMPLEADO) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-users"></i>
@@ -234,17 +258,20 @@
                 <p>Lista de Grupos</p>
               </a>
             </li>
+            {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
             <li class="nav-item">
               <a href="{% url 'guarderia:registrar_grupo' %}" class="nav-link">
                 <i class="fas fa-plus nav-icon"></i>
                 <p>Registrar Grupo</p>
               </a>
             </li>
+            {% endif %}
           </ul>
         </li>
+        {% endif %}
 
         <!-- ============================================ -->
-        <!-- OBSERVACIONES -->
+        <!-- OBSERVACIONES (TODOS) -->
         <!-- ============================================ -->
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
@@ -271,17 +298,19 @@
         </li>
 
         <!-- ============================================ -->
-        <!-- CONFIGURACIÓN -->
+        <!-- CONFIGURACIÓN (SOLO ADMIN y SUPERUSER) -->
         <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
         <li class="nav-item">
           <a href="{% url 'admin:index' %}" class="nav-link">
             <i class="nav-icon fas fa-cog"></i>
             <p>
               Configuración
-              <span class="right badge badge-info">Admin</span>
+              <span class="right badge badge-danger">Admin</span>
             </p>
           </a>
         </li>
+        {% endif %}
       </ul>
     </nav>
     <!-- /.sidebar-menu -->

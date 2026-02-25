@@ -1,1 +1,116 @@
-<h1>Página SIN_PERMISOS.HTML</h1>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acceso Denegado{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-12 text-center">
+        <h1 class="m-0 text-danger">
+          <i class="fas fa-shield-alt"></i> Acceso Denegado
+        </h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        
+        <!-- Card de Error -->
+        <div class="card card-danger card-outline">
+          <div class="card-body text-center p-5">
+            
+            <!-- Icono Grande -->
+            <div class="mb-4">
+              <i class="fas fa-exclamation-triangle fa-5x text-warning"></i>
+            </div>
+            
+            <!-- Título -->
+            <h2 class="text-danger mb-3">
+              <strong>Permisos Insuficientes</strong>
+            </h2>
+            
+            <!-- Mensaje -->
+            <p class="lead text-muted mb-4">
+              No tienes los permisos necesarios para acceder a esta página.
+            </p>
+            
+            <!-- Información del Usuario -->
+            <div class="alert alert-light border mb-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-1">
+                    <strong>Usuario:</strong> {{ user.username }}
+                  </p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1">
+                    <strong>Rol:</strong> 
+                    {% if user.perfil.rol %}
+                      <span class="badge 
+                        {% if user.perfil.rol.nombre == 'ADMIN' %}badge-danger
+                        {% elif user.perfil.rol.nombre == 'EMPLEADO' %}badge-success
+                        {% elif user.perfil.rol.nombre == 'OBSERVADOR' %}badge-info
+                        {% else %}badge-secondary{% endif %}">
+                        {{ user.perfil.rol.nombre }}
+                      </span>
+                    {% else %}
+                      <span class="badge badge-secondary">Sin rol</span>
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Información Adicional -->
+            <div class="callout callout-info">
+              <p class="mb-0">
+                <i class="fas fa-info-circle"></i>
+                <strong>¿Necesitas acceso?</strong><br>
+                <small class="text-muted">
+                  Contacta al administrador del sistema para solicitar los permisos necesarios.
+                </small>
+              </p>
+            </div>
+            
+            <!-- Botones de Acción -->
+            <div class="mt-4">
+              <a href="javascript:history.back()" class="btn btn-secondary btn-lg mr-2">
+                <i class="fas fa-arrow-left"></i> Volver Atrás
+              </a>
+              <a href="{% url 'guarderia:dashboard' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-home"></i> Ir al Dashboard
+              </a>
+            </div>
+            
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Mostrar SweetAlert automáticamente al cargar la página
+$(document).ready(function() {
+  Swal.fire({
+    icon: 'warning',
+    title: 'Acceso Denegado',
+    html: '<p class="mb-2">No tienes permisos para acceder a esta página.</p>' +
+          '<small class="text-muted">Contacta al administrador si necesitas acceso.</small>',
+    confirmButtonColor: '#007bff',
+    confirmButtonText: '<i class="fas fa-check"></i> Entendido',
+    allowOutsideClick: false,
+    allowEscapeKey: false
+  });
+});
+</script>
+{% endblock %}

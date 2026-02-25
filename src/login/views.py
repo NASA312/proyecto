@@ -1,6 +1,7 @@
 from datetime import datetime
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import login, authenticate, logout
+from django.views.decorators.http import require_http_methods
 from .forms import LoginForm, RegistroUsuarioForm, EditarUsuarioForm, EditarPerfilForm
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -15,6 +16,19 @@ from django.utils import timezone
 import base64
 import json
 import requests
+
+# ============================================
+# FUNCIÓN AUXILIAR PARA VERIFICAR ADMIN
+# ============================================
+
+def es_admin(user):
+    """Verifica si el usuario es superuser O tiene rol ADMIN"""
+    if user.is_superuser:
+        return True
+    if hasattr(user, 'perfil') and user.perfil.rol:
+        return user.perfil.rol.nombre == 'ADMIN'
+    return False
+
 
 # ============================================
 # VISTAS DE AUTENTICACIÓN TRABAJADORES
@@ -69,33 +83,118 @@ def app_logout(request):
 
 def permission_denied(request):
     return render(request, "login/sin_permisos.html", {})
+
+
 # ============================================
 # VISTAS DE GESTIÓN DE USUARIOS
 # ============================================
 
 @login_required
 def lista_usuarios(request):
-    """Lista de todos los usuarios del sistema"""
-    # Solo administradores pueden ver esta página
-    if not request.user.is_superuser:
+    """Lista de todos los usuarios del sistema con tabs Activos/Papelera"""
+    # ✅ Verificar si es ADMIN o Superuser
+    if not es_admin(request.user):
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('auth:denegado')
     
-    usuarios = User.objects.all().select_related('perfil', 'perfil__rol').order_by('-date_joined')
+    usuarios_activos = User.objects.filter(is_active=True).select_related('perfil', 'perfil__rol').order_by('-date_joined')
+    usuarios_inactivos = User.objects.filter(is_active=False).select_related('perfil', 'perfil__rol').order_by('-date_joined')
     
     ctx = {
-        'usuarios': usuarios,
-        'total_usuarios': usuarios.count(),
-        'usuarios_activos': usuarios.filter(is_active=True).count(),
+        'usuarios_activos': usuarios_activos,
+        'usuarios_inactivos': usuarios_inactivos,
+        'total_usuarios': User.objects.count(),
     }
     return render(request, 'usuario/lista.html', ctx)
 
 
+# ============================================
+# FUNCIONES DE PAPELERA - USUARIOS
+# ============================================
+
+@login_required
+@require_http_methods(["POST"])
+def enviar_usuario_papelera(request, user_id):
+    """Enviar usuario a papelera (marcar como inactivo)"""
+    try:
+        # ✅ Verificar permisos
+        if not es_admin(request.user):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para realizar esta acción.'
+            }, status=403)
+        
+        usuario = get_object_or_404(User, id=user_id)
+        
+        # ✅ No permitir desactivarse a sí mismo
+        if usuario.id == request.user.id:
+            return JsonResponse({
+                'success': False,
+                'message': 'No puedes desactivar tu propia cuenta.'
+            }, status=400)
+        
+        # ✅ NUEVO: No permitir desactivar superusers
+        if usuario.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'message': 'No se puede desactivar a un superadministrador del sistema.'
+            }, status=400)
+        
+        # Enviar a papelera
+        usuario.is_active = False
+        usuario.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Usuario {usuario.username} enviado a papelera'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_usuario(request, user_id):
+    """Restaurar usuario desde papelera (marcar como activo)"""
+    try:
+        # ✅ Verificar permisos
+        if not es_admin(request.user):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para realizar esta acción.'
+            }, status=403)
+        
+        usuario = get_object_or_404(User, id=user_id)
+        
+        # Restaurar usuario
+        usuario.is_active = True
+        usuario.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Usuario {usuario.username} restaurado exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+# ============================================
+# OTRAS VISTAS DE USUARIOS
+# ============================================
+
 @login_required
 def registrar_usuario(request):
     """Registrar nuevo usuario (solo administradores)"""
-    # Solo administradores pueden registrar usuarios
-    if not request.user.is_superuser:
+    # ✅ CORREGIDO: Permitir a ADMIN y Superuser
+    if not es_admin(request.user):
         messages.error(request, 'No tienes permisos para registrar usuarios.')
         return redirect('auth:denegado')
     
@@ -104,15 +203,6 @@ def registrar_usuario(request):
         
         # Detectar si es petición AJAX
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
-        # 🔍 DEBUG: Imprimir datos recibidos
-        print("\n" + "="*50)
-        print("📝 DATOS RECIBIDOS DEL FORMULARIO:")
-        print("="*50)
-        for key, value in request.POST.items():
-            if 'password' not in key.lower():  # No mostrar contraseñas
-                print(f"{key}: {value}")
-        print("="*50 + "\n")
         
         if form.is_valid():
             try:
@@ -124,7 +214,7 @@ def registrar_usuario(request):
                     return JsonResponse({
                         'success': True,
                         'message': f'Usuario {usuario.username} registrado exitosamente.',
-                        'redirect_url': '/login/usuarios/'
+                        'redirect_url': '/auth/usuarios/'
                     })
                 else:
                     messages.success(request, f'Usuario {usuario.username} registrado exitosamente.')
@@ -141,21 +231,6 @@ def registrar_usuario(request):
                 else:
                     messages.error(request, f'Error al guardar el usuario: {str(e)}')
         else:
-            # 🔍 DEBUG: Mostrar errores detallados
-            print("\n" + "="*50)
-            print("❌ ERRORES DE VALIDACIÓN DEL FORMULARIO:")
-            print("="*50)
-            
-            for field, errors in form.errors.items():
-                print(f"\n🔴 Campo: {field}")
-                for error in errors:
-                    print(f"   └─ {error}")
-            
-            print("\n" + "="*50)
-            print("📋 ERRORES EN FORMATO JSON:")
-            print(form.errors.as_json())
-            print("="*50 + "\n")
-            
             if is_ajax:
                 errors = {}
                 for field, error_list in form.errors.items():
@@ -176,8 +251,8 @@ def registrar_usuario(request):
 @login_required
 def detalle_usuario(request, user_id):
     """Ver detalles de un usuario"""
-    # Solo administradores o el mismo usuario pueden ver detalles
-    if not request.user.is_superuser and request.user.id != user_id:
+    # ✅ Solo administradores o el mismo usuario pueden ver detalles
+    if not es_admin(request.user) and request.user.id != user_id:
         messages.error(request, 'No tienes permisos para ver este usuario.')
         return redirect('auth:denegado')
     
@@ -194,8 +269,8 @@ def detalle_usuario(request, user_id):
 @login_required
 def editar_usuario(request, user_id):
     """Editar información de usuario"""
-    # Solo administradores o el mismo usuario pueden editar
-    if not request.user.is_superuser and request.user.id != user_id:
+    # ✅ Solo administradores o el mismo usuario pueden editar
+    if not es_admin(request.user) and request.user.id != user_id:
         messages.error(request, 'No tienes permisos para editar este usuario.')
         return redirect('auth:denegado')
     
@@ -235,7 +310,7 @@ def editar_usuario(request, user_id):
                 return JsonResponse({
                     'success': True,
                     'message': f'Usuario {usuario.username} actualizado correctamente.',
-                    'redirect_url': f'/login/usuario/{usuario.id}/'
+                    'redirect_url': f'/auth/usuario/{usuario.id}/'
                 })
             else:
                 messages.success(request, f'Usuario {usuario.username} actualizado correctamente.')
@@ -266,18 +341,25 @@ def editar_usuario(request, user_id):
     }
     return render(request, 'usuario/editar.html', ctx)
 
+
 @login_required
 def desactivar_usuario(request, user_id):
-    """Desactivar/Activar usuario"""
-    if not request.user.is_superuser:
+    """Desactivar/Activar usuario (FUNCIÓN LEGACY - usar enviar_usuario_papelera)"""
+    # ✅ Verificar permisos
+    if not es_admin(request.user):
         messages.error(request, 'No tienes permisos para realizar esta acción.')
         return redirect('auth:denegado')
     
     usuario = get_object_or_404(User, id=user_id)
     
-    # No permitir desactivar al propio usuario
+    # ✅ No permitir desactivar al propio usuario
     if usuario.id == request.user.id:
         messages.error(request, 'No puedes desactivar tu propia cuenta.')
+        return redirect('auth:lista_usuarios')
+    
+    # ✅ NUEVO: No permitir desactivar superusers
+    if usuario.is_superuser:
+        messages.error(request, 'No se puede desactivar a un superadministrador del sistema.')
         return redirect('auth:lista_usuarios')
     
     # Cambiar estado

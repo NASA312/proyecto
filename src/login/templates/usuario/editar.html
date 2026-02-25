@@ -114,7 +114,7 @@
                 <div class="col-md-6">
                   <div class="form-group">
                     <label for="{{ user_form.first_name.id_for_label }}">
-                      <i class="fas fa-signature"></i> Nombre(s) *
+                      <i class="fas fa-user"></i> Nombre(s) *
                     </label>
                     {{ user_form.first_name }}
                     {% if user_form.first_name.errors %}
@@ -125,7 +125,7 @@
                 <div class="col-md-6">
                   <div class="form-group">
                     <label for="{{ user_form.last_name.id_for_label }}">
-                      <i class="fas fa-signature"></i> Apellidos *
+                      <i class="fas fa-user-tie"></i> Apellidos *
                     </label>
                     {{ user_form.last_name }}
                     {% if user_form.last_name.errors %}
@@ -149,17 +149,23 @@
                 </div>
               </div>
 
+              <!-- Campo oculto para is_active (sin mostrar checkbox) -->
+              <input type="hidden" name="is_active" value="{{ user_form.is_active.value|default:'on' }}">
+              
               <div class="row">
                 <div class="col-md-12">
-                  <div class="form-group">
-                    <div class="icheck-primary">
-                      {{ user_form.is_active }}
-                      <label for="{{ user_form.is_active.id_for_label }}">
-                        Usuario Activo en el Sistema
-                      </label>
-                    </div>
-                    <small class="form-text text-muted">
-                      Si se desactiva, el usuario no podrá iniciar sesión
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Estado:</strong> Usuario 
+                    {% if usuario.is_active %}
+                      <span class="badge badge-success">ACTIVO</span>
+                    {% else %}
+                      <span class="badge badge-danger">INACTIVO</span>
+                    {% endif %}
+                    en el sistema
+                    <br>
+                    <small class="text-muted">
+                      Para desactivar/activar usuarios, usa el botón "Enviar a papelera" en la lista de usuarios
                     </small>
                   </div>
                 </div>
@@ -207,16 +213,21 @@
                 </div>
               </div>
 
+              <!-- Campo oculto para activo (sin mostrar checkbox) -->
+              <input type="hidden" name="activo" value="{{ perfil_form.activo.value|default:'on' }}">
+              
               <div class="row">
                 <div class="col-md-12">
-                  <div class="form-group">
-                    <div class="icheck-success">
-                      {{ perfil_form.activo }}
-                      <label for="{{ perfil_form.activo.id_for_label }}">
-                        Perfil Activo
-                      </label>
-                    </div>
-                    <small class="form-text text-muted">
+                  <div class="alert alert-success">
+                    <i class="fas fa-id-badge"></i>
+                    <strong>Perfil Laboral:</strong> 
+                    {% if perfil.activo %}
+                      <span class="badge badge-success">ACTIVO</span>
+                    {% else %}
+                      <span class="badge badge-danger">INACTIVO</span>
+                    {% endif %}
+                    <br>
+                    <small class="text-muted">
                       Estado del perfil laboral del empleado
                     </small>
                   </div>
