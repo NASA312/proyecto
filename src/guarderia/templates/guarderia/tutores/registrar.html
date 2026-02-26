@@ -507,38 +507,139 @@ $(document).ready(function () {
     });
   });
 
-  // ══════════════════════════════════════════
-  // VALIDACIÓN AL ENVIAR
-  // ══════════════════════════════════════════
-  $('form').on('submit', function (e) {
-    // Si hay CP pero no colonia seleccionada, bloquear
-    if (cpInput.val().trim() && !hiddenColonia.val()) {
-      e.preventDefault();
-      $('.error-colonia').text('Selecciona una colonia de la lista.');
-      $('html, body').animate({
-        scrollTop: $('.error-colonia:first').offset().top - 120
-      }, 400);
-      return false;
+// ══════════════════════════════════════════
+// VALIDACIÓN AL ENVIAR
+// ══════════════════════════════════════════
+$('form').on('submit', function (e) {
+  // Limpiar errores previos
+  $('.text-danger[class^="error-"]').text('');
+  $('.form-control').removeClass('is-invalid');
+
+  // Validación cliente: Si hay CP pero no colonia seleccionada, bloquear
+  if (cpInput.val().trim() && !hiddenColonia.val()) {
+    e.preventDefault();
+    $('.error-colonia').text('Selecciona una colonia de la lista.');
+    $('#id_colonia').closest('.form-group').find('.form-control, input').addClass('is-invalid');
+    $('html, body').animate({
+      scrollTop: $('.error-colonia:first').offset().top - 120
+    }, 400);
+    return false;
+  }
+
+  // Si el formulario usa AJAX, capturar la respuesta
+  const form = $(this);
+  const isAjax = form.data('ajax') === true; // puedes agregar data-ajax="true" al form
+
+  // Si quieres forzar AJAX siempre:
+  e.preventDefault();
+  
+  $.ajax({
+    url: form.attr('action') || window.location.href,
+    method: 'POST',
+    data: form.serialize(),
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    success: function(response) {
+      if (response.success) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Éxito!',
+          text: response.message,
+          confirmButtonText: 'Continuar'
+        }).then(() => {
+          if (response.redirect_url) {
+            window.location.href = response.redirect_url;
+          }
+        });
+      }
+    },
+    error: function(xhr) {
+      if (xhr.status === 400 && xhr.responseJSON) {
+        const data = xhr.responseJSON;
+        
+        // Mostrar errores en los campos
+        if (data.errors) {
+          let erroresHTML = '<ul class="text-left" style="margin: 0; padding-left: 20px;">';
+          
+          $.each(data.errors, function(field, errors) {
+            // Mostrar en el campo
+            $(`.error-${field}`).text(errors.join(', '));
+            $(`#id_${field}`).addClass('is-invalid');
+            
+            // Agregar al HTML del SweetAlert
+            const fieldLabel = $(`label[for="id_${field}"]`).text() || field;
+            errors.forEach(function(error) {
+              erroresHTML += `<li><strong>${fieldLabel}:</strong> ${error}</li>`;
+            });
+          });
+          
+          erroresHTML += '</ul>';
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Errores en el formulario',
+            html: erroresHTML,
+            confirmButtonText: 'Corregir',
+            width: '600px'
+          }).then(() => {
+            // Scroll al primer error
+            const primerError = $('.is-invalid:first');
+            if (primerError.length) {
+              $('html, body').animate({
+                scrollTop: primerError.offset().top - 120
+              }, 400);
+              primerError.focus();
+            }
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.message || 'Ocurrió un error al procesar el formulario.',
+            confirmButtonText: 'Entendido'
+          });
+        }
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error del servidor',
+          text: 'Ocurrió un error inesperado. Por favor intenta de nuevo.',
+          confirmButtonText: 'Entendido'
+        });
+      }
     }
   });
+  
+  return false;
+});
 
-  // Errores del servidor via SweetAlert (solo en registrar)
-  {% if form.errors %}
-    const errores = [];
-    {% for field, errors in form.errors.items %}
-      {% for error in errors %}
-        errores.push("{{ field }}: {{ error }}");
-      {% endfor %}
+// ══════════════════════════════════════════
+// ERRORES DEL SERVIDOR (Renderizado inicial)
+// ══════════════════════════════════════════
+{% if form.errors %}
+  const errores = [];
+  {% for field, errors in form.errors.items %}
+    const fieldLabel = $('label[for="id_{{ field }}"]').text() || '{{ field }}';
+    {% for error in errors %}
+      errores.push(`<strong>${fieldLabel}:</strong> {{ error }}`);
+      $('.error-{{ field }}').text('{{ error }}');
+      $('#id_{{ field }}').addClass('is-invalid');
     {% endfor %}
-    if (errores.length) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Errores en el formulario',
-        html: '<ul class="text-left">' + errores.map(e => `<li>${e}</li>`).join('') + '</ul>',
-        confirmButtonText: 'Entendido'
-      });
-    }
-  {% endif %}
+  {% endfor %}
+  
+  if (errores.length) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Errores en el formulario',
+      html: '<ul class="text-left" style="margin: 0; padding-left: 20px;">' + 
+            errores.map(e => `<li>${e}</li>`).join('') + 
+            '</ul>',
+      confirmButtonText: 'Corregir',
+      width: '600px'
+    });
+  }
+{% endif %}
 
 });
 </script>
