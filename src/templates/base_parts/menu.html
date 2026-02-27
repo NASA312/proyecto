@@ -1,271 +1,319 @@
 {% load static %}
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <!-- Brand Logo -->
-    <a href="{% url 'guarderia:dashboard' %}" class="brand-link">
-      
-      <span class="brand-text font-weight-light">Guardería</span>
-    </a>
+  <!-- Brand Logo -->
+  <a href="{% url 'guarderia:dashboard' %}" class="brand-link">
+    <span class="brand-text font-weight-light">Guardería</span>
+  </a>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Sidebar user panel (optional) -->
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="image">
-            <i class="fas fa-user-circle fa-2x text-white"></i>
-        </div>
-        <div class="info">
-            <a href="#" class="d-block"><strong class="font-bold">{{ user.first_name }}</strong>
-                <strong class="font-bold">{{ user.last_name }}</strong></a>
-        </div>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Sidebar user panel (optional) -->
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+      <div class="image">
+        {% if user.perfil.foto_perfil %}
+          <img src="{{ user.perfil.foto_perfil.url }}" class="img-circle elevation-2" alt="{{ user.get_full_name }}" style="width: 35px; height: 35px; object-fit: cover;">
+        {% else %}
+          <i class="fas fa-user-circle fa-2x text-white"></i>
+        {% endif %}
+      </div>
+      <div class="info">
+        <a href="#" class="d-block">
+          <strong class="font-bold">{{ user.first_name }} {{ user.last_name }}</strong>
+        </a>
+        {% if user.perfil.rol %}
+          <small class="badge 
+            {% if user.perfil.rol.nombre == 'ADMIN' %}badge-danger
+            {% elif user.perfil.rol.nombre == 'EMPLEADO' %}badge-success
+            {% elif user.perfil.rol.nombre == 'OBSERVADOR' %}badge-info
+            {% else %}badge-secondary{% endif %}">
+            {{ user.perfil.rol.nombre }}
+          </small>
+        {% endif %}
+      </div>
     </div>
 
+    <!-- Sidebar Menu -->
+    <nav class="mt-2">
+      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+        
+        <!-- ============================================ -->
+        <!-- USUARIOS DEL SISTEMA (SOLO ADMIN) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-users-cog"></i>
+            <p>
+              Usuarios
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'auth:lista_usuarios' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Usuarios</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'auth:registrar_usuario' %}" class="nav-link">
+                <i class="fas fa-user-plus nav-icon"></i>
+                <p>Registrar Usuario</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
+        <!-- ============================================ -->
+        <!-- TUTORES (ADMIN y EMPLEADO) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-user-friends"></i>
+            <p>
+              Tutores
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_tutores' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Tutores</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_tutor' %}" class="nav-link">
+                <i class="fas fa-user-plus nav-icon"></i>
+                <p>Registrar Tutor</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
-      <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <!-- Add icons to the links using the .nav-icon class
-               with font-awesome or any other icon font library -->
-          <li class="nav-item menu-close">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-users"></i>
-              <p>
-                Usuarios
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
-            {% comment %} {% url 'auth:agregar_empleado' %} {% endcomment %}
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="" class="nav-link">
-                  <i class="fas fa-user-tie nav-icon"></i>
-                  <p>Registrar Nueva Persona</p>
-                </a>
-              </li>
-            </ul>
-          </li>
-          <!-- Agregar esto en tu sidebar existente -->
+        <!-- ============================================ -->
+        <!-- NIÑOS (TODOS pueden ver, solo ADMIN y EMPLEADO pueden registrar) -->
+        <!-- ============================================ -->
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-child"></i>
+            <p>
+              Niños
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_ninos' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Niños</p>
+              </a>
+            </li>
+            {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_nino' %}" class="nav-link">
+                <i class="fas fa-plus-circle nav-icon"></i>
+                <p>Registrar Niño</p>
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
 
-<!-- TUTORES -->
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-user-friends"></i>
-    <p>
-      Tutores
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_tutores' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Tutores</p>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_tutor' %}" class="nav-link">
-        <i class="fas fa-user-plus nav-icon"></i>
-        <p>Registrar Tutor</p>
-      </a>
-    </li>
-  </ul>
-</li>
+        <!-- ============================================ -->
+        <!-- CONTROL DE ACCESO (ADMIN y EMPLEADO) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-fingerprint"></i>
+            <p>
+              Control de Acceso
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:verificar_huella_tutor' %}" class="nav-link">
+                <i class="fas fa-hand-paper nav-icon"></i>
+                <p>Verificar Huella</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:historial_accesos' %}" class="nav-link">
+                <i class="fas fa-history nav-icon"></i>
+                <p>Historial de Accesos</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
-<!-- NIÑOS -->
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-child"></i>
-    <p>
-      Niños
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_ninos' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Niños</p>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_nino' %}" class="nav-link">
-        <i class="fas fa-plus-circle nav-icon"></i>
-        <p>Registrar Niño</p>
-      </a>
-    </li>
-  </ul>
-</li>
+        <!-- ============================================ -->
+        <!-- DEPENDENCIAS (SOLO ADMIN) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-building"></i>
+            <p>
+              Dependencias
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_dependencias' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Dependencias</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_dependencia' %}" class="nav-link">
+                <i class="fas fa-plus nav-icon"></i>
+                <p>Registrar Dependencia</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
-<!-- VERIFICACIÓN Y REGISTROS -->
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-fingerprint"></i>
-    <p>
-      Control de Acceso
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-    <li class="nav-item">
-      <a href="{% url 'guarderia:verificar_huella_tutor' %}" class="nav-link">
-        <i class="fas fa-hand-paper nav-icon"></i>
-        <p>Verificar Huella</p>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="{% url 'guarderia:historial_accesos' %}" class="nav-link">
-        <i class="fas fa-history nav-icon"></i>
-        <p>Historial de Accesos</p>
-      </a>
-    </li>
-  </ul>
-</li>
-          
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-building"></i>
-    <p>
-      Dependencias
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
+        <!-- ============================================ -->
+        <!-- DEPARTAMENTOS (SOLO ADMIN) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-sitemap"></i>
+            <p>
+              Departamentos
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_departamentos' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Departamentos</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_departamento' %}" class="nav-link">
+                <i class="fas fa-plus nav-icon"></i>
+                <p>Registrar Departamento</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_dependencias' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Dependencias</p>
-      </a>
-    </li>
+        <!-- ============================================ -->
+        <!-- SERVICIOS MÉDICOS (SOLO ADMIN) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-user-md"></i>
+            <p>
+              Servicios Médicos
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_servicios_medicos' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Servicios Médicos</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_servicio_medico' %}" class="nav-link">
+                <i class="fas fa-plus nav-icon"></i>
+                <p>Registrar Servicio Médico</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
 
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_dependencia' %}" class="nav-link">
-        <i class="fas fa-plus nav-icon"></i>
-        <p>Registrar Dependencia</p>
-      </a>
-    </li>
+        <!-- ============================================ -->
+        <!-- GRUPOS (ADMIN y EMPLEADO) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-users"></i>
+            <p>
+              Grupos
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_grupos' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Grupos</p>
+              </a>
+            </li>
+            {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_grupo' %}" class="nav-link">
+                <i class="fas fa-plus nav-icon"></i>
+                <p>Registrar Grupo</p>
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
 
-  </ul>
-</li>
+        <!-- ============================================ -->
+        <!-- OBSERVACIONES (TODOS) -->
+        <!-- ============================================ -->
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-clipboard-list"></i>
+            <p>
+              Observaciones
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'guarderia:lista_observaciones' %}" class="nav-link">
+                <i class="fas fa-list nav-icon"></i>
+                <p>Lista de Observaciones</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'guarderia:registrar_observacion' %}" class="nav-link">
+                <i class="fas fa-plus nav-icon"></i>
+                <p>Registrar Observación</p>
+              </a>
+            </li>
+          </ul>
+        </li>
 
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-sitemap"></i>
-    <p>
-      Departamentos
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_departamentos' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Departamentos</p>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_departamento' %}" class="nav-link">
-        <i class="fas fa-plus nav-icon"></i>
-        <p>Registrar Departamento</p>
-      </a>
-    </li>
-  </ul>
-</li>
-
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-user-md"></i>
-    <p>
-      Servicios Médicos
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_servicios_medicos' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Servicios Médicos</p>
-      </a>
-    </li>
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_servicio_medico' %}" class="nav-link">
-        <i class="fas fa-plus nav-icon"></i>
-        <p>Registrar Servicio Médico</p>
-      </a>
-    </li>
-
-  </ul>
-</li>
-
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-users"></i>
-    <p>
-      Grupos
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_grupos' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Grupos</p>
-      </a>
-    </li>
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_grupo' %}" class="nav-link">
-        <i class="fas fa-plus nav-icon"></i>
-        <p>Registrar Grupo</p>
-      </a>
-    </li>
-
-  </ul>
-</li>
-
-<li class="nav-item menu-close">
-  <a href="#" class="nav-link">
-    <i class="nav-icon fas fa-clipboard-list"></i>
-    <p>
-      Observaciones
-      <i class="right fas fa-angle-left"></i>
-    </p>
-  </a>
-  <ul class="nav nav-treeview">
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:lista_observaciones' %}" class="nav-link">
-        <i class="fas fa-list nav-icon"></i>
-        <p>Lista de Observaciones</p>
-      </a>
-    </li>
-
-    <li class="nav-item">
-      <a href="{% url 'guarderia:registrar_observacion' %}" class="nav-link">
-        <i class="fas fa-plus nav-icon"></i>
-        <p>Registrar Observación</p>
-      </a>
-    </li>
-
-  </ul>
-</li>
-          
-          
-          <li class="nav-item">
-            <a href="{% url 'admin:index' %}" class="nav-link">
-              <i class="nav-icon fas fa-cog"></i>
-              <p>
-                Configuración
-                <span class="right badge badge-info">Admin</span>
-              </p>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <!-- /.sidebar-menu -->
-    </div>
-    <!-- /.sidebar -->
-  </aside>
+        <!-- ============================================ -->
+        <!-- CONFIGURACIÓN (SOLO ADMIN y SUPERUSER) -->
+        <!-- ============================================ -->
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item">
+          <a href="{% url 'admin:index' %}" class="nav-link">
+            <i class="nav-icon fas fa-cog"></i>
+            <p>
+              Configuración
+              <span class="right badge badge-danger">Admin</span>
+            </p>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    <!-- /.sidebar-menu -->
+  </div>
+  <!-- /.sidebar -->
+</aside>

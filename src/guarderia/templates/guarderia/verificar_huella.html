@@ -1,409 +1,389 @@
-{% extends 'base.html' %}
+{% extends 'base_kiosk.html' %}
 {% load static %}
 
-{% block title %}Verificar Huella{% endblock %}
+{% block title %}Control de Acceso{% endblock %}
+
+{% block css %}
+<style>
+  body { background: #0d1117; }
+  .kiosk-content { padding: 0; background: #0d1117; }
+  .kiosk-topbar  { background: #0d1117; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .kiosk-footer  { background: #0d1117; border-top: 1px solid rgba(255,255,255,.07); }
+  .kiosk-topbar .hora { display: none; }
+
+  .kiosk-main {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  /* Panel inicial */
+  .panel-inicial { text-align: center; max-width: 520px; width: 100%; }
+
+  .reloj-grande {
+    font-size: 5.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -2px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 40px rgba(99,179,237,.35);
+  }
+  .fecha-texto {
+    font-size: .95rem;
+    color: rgba(255,255,255,.4);
+    margin-top: 6px;
+    margin-bottom: 44px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .huella-ring {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    border: 2px solid rgba(99,179,237,.25);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+    position: relative;
+    animation: pulsar 2.5s ease-in-out infinite;
+  }
+  .huella-ring::before {
+    content: ''; position: absolute; inset: -12px;
+    border-radius: 50%; border: 1px solid rgba(99,179,237,.12);
+    animation: pulsar 2.5s ease-in-out infinite .35s;
+  }
+  .huella-ring::after {
+    content: ''; position: absolute; inset: -24px;
+    border-radius: 50%; border: 1px solid rgba(99,179,237,.06);
+    animation: pulsar 2.5s ease-in-out infinite .7s;
+  }
+  @keyframes pulsar {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.05); opacity: .6; }
+  }
+  .huella-icono {
+    font-size: 3.5rem; color: #63b3ed;
+    animation: latido 2.5s ease-in-out infinite;
+  }
+  @keyframes latido {
+    0%,100% { transform: scale(1); color: #63b3ed; }
+    50%      { transform: scale(1.08); color: #90cdf4; }
+  }
+
+  .estado-titulo    { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .estado-subtitulo { font-size: .88rem; color: rgba(255,255,255,.4); margin-bottom: 28px; }
+
+  .scan-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; max-width: 280px; margin: 0 auto; }
+  .scan-bar-inner { height: 100%; background: linear-gradient(90deg, transparent, #63b3ed, transparent); animation: scan 1.8s ease-in-out infinite; }
+  @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+  /* Panel verificado */
+  .panel-verificado {
+    width: 100%; max-width: 760px;
+    background: #161b22;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px; overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+  .verificado-header {
+    background: linear-gradient(135deg, #1a472a, #22543d);
+    padding: 18px 28px; display: flex; align-items: center; gap: 12px;
+  }
+  .verificado-header i  { font-size: 1.4rem; color: #68d391; }
+  .verificado-header h4 { color: #fff; margin: 0; font-size: 1.05rem; font-weight: 700; }
+  .verificado-body { padding: 24px 28px; }
+
+  .tutor-info {
+    display: flex; align-items: center; gap: 18px;
+    padding: 18px; background: rgba(255,255,255,.04);
+    border-radius: 12px; margin-bottom: 22px;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .tutor-avatar {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: #2d3748; flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tutor-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .tutor-avatar i   { font-size: 1.6rem; color: #68d391; }
+  .tutor-datos h5   { color: #fff; margin: 0 0 3px; font-size: 1.05rem; font-weight: 700; }
+  .tutor-datos p    { color: rgba(255,255,255,.45); margin: 0; font-size: .82rem; }
+
+  .ninos-label { color: rgba(255,255,255,.5); font-size: .75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+
+  .nino-card {
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .nino-foto {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #2d3748; flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nino-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .nino-foto i   { font-size: 1.2rem; color: #90cdf4; }
+  .nino-datos    { flex: 1; }
+  .nino-datos h6 { color: #fff; margin: 0 0 3px; font-size: .92rem; font-weight: 600; }
+  .nino-datos small { color: rgba(255,255,255,.4); font-size: .78rem; }
+
+  .badge-dentro { background: rgba(72,187,120,.15); color: #68d391; border: 1px solid rgba(72,187,120,.3); border-radius: 20px; padding: 2px 10px; font-size: .72rem; font-weight: 700; margin-left: 6px; }
+  .badge-fuera  { background: rgba(160,174,192,.1); color: #a0aec0; border: 1px solid rgba(160,174,192,.2); border-radius: 20px; padding: 2px 10px; font-size: .72rem; font-weight: 700; margin-left: 6px; }
+
+  .btn-entrada { background: #276749; color: #fff; border: none; border-radius: 9px; padding: 8px 16px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-entrada:hover { background: #2f855a; }
+  .btn-salida  { background: #2b4c7e; color: #fff; border: none; border-radius: 9px; padding: 8px 16px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-salida:hover  { background: #2c5282; }
+
+  .btn-nueva {
+    margin-top: 18px; width: 100%;
+    background: rgba(255,255,255,.06); color: rgba(255,255,255,.6);
+    border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+    padding: 10px; font-size: .86rem; cursor: pointer; transition: background .15s;
+  }
+  .btn-nueva:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+  /* Panel error */
+  .panel-error {
+    width: 100%; max-width: 460px;
+    background: #161b22; border: 1px solid rgba(252,129,129,.2);
+    border-radius: 20px; padding: 44px 32px; text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+  .panel-error .err-icon { font-size: 3rem; color: #fc8181; display: block; margin-bottom: 16px; }
+  .panel-error h4 { color: #fff; margin-bottom: 8px; font-size: 1.1rem; }
+  .panel-error p  { color: rgba(255,255,255,.4); font-size: .86rem; margin-bottom: 24px; }
+  .btn-reintentar { background: #63b3ed; color: #1a202c; border: none; border-radius: 10px; padding: 11px 28px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+  .btn-reintentar:hover { background: #90cdf4; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="content-header">
-  <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-12 text-center">
-        <h1 class="m-0">Control de Acceso - Verificación de Huella</h1>
-      </div>
+<div class="kiosk-main">
+
+  <!-- PANEL INICIAL -->
+  <div class="panel-inicial" id="card-inicial">
+    <div class="reloj-grande" id="reloj-kiosk-grande">--:--:--</div>
+    <div class="fecha-texto"  id="fecha-kiosk-grande">cargando...</div>
+
+    <div class="huella-ring">
+      <i class="fas fa-fingerprint huella-icono" id="icono-mano"></i>
+    </div>
+
+    <div class="estado-titulo"    id="mensaje-estado">Coloque su dedo en el lector</div>
+    <div class="estado-subtitulo">El sistema verificará su identidad automáticamente</div>
+
+    <div class="scan-bar" id="barra-progreso">
+      <div class="scan-bar-inner"></div>
     </div>
   </div>
+
+  <!-- PANEL VERIFICADO -->
+  <div class="panel-verificado" id="card-verificado" style="display:none;">
+    <div class="verificado-header">
+      <i class="fas fa-check-circle"></i>
+      <h4>Tutor Verificado</h4>
+    </div>
+    <div class="verificado-body">
+      <div class="tutor-info">
+        <div class="tutor-avatar">
+          <img id="tutor-foto" src="" alt="" style="display:none;">
+          <i class="fas fa-user" id="tutor-icono"></i>
+        </div>
+        <div class="tutor-datos">
+          <h5 id="tutor-nombre"></h5>
+          <p id="tutor-parentesco"></p>
+          <p><i class="fas fa-phone" style="font-size:.72rem;margin-right:4px;"></i><span id="tutor-telefono"></span></p>
+        </div>
+      </div>
+      <div class="ninos-label"><i class="fas fa-child" style="margin-right:6px;"></i>Niños autorizados</div>
+      <div id="lista-ninos"></div>
+      <button class="btn-nueva" onclick="reiniciar()">
+        <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Nueva Verificación
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL ERROR -->
+  <div class="panel-error" id="card-error" style="display:none;">
+    <i class="fas fa-exclamation-triangle err-icon"></i>
+    <h4 id="mensaje-error">Huella no reconocida</h4>
+    <p>Por favor intente nuevamente o contacte al personal</p>
+    <button class="btn-reintentar" onclick="reiniciar()">
+      <i class="fas fa-redo" style="margin-right:8px;"></i>Intentar Nuevamente
+    </button>
+  </div>
+
 </div>
-
-<section class="content">
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-md-8 offset-md-2">
-        <!-- Card Principal -->
-        <div class="card card-primary card-outline" id="card-inicial">
-          <div class="card-header text-center">
-            <h3 class="card-title">
-              <i class="fas fa-fingerprint fa-2x"></i><br>
-              Coloque su dedo en el lector biométrico
-            </h3>
-          </div>
-          <div class="card-body text-center">
-            <div class="mb-4">
-              <i class="fas fa-hand-paper fa-5x text-primary" id="icono-mano"></i>
-            </div>
-            <h4 id="mensaje-estado">Esperando lectura de huella...</h4>
-            <p class="text-muted">El sistema verificará su identidad automáticamente</p>
-            <div class="progress mt-4" style="height: 30px;">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                   role="progressbar" 
-                   id="barra-progreso"
-                   style="width: 100%">
-                Escaneando...
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card de Tutor Verificado (oculto inicialmente) -->
-        <div class="card card-success" id="card-verificado" style="display: none;">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="fas fa-check-circle"></i> Tutor Verificado
-            </h3>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-4 text-center">
-                <img id="tutor-foto" src="" alt="Foto Tutor" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover; display: none;">
-                <i class="fas fa-user-circle fa-5x text-success mb-3" id="tutor-icono"></i>
-                <h5 id="tutor-nombre"></h5>
-                <p class="text-muted" id="tutor-parentesco"></p>
-                <p><i class="fas fa-phone"></i> <span id="tutor-telefono"></span></p>
-              </div>
-              <div class="col-md-8">
-                <h5 class="mb-3"><i class="fas fa-child"></i> Seleccione el niño:</h5>
-                <div id="lista-ninos"></div>
-              </div>
-            </div>
-          </div>
-          <div class="card-footer text-center">
-            <button class="btn btn-secondary" onclick="reiniciar()">
-              <i class="fas fa-arrow-left"></i> Nueva Verificación
-            </button>
-          </div>
-        </div>
-
-        <!-- Card de Error (oculto inicialmente) -->
-        <div class="card card-danger" id="card-error" style="display: none;">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="fas fa-times-circle"></i> Error en Verificación
-            </h3>
-          </div>
-          <div class="card-body text-center">
-            <i class="fas fa-exclamation-triangle fa-5x text-danger mb-3"></i>
-            <h4 id="mensaje-error">Huella no reconocida</h4>
-            <p class="text-muted">Por favor intente nuevamente o contacte al personal</p>
-            <button class="btn btn-primary mt-3" onclick="reiniciar()">
-              <i class="fas fa-redo"></i> Intentar Nuevamente
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let verificando = false;
-let intervalPolling = null;
-let tutorActualId = null;
-let ninosEstados = {}; // Guardar estados de los niños
+// ── Reloj ──────────────────────────────────────
+var DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function tickReloj() {
+  var a = new Date();
+  var horas24 = a.getHours();
+  var h = String(horas24 % 12 || 12).padStart(2,'0');
+  var ampm = horas24 >= 12 ? 'PM' : 'AM';
+  var m = String(a.getMinutes()).padStart(2,'0');
+  var s = String(a.getSeconds()).padStart(2,'0');
+  var eg = document.getElementById('reloj-kiosk-grande');
+  var ef = document.getElementById('fecha-kiosk-grande');
+  var et = document.getElementById('reloj-kiosk');
+  if (eg) eg.textContent = h + ':' + m + ':' + s + ' ' + ampm;
+  if (ef) ef.textContent = DIAS[a.getDay()] + ', ' + a.getDate() + ' de ' + MESES[a.getMonth()] + ' ' + a.getFullYear();
+  if (et) et.textContent = h + ':' + m + ':' + s;
+}
+tickReloj();
+setInterval(tickReloj, 1000);
 
-// Iniciar verificación automáticamente al cargar
-document.addEventListener('DOMContentLoaded', function() {
-  iniciarVerificacion();
-});
+// ── Verificación (lógica intacta) ─────────────
+let verificando = false, intervalPolling = null, tutorActualId = null, ninosEstados = {};
+
+document.addEventListener('DOMContentLoaded', function() { iniciarVerificacion(); });
 
 function iniciarVerificacion() {
   if (verificando) return;
-  
-  console.log('🔍 Iniciando verificación...');
   verificando = true;
-  
-  // Actualizar UI
-  document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector...';
-  document.getElementById('icono-mano').className = 'fas fa-hand-paper fa-5x text-primary';
-  
-  // Llamar al endpoint para iniciar captura
+  document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector';
+  document.getElementById('icono-mano').className = 'fas fa-fingerprint huella-icono';
+
   fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token }}'
-    }
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
   })
-  .then(response => response.json())
-  .then(data => {
-    console.log('Respuesta inicio:', data);
-    if (data.success) {
-      iniciarPolling();
-    } else {
-      mostrarError(data.mensaje || 'Error al iniciar captura');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    mostrarError('No se puede conectar con el servidor. Verifique que el lector esté conectado.');
-  });
+  .then(r => r.json())
+  .then(d => d.success ? iniciarPolling() : mostrarError(d.mensaje || 'Error al iniciar captura'))
+  .catch(() => mostrarError('No se puede conectar con el servidor. Verifique que el lector esté conectado.'));
 }
 
 function iniciarPolling() {
   let intentos = 0;
-  const maxIntentos = 30;
-  
   intervalPolling = setInterval(function() {
     intentos++;
-    
-    const puntos = '.'.repeat((intentos % 3) + 1);
-    document.getElementById('mensaje-estado').textContent = `Procesando${puntos}`;
-    document.getElementById('barra-progreso').textContent = `Procesando (${intentos}s)`;
-    
-    if (intentos > maxIntentos) {
-      clearInterval(intervalPolling);
-      mostrarError('Tiempo de espera agotado. Intente nuevamente.');
-      return;
-    }
-    
+    document.getElementById('mensaje-estado').textContent = 'Procesando' + '.'.repeat((intentos % 3) + 1);
+    if (intentos > 30) { clearInterval(intervalPolling); mostrarError('Tiempo agotado. Intente nuevamente.'); return; }
     fetch("{% url 'guarderia:verificar_huella_estado' %}")
-      .then(response => response.json())
-      .then(data => {
-        console.log(`Polling ${intentos}:`, data);
-        
-        if (data.completado) {
-          clearInterval(intervalPolling);
-          
-          if (data.success) {
-            mostrarTutorVerificado(data);
-          } else {
-            mostrarError(data.mensaje || 'Huella no reconocida');
-          }
-        }
-      })
-      .catch(error => {
-        console.error('Error en polling:', error);
-      });
-      
+      .then(r => r.json())
+      .then(d => { if (d.completado) { clearInterval(intervalPolling); d.success ? mostrarTutorVerificado(d) : mostrarError(d.mensaje || 'Huella no reconocida'); } })
+      .catch(e => console.error(e));
   }, 1000);
 }
 
 function mostrarTutorVerificado(data) {
-  console.log('✅ Tutor verificado:', data);
-  
-  document.getElementById('card-inicial').style.display = 'none';
-  document.getElementById('card-error').style.display = 'none';
+  document.getElementById('card-inicial').style.display    = 'none';
+  document.getElementById('card-error').style.display      = 'none';
   document.getElementById('card-verificado').style.display = 'block';
-
-  document.getElementById('tutor-nombre').textContent = data.tutor.nombre;
+  document.getElementById('tutor-nombre').textContent     = data.tutor.nombre;
   document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
-  document.getElementById('tutor-telefono').textContent = data.tutor.telefono;
-  
+  document.getElementById('tutor-telefono').textContent   = data.tutor.telefono;
   if (data.tutor.foto_url) {
     document.getElementById('tutor-foto').src = data.tutor.foto_url;
-    document.getElementById('tutor-foto').style.display = 'block';
+    document.getElementById('tutor-foto').style.display  = 'block';
     document.getElementById('tutor-icono').style.display = 'none';
   } else {
-    document.getElementById('tutor-foto').style.display = 'none';
+    document.getElementById('tutor-foto').style.display  = 'none';
     document.getElementById('tutor-icono').style.display = 'block';
   }
-  
   tutorActualId = data.tutor.id;
-
-  // Mostrar lista de niños CON ESTADO
-  let listaNinos = document.getElementById('lista-ninos');
-  listaNinos.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Cargando niños...</div>';
-
+  var ln = document.getElementById('lista-ninos');
+  ln.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
   if (data.ninos && data.ninos.length > 0) {
-    // Obtener estado de cada niño
-    Promise.all(data.ninos.map(nino => obtenerEstadoNino(nino.id)))
-      .then(estados => {
-        listaNinos.innerHTML = '';
-        
-        data.ninos.forEach((nino, index) => {
-          const estado = estados[index];
-          ninosEstados[nino.id] = estado.estado;
-          
-          mostrarTarjetaNino(nino, estado.estado);
-        });
-      });
+    Promise.all(data.ninos.map(n => obtenerEstadoNino(n.id))).then(function(estados) {
+      ln.innerHTML = '';
+      data.ninos.forEach(function(n, i) { ninosEstados[n.id] = estados[i].estado; mostrarTarjetaNino(n, estados[i].estado); });
+    });
   } else {
-    listaNinos.innerHTML = '<div class="alert alert-warning">No hay niños asignados a este tutor</div>';
+    ln.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:16px;">No hay niños asignados a este tutor</p>';
   }
-  
   verificando = false;
 }
 
 function obtenerEstadoNino(ninoId) {
-  return fetch(`/guarderia/api/nino/${ninoId}/estado/`)
-    .then(response => response.json())
-    .catch(error => {
-      console.error('Error obteniendo estado:', error);
-      return { estado: 'DESCONOCIDO' };
-    });
+  return fetch('/guarderia/api/nino/' + ninoId + '/estado/')
+    .then(r => r.json()).catch(() => ({ estado: 'DESCONOCIDO' }));
 }
 
 function mostrarTarjetaNino(nino, estado) {
-  let fotoHtml = nino.foto_url 
-    ? `<img src="${nino.foto_url}" class="rounded-circle mr-2" style="width: 50px; height: 50px; object-fit: cover;">` 
-    : '<i class="fas fa-child fa-2x text-muted mr-2"></i>';
-  
-  let badgeEstado = '';
-  let botonesAccion = '';
-  
+  var fotoHtml = nino.foto_url ? '<img src="' + nino.foto_url + '" alt="">' : '<i class="fas fa-child"></i>';
+  var badge, boton;
   if (estado === 'DENTRO') {
-    badgeEstado = '<span class="badge badge-success"><i class="fas fa-check-circle"></i> DENTRO</span>';
-    botonesAccion = `
-      <button class="btn btn-info" onclick="registrarAccion(${nino.id}, 'SALIDA')">
-        <i class="fas fa-sign-out-alt"></i> Registrar Salida
-      </button>
-    `;
+    badge = '<span class="badge-dentro">● DENTRO</span>';
+    boton = '<button class="btn-salida" onclick="registrarAccion(' + nino.id + ',\'SALIDA\')"><i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar Salida</button>';
   } else if (estado === 'FUERA' || estado === 'SIN_REGISTROS') {
-    badgeEstado = '<span class="badge badge-secondary"><i class="fas fa-times-circle"></i> FUERA</span>';
-    botonesAccion = `
-      <button class="btn btn-success" onclick="registrarAccion(${nino.id}, 'ENTRADA')">
-        <i class="fas fa-sign-in-alt"></i> Registrar Entrada
-      </button>
-    `;
+    badge = '<span class="badge-fuera">○ FUERA</span>';
+    boton = '<button class="btn-entrada" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')"><i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar Entrada</button>';
   } else {
-    badgeEstado = '<span class="badge badge-warning">Estado Desconocido</span>';
-    botonesAccion = `
-      <button class="btn btn-success mr-1" onclick="registrarAccion(${nino.id}, 'ENTRADA')">
-        <i class="fas fa-sign-in-alt"></i> Entrada
-      </button>
-      <button class="btn btn-info" onclick="registrarAccion(${nino.id}, 'SALIDA')">
-        <i class="fas fa-sign-out-alt"></i> Salida
-      </button>
-    `;
+    badge = '<span class="badge-fuera">? Desconocido</span>';
+    boton = '<button class="btn-entrada" style="margin-right:6px;" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')">Entrada</button>'
+          + '<button class="btn-salida"  onclick="registrarAccion(' + nino.id + ',\'SALIDA\')">Salida</button>';
   }
-  
-  let card = `
-    <div class="card mb-2" id="card-nino-${nino.id}">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-md-2 text-center">
-            ${fotoHtml}
-          </div>
-          <div class="col-md-5">
-            <h6 class="mb-0">${nino.nombre}</h6>
-            <small class="text-muted">Grupo: ${nino.grupo} | ${nino.edad} años</small>
-            <br>${badgeEstado}
-          </div>
-          <div class="col-md-5 text-right">
-            ${botonesAccion}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('lista-ninos').insertAdjacentHTML('beforeend', card);
+  document.getElementById('lista-ninos').insertAdjacentHTML('beforeend',
+    '<div class="nino-card" id="card-nino-' + nino.id + '">'
+    + '<div class="nino-foto">' + fotoHtml + '</div>'
+    + '<div class="nino-datos"><h6>' + nino.nombre + '</h6>'
+    + '<small>Grupo: ' + nino.grupo + ' · ' + nino.edad + ' años' + badge + '</small></div>'
+    + '<div>' + boton + '</div></div>');
 }
 
 function registrarAccion(ninoId, tipoAccion) {
-  const botonCard = document.querySelector(`#card-nino-${ninoId} button`);
-  
   Swal.fire({
-    title: `¿Registrar ${tipoAccion}?`,
-    html: `
-      <p>¿Desea agregar alguna observación?</p>
-      <textarea id="swal-observaciones" class="swal2-input" placeholder="Observaciones (opcional)" style="height: 80px;"></textarea>
-    `,
-    icon: 'question',
+    title: '¿Registrar ' + tipoAccion + '?',
+    html: '<p style="color:#ccc;margin-bottom:8px;">¿Desea agregar alguna observación?</p>'
+        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+    icon: 'question', background: '#161b22', color: '#fff',
     showCancelButton: true,
-    confirmButtonText: `Sí, registrar ${tipoAccion.toLowerCase()}`,
-    cancelButtonText: 'Cancelar',
-    preConfirm: () => {
-      return document.getElementById('swal-observaciones').value;
-    }
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const observaciones = result.value || '';
-      
-      botonCard.disabled = true;
-      botonCard.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
-      
-      const url = tipoAccion === 'ENTRADA' 
-        ? "{% url 'guarderia:registrar_entrada' %}" 
-        : "{% url 'guarderia:registrar_salida' %}";
-      
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({
-          nino_id: ninoId,
-          tutor_id: tutorActualId,
-          observaciones: observaciones
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: `¡${tipoAccion} Registrada!`,
-            text: data.mensaje,
-            timer: 3000,
-            showConfirmButton: false
-          }).then(() => {
-            reiniciar();
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: data.mensaje
-          });
-          botonCard.disabled = false;
-          botonCard.innerHTML = tipoAccion === 'ENTRADA' 
-            ? '<i class="fas fa-sign-in-alt"></i> Registrar Entrada'
-            : '<i class="fas fa-sign-out-alt"></i> Registrar Salida';
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudo registrar la acción'
-        });
-        botonCard.disabled = false;
-      });
-    }
+    confirmButtonColor: tipoAccion === 'ENTRADA' ? '#276749' : '#2b4c7e',
+    confirmButtonText: 'Sí, registrar', cancelButtonText: 'Cancelar',
+    preConfirm: () => document.getElementById('swal-obs').value
+  }).then(function(result) {
+    if (!result.isConfirmed) return;
+    var btn = document.querySelector('#card-nino-' + ninoId + ' button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    var url = tipoAccion === 'ENTRADA' ? "{% url 'guarderia:registrar_entrada' %}" : "{% url 'guarderia:registrar_salida' %}";
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ nino_id: ninoId, tutor_id: tutorActualId, observaciones: result.value || '' })
+    })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.success) {
+        Swal.fire({ icon: 'success', title: tipoAccion + ' registrada', text: data.mensaje, timer: 3000, showConfirmButton: false, background: '#161b22', color: '#fff' }).then(reiniciar);
+      } else {
+        Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje, background: '#161b22', color: '#fff' });
+        if (btn) { btn.disabled = false; btn.innerHTML = tipoAccion === 'ENTRADA' ? '<i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar Entrada' : '<i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar Salida'; }
+      }
+    })
+    .catch(function() {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo registrar', background: '#161b22', color: '#fff' });
+      if (btn) btn.disabled = false;
+    });
   });
 }
 
 function mostrarError(mensaje) {
-  console.log('❌ Error:', mensaje);
-  
-  document.getElementById('card-inicial').style.display = 'none';
+  document.getElementById('card-inicial').style.display    = 'none';
   document.getElementById('card-verificado').style.display = 'none';
-  document.getElementById('card-error').style.display = 'block';
-  document.getElementById('mensaje-error').textContent = mensaje;
-  
+  document.getElementById('card-error').style.display      = 'block';
+  document.getElementById('mensaje-error').textContent     = mensaje;
   verificando = false;
-  
-  setTimeout(function() {
-    reiniciar();
-  }, 5000);
+  setTimeout(reiniciar, 5000);
 }
 
 function reiniciar() {
-  console.log('🔄 Reiniciando...');
-  
-  if (intervalPolling) {
-    clearInterval(intervalPolling);
-    intervalPolling = null;
-  }
-  
-  verificando = false;
-  tutorActualId = null;
-  ninosEstados = {};
-  
-  document.getElementById('card-inicial').style.display = 'block';
+  if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
+  verificando = false; tutorActualId = null; ninosEstados = {};
+  document.getElementById('card-inicial').style.display    = 'block';
   document.getElementById('card-verificado').style.display = 'none';
-  document.getElementById('card-error').style.display = 'none';
-  
-  document.getElementById('mensaje-estado').textContent = 'Esperando lectura de huella...';
-  document.getElementById('barra-progreso').textContent = 'Escaneando...';
-  document.getElementById('icono-mano').className = 'fas fa-hand-paper fa-5x text-primary';
-  
+  document.getElementById('card-error').style.display      = 'none';
+  document.getElementById('mensaje-estado').textContent    = 'Coloque su dedo en el lector';
+  document.getElementById('icono-mano').className          = 'fas fa-fingerprint huella-icono';
   setTimeout(iniciarVerificacion, 2000);
 }
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-{% endblock scripts %}
+{% endblock %}

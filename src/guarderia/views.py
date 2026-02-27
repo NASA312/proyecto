@@ -17,19 +17,30 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 import pandas as pd
 import os
+from django.db import transaction 
+
+# ============================================
+# IMPORTAR DECORADORES DE PERMISOS
+# ============================================
+from login.decorators import rol_requerido, admin_requerido
 
 # ============================================
 # VISTAS DE TUTORES
 # ============================================
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def lista_tutores(request):
     """Lista de tutores registrados"""
-    tutores = Tutor.objects.filter(activo=True).order_by('-fecha_registro')
-    ctx = {'tutores': tutores}
-    return render(request, 'guarderia/tutores/lista.html', ctx)
+    tutores_activos   = Tutor.objects.filter(activo=True).order_by('-fecha_registro')
+    tutores_inactivos = Tutor.objects.filter(activo=False).order_by('-fecha_registro')
+    return render(request, 'guarderia/tutores/lista.html', {
+        'tutores_activos':   tutores_activos,
+        'tutores_inactivos': tutores_inactivos,
+    })
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_tutor(request):
     """Registrar nuevo tutor"""
     if request.method == 'POST':
@@ -71,6 +82,7 @@ def registrar_tutor(request):
     return render(request, 'guarderia/tutores/registrar.html', {'form': form})
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def detalle_tutor(request, tutor_id):
     """Ver detalles de un tutor"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
@@ -85,6 +97,7 @@ def detalle_tutor(request, tutor_id):
     return render(request, 'guarderia/tutores/detalle.html', ctx)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def editar_tutor(request, tutor_id):
     """Editar información de tutor"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
@@ -136,6 +149,7 @@ def editar_tutor(request, tutor_id):
     return render(request, 'guarderia/tutores/editar.html', context)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_huella_tutor(request, tutor_id):
     """Registrar huella del tutor con lector biométrico"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
@@ -163,11 +177,15 @@ def registrar_huella_tutor(request, tutor_id):
 @login_required
 def lista_ninos(request):
     """Lista de niños registrados"""
-    ninos = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
-    ctx = {'ninos': ninos}
-    return render(request, 'guarderia/ninos/lista.html', ctx)
+    ninos_activos   = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
+    ninos_inactivos = Nino.objects.filter(activo=False).order_by('grupo', 'apellido_paterno')
+    return render(request, 'guarderia/ninos/lista.html', {
+        'ninos_activos':   ninos_activos,
+        'ninos_inactivos': ninos_inactivos,
+    })
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_nino(request):
     """Registrar nuevo niño"""
     if request.method == 'POST':
@@ -218,6 +236,7 @@ def detalle_nino(request, nino_id):
     return render(request, 'guarderia/ninos/detalle.html', ctx)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def editar_nino(request, nino_id):
     """Editar información de niño"""
     nino = get_object_or_404(Nino, id=nino_id)
@@ -254,6 +273,7 @@ def editar_nino(request, nino_id):
     return render(request, 'guarderia/ninos/editar.html', {'form': form, 'nino': nino})
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def asignar_tutores(request, nino_id):
     """Asignar tutores a un niño"""
     nino = get_object_or_404(Nino, id=nino_id)
@@ -342,6 +362,7 @@ def verificar_huella_tutor(request):
 # ============================================
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def historial_accesos(request):
     """Historial de entradas y salidas"""
     registros = RegistroAcceso.objects.all().select_related('nino', 'tutor').order_by('-fecha_hora')[:100]
@@ -904,71 +925,6 @@ def verificar_huella_estado(request):
     return JsonResponse({'success': False}, status=405)
 
 
-@csrf_exempt  
-def registrar_salida(request):
-    """Registrar salida de un niño"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            nino_id = data.get('nino_id')
-            tutor_id = data.get('tutor_id')
-            
-            if not nino_id or not tutor_id:
-                return JsonResponse({
-                    'success': False,
-                    'mensaje': 'Faltan datos'
-                }, status=400)
-            
-            nino = Nino.objects.get(id=nino_id, activo=True)
-            tutor = Tutor.objects.get(id=tutor_id, activo=True)
-            
-            # Verificar autorización
-            if tutor not in nino.tutores.all():
-                return JsonResponse({
-                    'success': False,
-                    'mensaje': f'{tutor.nombre_completo()} no está autorizado para recoger a {nino.nombre_completo()}'
-                }, status=403)
-            
-            # Registrar salida
-            registro = RegistroAcceso.objects.create(
-                nino=nino,
-                tutor=tutor,
-                tipo='SALIDA',
-                verificacion_exitosa=True,
-                metodo_verificacion='HUELLA'
-            )
-            
-            print(f"✅ SALIDA REGISTRADA:")
-            print(f"   Niño: {nino.nombre_completo()}")
-            print(f"   Tutor: {tutor.nombre_completo()}")
-            print(f"   Hora: {registro.fecha_hora}")
-            
-            return JsonResponse({
-                'success': True,
-                'mensaje': f'{nino.nombre_completo()} entregado a {tutor.nombre_completo()}',
-                'registro_id': registro.id
-            })
-            
-        except Nino.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Niño no encontrado'
-            }, status=404)
-        except Tutor.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Tutor no encontrado'
-            }, status=404)
-        except Exception as e:
-            print(f"❌ Error registrando salida: {e}")
-            return JsonResponse({
-                'success': False,
-                'mensaje': f'Error: {str(e)}'
-            }, status=500)
-    
-    return JsonResponse({'success': False}, status=405)
-
-
 
 # ============================================
 # VISTAS DE COLONIAS (CÓDIGO POSTAL)
@@ -1067,15 +1023,20 @@ def buscar_colonias_cp(request):
 # ============================================
 
 @login_required
+@admin_requerido
 def lista_dependencias(request):
-    """Lista de dependencias"""
-    dependencias = Dependencia.objects.filter(activo=True).order_by('nombre')
+    """Lista de dependencias activas e inactivas"""
+    dependencias_activas = Dependencia.objects.filter(activo=True).order_by('nombre')
+    dependencias_inactivas = Dependencia.objects.filter(activo=False).order_by('nombre')
+    
     return render(request, 'guarderia/dependencias/lista.html', {
-        'dependencias': dependencias
+        'dependencias_activas': dependencias_activas,
+        'dependencias_inactivas': dependencias_inactivas
     })
 
 
 @login_required
+@admin_requerido
 def registrar_dependencia(request):
     """Registrar nueva dependencia"""
     if request.method == 'POST':
@@ -1106,6 +1067,7 @@ def registrar_dependencia(request):
     return render(request, 'guarderia/dependencias/registrar.html', {'form': form})
 
 @login_required
+@admin_requerido
 def editar_dependencia(request, dependencia_id):
     """Editar dependencia"""
     dependencia = get_object_or_404(Dependencia, id=dependencia_id)
@@ -1127,16 +1089,20 @@ def editar_dependencia(request, dependencia_id):
 
 
 @login_required
+@admin_requerido
 def lista_departamentos(request):
-    """Lista de departamentos"""
-    departamentos = Departamento.objects.filter(activo=True).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
+    """Lista de departamentos activos e inactivos"""
+    departamentos_activos = Departamento.objects.filter(activo=True).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
+    departamentos_inactivos = Departamento.objects.filter(activo=False).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
     
     return render(request, 'guarderia/departamentos/lista.html', {
-        'departamentos': departamentos
+        'departamentos_activos': departamentos_activos,
+        'departamentos_inactivos': departamentos_inactivos
     })
 
 
 @login_required
+@admin_requerido
 def editar_departamento(request, departamento_id):
     """Editar departamento"""
     departamento = get_object_or_404(Departamento, id=departamento_id)
@@ -1159,6 +1125,7 @@ def editar_departamento(request, departamento_id):
 
 
 @login_required
+@admin_requerido
 @require_http_methods(["GET"])
 def obtener_departamentos_ajax(request):
     """Obtener departamentos de una dependencia vía AJAX"""
@@ -1185,6 +1152,7 @@ def obtener_departamentos_ajax(request):
 
 
 @login_required
+@admin_requerido
 def registrar_departamento(request):
     """Registrar nuevo departamento"""
     if request.method == 'POST':
@@ -1215,15 +1183,19 @@ def registrar_departamento(request):
     return render(request, 'guarderia/departamentos/registrar.html', {'form': form})
 
 @login_required
+@admin_requerido
 def lista_servicios_medicos(request):
     """Lista de servicios médicos"""
-    servicios = ServicioMedico.objects.filter(activo=True).order_by('nombre')
+    servicios_activos   = ServicioMedico.objects.filter(activo=True).order_by('nombre')
+    servicios_inactivos = ServicioMedico.objects.filter(activo=False).order_by('nombre')
     return render(request, 'guarderia/servicios_medicos/lista.html', {
-        'servicios': servicios
+        'servicios_activos':   servicios_activos,
+        'servicios_inactivos': servicios_inactivos,
     })
 
 
 @login_required
+@admin_requerido
 def registrar_servicio_medico(request):
     """Registrar nuevo servicio médico"""
     if request.method == 'POST':
@@ -1255,6 +1227,7 @@ def registrar_servicio_medico(request):
 
 
 @login_required
+@admin_requerido
 def editar_servicio_medico(request, servicio_id):
     """Editar servicio médico"""
     servicio = get_object_or_404(ServicioMedico, id=servicio_id)
@@ -1278,27 +1251,32 @@ def editar_servicio_medico(request, servicio_id):
 # ========== GRUPOS ==========
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def lista_grupos(request):
     """Lista de grupos con estadísticas"""
-    grupos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
-    
-    # Agregar estadísticas a cada grupo
-    grupos_con_stats = []
-    for grupo in grupos:
-        grupos_con_stats.append({
-            'grupo': grupo,
-            'ninos_asignados': grupo.ninos_asignados(),
-            'capacidad_disponible': grupo.capacidad_disponible(),
-            'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
-            'esta_lleno': grupo.esta_lleno()
-        })
-    
+    def enriquecer(qs):
+        resultado = []
+        for grupo in qs:
+            resultado.append({
+                'grupo':                grupo,
+                'ninos_asignados':      grupo.ninos_asignados(),
+                'capacidad_disponible': grupo.capacidad_disponible(),
+                'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
+                'esta_lleno':           grupo.esta_lleno(),
+            })
+        return resultado
+
+    grupos_activos   = enriquecer(Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre'))
+    grupos_inactivos = enriquecer(Grupo.objects.filter(activo=False).order_by('tipo', 'grado', 'nombre'))
+
     return render(request, 'guarderia/grupos/lista.html', {
-        'grupos': grupos_con_stats
+        'grupos_activos':   grupos_activos,
+        'grupos_inactivos': grupos_inactivos,
     })
 
 
 @login_required
+@admin_requerido
 def registrar_grupo(request):
     """Registrar nuevo grupo"""
     if request.method == 'POST':
@@ -1330,6 +1308,7 @@ def registrar_grupo(request):
 
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def detalle_grupo(request, grupo_id):
     """Ver detalles de un grupo"""
     grupo = get_object_or_404(Grupo, id=grupo_id)
@@ -1346,6 +1325,7 @@ def detalle_grupo(request, grupo_id):
 
 
 @login_required
+@admin_requerido
 def editar_grupo(request, grupo_id):
     """Editar grupo"""
     grupo = get_object_or_404(Grupo, id=grupo_id)
@@ -1367,6 +1347,7 @@ def editar_grupo(request, grupo_id):
 
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["GET"])
 def obtener_grupos_disponibles_ajax(request):
     """Obtener grupos con disponibilidad vía AJAX"""
@@ -1496,6 +1477,7 @@ def observaciones_nino(request, nino_id):
 
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 def editar_observacion(request, observacion_id):
     """Editar una observación"""
     observacion = get_object_or_404(ObservacionNino, id=observacion_id)
@@ -1517,6 +1499,7 @@ def editar_observacion(request, observacion_id):
 
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["POST"])
 def marcar_observacion_notificada(request, observacion_id):
     """Marcar una observación como notificada"""
@@ -1690,6 +1673,7 @@ def dashboard(request):
 # ============================================
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def enviar_departamento_papelera(request, departamento_id):
     """Enviar departamento a papelera (marcar como inactivo)"""
@@ -1712,6 +1696,7 @@ def enviar_departamento_papelera(request, departamento_id):
 
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def restaurar_departamento(request, departamento_id):
     """Restaurar departamento desde papelera (marcar como activo)"""
@@ -1734,6 +1719,7 @@ def restaurar_departamento(request, departamento_id):
 
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def enviar_dependencia_papelera(request, dependencia_id):
     """Enviar dependencia a papelera (marcar como inactivo)"""
@@ -1756,6 +1742,7 @@ def enviar_dependencia_papelera(request, dependencia_id):
 
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def restaurar_dependencia(request, dependencia_id):
     """Restaurar dependencia desde papelera (marcar como activo)"""
@@ -1777,51 +1764,10 @@ def restaurar_dependencia(request, dependencia_id):
         }, status=500)
 
 
-# ============================================
-# VISTAS ACTUALIZADAS CON FILTROS
-# ============================================
-
-@login_required
-def lista_departamentos(request):
-    """Lista de departamentos activos e inactivos"""
-    departamentos_activos = Departamento.objects.filter(activo=True).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
-    departamentos_inactivos = Departamento.objects.filter(activo=False).select_related('dependencia').order_by('dependencia__nombre', 'nombre')
-    
-    return render(request, 'guarderia/departamentos/lista.html', {
-        'departamentos_activos': departamentos_activos,
-        'departamentos_inactivos': departamentos_inactivos
-    })
-
-
-@login_required
-def lista_dependencias(request):
-    """Lista de dependencias activas e inactivas"""
-    dependencias_activas = Dependencia.objects.filter(activo=True).order_by('nombre')
-    dependencias_inactivas = Dependencia.objects.filter(activo=False).order_by('nombre')
-    
-    return render(request, 'guarderia/dependencias/lista.html', {
-        'dependencias_activas': dependencias_activas,
-        'dependencias_inactivas': dependencias_inactivas
-    })
-    
-    
-# ============================================
-# AGREGAR A views.py — Funciones de papelera
-# para ServicioMedico, Grupo, Tutor, Nino
-# ============================================
-
 # ── Servicios Médicos ──────────────────────
 
 @login_required
-def lista_servicios_medicos(request):
-    servicios_activos   = ServicioMedico.objects.filter(activo=True).order_by('nombre')
-    servicios_inactivos = ServicioMedico.objects.filter(activo=False).order_by('nombre')
-    return render(request, 'guarderia/servicios_medicos/lista.html', {
-        'servicios_activos':   servicios_activos,
-        'servicios_inactivos': servicios_inactivos,
-    })
-
-@login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def enviar_servicio_papelera(request, servicio_id):
     try:
@@ -1833,6 +1779,7 @@ def enviar_servicio_papelera(request, servicio_id):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def restaurar_servicio(request, servicio_id):
     try:
@@ -1847,28 +1794,7 @@ def restaurar_servicio(request, servicio_id):
 # ── Grupos ─────────────────────────────────
 
 @login_required
-def lista_grupos(request):
-    def enriquecer(qs):
-        resultado = []
-        for grupo in qs:
-            resultado.append({
-                'grupo':                grupo,
-                'ninos_asignados':      grupo.ninos_asignados(),
-                'capacidad_disponible': grupo.capacidad_disponible(),
-                'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
-                'esta_lleno':           grupo.esta_lleno(),
-            })
-        return resultado
-
-    grupos_activos   = enriquecer(Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre'))
-    grupos_inactivos = enriquecer(Grupo.objects.filter(activo=False).order_by('tipo', 'grado', 'nombre'))
-
-    return render(request, 'guarderia/grupos/lista.html', {
-        'grupos_activos':   grupos_activos,
-        'grupos_inactivos': grupos_inactivos,
-    })
-
-@login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def enviar_grupo_papelera(request, grupo_id):
     try:
@@ -1880,6 +1806,7 @@ def enviar_grupo_papelera(request, grupo_id):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
+@admin_requerido
 @require_http_methods(["POST"])
 def restaurar_grupo(request, grupo_id):
     try:
@@ -1894,15 +1821,7 @@ def restaurar_grupo(request, grupo_id):
 # ── Tutores ────────────────────────────────
 
 @login_required
-def lista_tutores(request):
-    tutores_activos   = Tutor.objects.filter(activo=True).order_by('-fecha_registro')
-    tutores_inactivos = Tutor.objects.filter(activo=False).order_by('-fecha_registro')
-    return render(request, 'guarderia/tutores/lista.html', {
-        'tutores_activos':   tutores_activos,
-        'tutores_inactivos': tutores_inactivos,
-    })
-
-@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["POST"])
 def enviar_tutor_papelera(request, tutor_id):
     try:
@@ -1914,6 +1833,7 @@ def enviar_tutor_papelera(request, tutor_id):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["POST"])
 def restaurar_tutor(request, tutor_id):
     try:
@@ -1928,15 +1848,7 @@ def restaurar_tutor(request, tutor_id):
 # ── Niños ──────────────────────────────────
 
 @login_required
-def lista_ninos(request):
-    ninos_activos   = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
-    ninos_inactivos = Nino.objects.filter(activo=False).order_by('grupo', 'apellido_paterno')
-    return render(request, 'guarderia/ninos/lista.html', {
-        'ninos_activos':   ninos_activos,
-        'ninos_inactivos': ninos_inactivos,
-    })
-
-@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["POST"])
 def enviar_nino_papelera(request, nino_id):
     try:
@@ -1948,6 +1860,7 @@ def enviar_nino_papelera(request, nino_id):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
 @require_http_methods(["POST"])
 def restaurar_nino(request, nino_id):
     try:
@@ -1957,3 +1870,130 @@ def restaurar_nino(request, nino_id):
         return JsonResponse({'success': True, 'message': f'{nino.nombre_completo()} restaurado'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+  # ============================================================
+# REEMPLAZA la función finalizar_ciclo_escolar en views.py
+# ============================================================
+
+@login_required
+@admin_requerido
+def finalizar_ciclo_escolar(request):
+    """
+    Finalizar ciclo escolar - Promoción masiva con propuesta automática
+    El sistema sugiere el siguiente grupo lógico, el admin puede editarlo.
+    """
+
+    # Orden de tipos y grados para calcular propuesta automática
+    ORDEN_TIPOS  = ['LACTANTE', 'MATERNAL', 'PREESCOLAR']
+    ORDEN_GRADOS = ['1er año', '2do año', '3er año']
+
+    def siguiente_grupo(grupo_actual, todos_los_grupos):
+        """
+        Dado un grupo, devuelve el grupo destino sugerido.
+        Busca el siguiente en la secuencia tipo+grado.
+        Si es el último, retorna None (graduar).
+        """
+        try:
+            idx_tipo  = ORDEN_TIPOS.index(grupo_actual.tipo)
+            idx_grado = ORDEN_GRADOS.index(grupo_actual.grado)
+        except ValueError:
+            return None
+
+        # Intentar siguiente grado dentro del mismo tipo
+        for g in ORDEN_GRADOS[idx_grado + 1:]:
+            candidatos = [gr for gr in todos_los_grupos
+                          if gr.tipo == grupo_actual.tipo and gr.grado == g and gr.id != grupo_actual.id]
+            if candidatos:
+                return candidatos[0]
+
+        # Intentar primer grado del siguiente tipo
+        for t in ORDEN_TIPOS[idx_tipo + 1:]:
+            candidatos = [gr for gr in todos_los_grupos
+                          if gr.tipo == t and gr.id != grupo_actual.id]
+            if candidatos:
+                # El de menor grado dentro de ese tipo
+                candidatos_ordenados = sorted(
+                    candidatos,
+                    key=lambda x: ORDEN_GRADOS.index(x.grado) if x.grado in ORDEN_GRADOS else 99
+                )
+                return candidatos_ordenados[0]
+
+        # No hay siguiente → graduar
+        return None
+
+    # ── POST: ejecutar promociones ──────────────────────────────────────
+    if request.method == 'POST':
+        try:
+            data       = json.loads(request.body)
+            promociones = data.get('promociones', {})
+
+            with transaction.atomic():
+                resultado = {'promovidos': [], 'graduados': [], 'errores': []}
+
+                for grupo_origen_id, grupo_destino_id in promociones.items():
+                    grupo_origen = Grupo.objects.get(id=grupo_origen_id)
+                    ninos        = Nino.objects.filter(grupo=grupo_origen, activo=True)
+
+                    if grupo_destino_id == 'graduar':
+                        for nino in ninos:
+                            ObservacionNino.objects.create(
+                                nino=nino,
+                                tipo='ACADEMICO',
+                                descripcion=f'Graduado del ciclo escolar {timezone.now().year}',
+                                importante=True,
+                                notificar_tutor=True,
+                                registrado_por=request.user
+                            )
+                            nino.grupo = None
+                            nino.activo = False 
+                            nino.save()
+                            resultado['graduados'].append({
+                                'nino': nino.nombre_completo(),
+                                'grupo_origen': str(grupo_origen)
+                            })
+
+                    elif grupo_destino_id:
+                        grupo_destino = Grupo.objects.get(id=grupo_destino_id)
+                        for nino in ninos:
+                            nino.grupo = grupo_destino
+                            nino.save()
+                            resultado['promovidos'].append({
+                                'nino': nino.nombre_completo(),
+                                'de': str(grupo_origen),
+                                'a': str(grupo_destino)
+                            })
+
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': 'Ciclo escolar finalizado exitosamente',
+                    'resultado': resultado,
+                    'total_promovidos': len(resultado['promovidos']),
+                    'total_graduados':  len(resultado['graduados'])
+                })
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'success': False, 'mensaje': str(e)}, status=500)
+
+    # ── GET: mostrar vista con propuestas ───────────────────────────────
+    todos_grupos = list(
+        Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+    )
+
+    grupos_info = []
+    for grupo in todos_grupos:
+        sugerido = siguiente_grupo(grupo, todos_grupos)
+        grupos_info.append({
+            'grupo':        grupo,
+            'ninos':        grupo.ninos.filter(activo=True),
+            'total_ninos':  grupo.ninos.filter(activo=True).count(),
+            'sugerido':     sugerido,       # objeto Grupo o None (=graduar)
+        })
+
+    grupos_destino = todos_grupos  # misma lista para los selects
+
+    return render(request, 'guarderia/grupos/finalizar_ciclo.html', {
+        'grupos_info':    grupos_info,
+        'grupos_destino': grupos_destino,
+    })

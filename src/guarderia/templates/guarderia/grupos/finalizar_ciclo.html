@@ -1,0 +1,583 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Finalizar Ciclo Escolar{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Variables ── */
+  :root {
+    --grad-start: #1a1a2e;
+    --grad-end:   #16213e;
+    --accent:     #e94560;
+    --accent2:    #0f3460;
+    --ok:         #00b894;
+    --warn:       #fdcb6e;
+    --text-light: #dfe6e9;
+  }
+
+  /* ── Header de página ── */
+  .ciclo-header {
+    background: linear-gradient(135deg, var(--grad-start) 0%, var(--accent2) 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 8px 32px rgba(26,26,46,.35);
+  }
+  .ciclo-header h1 {
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -.3px;
+  }
+  .ciclo-header p {
+    color: rgba(255,255,255,.65);
+    margin: 4px 0 0;
+    font-size: .9rem;
+  }
+  .ciclo-header .year-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 800;
+    padding: 10px 20px;
+    border-radius: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Alerta ── */
+  .alerta-ciclo {
+    background: linear-gradient(90deg, #fff3cd, #fff);
+    border-left: 5px solid #f39c12;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: .88rem;
+    color: #7d5a00;
+    box-shadow: 0 2px 8px rgba(243,156,18,.12);
+  }
+  .alerta-ciclo i { font-size: 1.2rem; color: #f39c12; }
+
+  /* ── Tabla de promociones ── */
+  .promo-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .promo-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    height: 60px;
+    background: #f8f9fc;
+    border-bottom: 1px solid #eef0f7;
+  }
+  .tipo-pill {
+    font-size: .72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tipo-LACTANTE   { background: #dff9fb; color: #00b894; }
+  .tipo-MATERNAL   { background: #ffeaa7; color: #e17055; }
+  .tipo-PREESCOLAR { background: #d0e8ff; color: #0984e3; }
+
+  .grupo-nombre {
+    font-weight: 700;
+    color: #2d3436;
+    font-size: .97rem;
+  }
+  .grupo-grado {
+    color: #636e72;
+    font-size: .82rem;
+    margin-left: 4px;
+  }
+  .ninos-count {
+    margin-left: auto;
+    font-size: .8rem;
+    color: #636e72;
+    white-space: nowrap;
+  }
+  .ninos-count span {
+    background: #f1f3f9;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-weight: 600;
+    color: #2d3436;
+  }
+
+  .promo-card-body {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+    gap: 16px;
+  }
+  .arrow-icon {
+    font-size: 1.2rem;
+    color: #b2bec3;
+    flex-shrink: 0;
+  }
+  .select-destino {
+    flex: 1;
+    border: 2px solid #eef0f7;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: .88rem;
+    color: #2d3436;
+    background: #fff;
+    transition: border-color .2s, box-shadow .2s;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23636e72' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .select-destino:focus {
+    border-color: #0f3460;
+    box-shadow: 0 0 0 3px rgba(15,52,96,.1);
+  }
+  .select-destino.seleccionado-ok   { border-color: #00b894; background-color: #f0fdf9; }
+  .select-destino.seleccionado-grad { border-color: #e94560; background-color: #fff5f5; }
+
+  /* Ver niños toggle */
+  .toggle-ninos {
+    background: none;
+    border: none;
+    color: #0984e3;
+    font-size: .78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .toggle-ninos:hover { text-decoration: underline; }
+
+  /* Panel niños */
+  .ninos-panel {
+    display: none;
+    background: #f8f9fc;
+    border-top: 1px solid #eef0f7;
+    padding: 10px 20px 12px 52px;
+  }
+  .ninos-panel.show { display: block; }
+  .ninos-list {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .nino-chip {
+    background: #fff;
+    border: 1px solid #dfe6e9;
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: .78rem;
+    color: #2d3436;
+  }
+
+  /* ── Resumen flotante ── */
+  .resumen-bar {
+    position: sticky;
+    bottom: 20px;
+    background: linear-gradient(135deg, var(--grad-start), var(--accent2));
+    border-radius: 16px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 8px 32px rgba(26,26,46,.4);
+    margin-top: 24px;
+    z-index: 100;
+  }
+  .resumen-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+  }
+  .resumen-stat .num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .resumen-stat .lbl {
+    font-size: .72rem;
+    opacity: .7;
+    margin-top: 2px;
+  }
+  .resumen-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(255,255,255,.2);
+  }
+  .btn-finalizar {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 28px;
+    font-size: .92rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    letter-spacing: .3px;
+    margin-left: auto;
+  }
+  .btn-finalizar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(233,69,96,.45);
+  }
+  .btn-finalizar:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-cancelar {
+    background: rgba(255,255,255,.1);
+    color: rgba(255,255,255,.8);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: .88rem;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .btn-cancelar:hover {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    text-decoration: none;
+  }
+
+  /* ── Grupo vacío ── */
+  .grupo-vacio .promo-card-header { opacity: .55; }
+  .badge-vacio {
+    font-size: .7rem;
+    background: #f1f3f9;
+    color: #b2bec3;
+    border-radius: 8px;
+    padding: 2px 8px;
+    margin-left: 8px;
+  }
+</style>
+
+<!-- Header -->
+<div class="container-fluid pt-3 pb-0">
+  <div class="ciclo-header">
+    <div>
+      <h1><i class="fas fa-graduation-cap mr-2"></i> Finalizar Ciclo Escolar</h1>
+      <p>Revisa y confirma la promoción masiva de grupos. El sistema propone el destino lógico.</p>
+    </div>
+    <!-- PON esto: -->
+<div class="year-badge">{% now "Y" %}</div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Alerta -->
+    <div class="alerta-ciclo">
+      <i class="fas fa-exclamation-triangle"></i>
+      <div>
+        <strong>Acción irreversible.</strong> Revisa cada fila antes de confirmar.
+        Los niños del último grado serán <strong>graduados</strong> automáticamente.
+        Los grupos sin niños serán ignorados.
+      </div>
+    </div>
+
+    <!-- Lista de grupos -->
+    <form id="formPromociones">
+      {% for info in grupos_info %}
+      <div class="promo-card {% if info.total_ninos == 0 %}grupo-vacio{% endif %}"
+           id="card_{{ info.grupo.id }}">
+
+        <!-- Header del grupo -->
+        <div class="promo-card-header">
+          <span class="tipo-pill tipo-{{ info.grupo.tipo }}">{{ info.grupo.get_tipo_display }}</span>
+          <span class="grupo-nombre">{{ info.grupo.nombre }}</span>
+          <span class="grupo-grado">({{ info.grupo.grado }})</span>
+          {% if info.total_ninos == 0 %}
+          <span class="badge-vacio"><i class="fas fa-minus-circle"></i> Sin niños</span>
+          {% endif %}
+          <span class="ninos-count">
+            <span>{{ info.total_ninos }} niño{{ info.total_ninos|pluralize }}</span>
+          </span>
+        </div>
+
+        <!-- Selector de destino -->
+        <div class="promo-card-body">
+          <i class="fas fa-arrow-right arrow-icon"></i>
+
+          <select class="select-destino"
+                  name="promocion_{{ info.grupo.id }}"
+                  data-total="{{ info.total_ninos }}"
+                  data-nombre="{{ info.grupo.nombre }}"
+                  data-sugerido="{% if info.sugerido %}{{ info.sugerido.id }}{% else %}graduar{% endif %}"
+                  onchange="onSelectChange(this)">
+            <option value="">-- Seleccionar destino --</option>
+            {% for destino in grupos_destino %}
+              {% if destino.id != info.grupo.id %}
+              <option value="{{ destino.id }}"
+                {% if info.sugerido and destino.id == info.sugerido.id %}selected{% endif %}>
+                {{ destino.get_tipo_display }} — {{ destino.nombre }} ({{ destino.grado }})
+              </option>
+              {% endif %}
+            {% endfor %}
+            <option value="graduar" {% if not info.sugerido %}selected{% endif %}>
+              🎓 GRADUAR — Completaron el ciclo
+            </option>
+          </select>
+
+          {% if info.total_ninos > 0 %}
+          <button type="button" class="toggle-ninos"
+                  onclick="toggleNinos('panel_{{ info.grupo.id }}', this)">
+            <i class="fas fa-users mr-1"></i>Ver niños
+          </button>
+          {% endif %}
+        </div>
+
+        <!-- Panel niños (oculto por defecto) -->
+        {% if info.total_ninos > 0 %}
+        <div class="ninos-panel" id="panel_{{ info.grupo.id }}">
+          <ul class="ninos-list">
+            {% for nino in info.ninos %}
+            <li class="nino-chip">
+              <i class="fas fa-child mr-1" style="color:#b2bec3;font-size:.7rem;"></i>
+              {{ nino.nombre_completo }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+      </div>
+      {% empty %}
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No hay grupos activos registrados.
+      </div>
+      {% endfor %}
+    </form>
+
+    <!-- Barra de resumen flotante -->
+    <div class="resumen-bar" id="resumenBar">
+      <div class="resumen-stat">
+        <span class="num" id="cntTotal">0</span>
+        <span class="lbl">Niños afectados</span>
+      </div>
+      <div class="resumen-divider"></div>
+      <div class="resumen-stat">
+        <span class="num" id="cntPromovidos" style="color:#a8edda;">0</span>
+        <span class="lbl">Promovidos</span>
+      </div>
+      <div class="resumen-divider"></div>
+      <div class="resumen-stat">
+        <span class="num" id="cntGraduados" style="color:#ffb8c1;">0</span>
+        <span class="lbl">Graduados</span>
+      </div>
+      <a href="{% url 'guarderia:lista_grupos' %}" class="btn-cancelar ml-auto">
+        <i class="fas fa-times mr-1"></i>Cancelar
+      </a>
+      <button type="button" class="btn-finalizar" id="btnFinalizar" onclick="confirmar()">
+        <i class="fas fa-check mr-1"></i>Finalizar Ciclo
+      </button>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Inicializar selects con propuesta automática y actualizar resumen
+document.addEventListener('DOMContentLoaded', function() {
+  var selects = document.querySelectorAll('.select-destino');
+  selects.forEach(function(sel) {
+    // Aplicar clase visual según el valor sugerido ya seleccionado
+    onSelectChange(sel);
+  });
+  actualizarResumen();
+});
+
+function onSelectChange(sel) {
+  sel.classList.remove('seleccionado-ok', 'seleccionado-grad');
+  if (sel.value === 'graduar') {
+    sel.classList.add('seleccionado-grad');
+  } else if (sel.value) {
+    sel.classList.add('seleccionado-ok');
+  }
+  actualizarResumen();
+}
+
+function actualizarResumen() {
+  var selects = document.querySelectorAll('.select-destino');
+  var total = 0, promovidos = 0, graduados = 0;
+  selects.forEach(function(sel) {
+    var n = parseInt(sel.getAttribute('data-total') || '0');
+    if (n === 0) return;
+    if (sel.value === 'graduar') {
+      total += n; graduados += n;
+    } else if (sel.value) {
+      total += n; promovidos += n;
+    }
+  });
+  document.getElementById('cntTotal').textContent      = total;
+  document.getElementById('cntPromovidos').textContent = promovidos;
+  document.getElementById('cntGraduados').textContent  = graduados;
+}
+
+function toggleNinos(panelId, btn) {
+  var panel = document.getElementById(panelId);
+  panel.classList.toggle('show');
+  btn.innerHTML = panel.classList.contains('show')
+    ? '<i class="fas fa-eye-slash mr-1"></i>Ocultar niños'
+    : '<i class="fas fa-users mr-1"></i>Ver niños';
+}
+
+function confirmar() {
+  var promociones = {};
+  var totalNinos  = 0;
+  var promovidos  = 0;
+  var graduados   = 0;
+  var detalleHtml = '<div style="text-align:left;max-height:260px;overflow-y:auto;">';
+  var form        = document.getElementById('formPromociones');
+  var selects     = form.querySelectorAll('.select-destino');
+
+  // Validar que los grupos CON niños tengan destino
+  for (var i = 0; i < selects.length; i++) {
+    var sel   = selects[i];
+    var total = parseInt(sel.getAttribute('data-total') || '0');
+    if (total > 0 && !sel.value) {
+      var nombre = sel.getAttribute('data-nombre') || 'desconocido';
+      Swal.fire({
+        icon: 'warning',
+        title: 'Falta selección',
+        text: 'Selecciona un destino para "' + nombre + '" (' + total + ' niños)',
+        confirmButtonColor: '#0f3460'
+      });
+      return;
+    }
+  }
+
+  // Construir resumen
+  for (var j = 0; j < selects.length; j++) {
+    var sel   = selects[j];
+    var total = parseInt(sel.getAttribute('data-total') || '0');
+    if (!sel.value || total === 0) continue;
+
+    var grupoId  = sel.name.replace('promocion_', '');
+    var nombre   = sel.getAttribute('data-nombre') || grupoId;
+    var destTxt  = sel.options[sel.selectedIndex].text;
+
+    promociones[grupoId] = sel.value;
+    totalNinos += total;
+
+    if (sel.value === 'graduar') {
+      graduados += total;
+      detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
+        + '<span style="font-weight:600;">' + nombre + '</span>'
+        + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
+        + ' <span style="color:#e94560;margin-left:6px;">🎓 Graduar</span></div>';
+    } else {
+      promovidos += total;
+      detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
+        + '<span style="font-weight:600;">' + nombre + '</span>'
+        + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
+        + ' <span style="color:#00b894;margin-left:6px;">→ ' + destTxt.replace(/^[^—]+— /, '') + '</span></div>';
+    }
+  }
+  detalleHtml += '</div>';
+
+  if (Object.keys(promociones).length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Nada que procesar',
+      text: 'No hay grupos con niños para mover.',
+      confirmButtonColor: '#0f3460'
+    });
+    return;
+  }
+
+  Swal.fire({
+    title: '¿Confirmar Finalizar Ciclo?',
+    html: '<div style="font-size:.85rem;margin-bottom:10px;">'
+      + '<b>' + promovidos + '</b> niños se promoverán &nbsp;·&nbsp; '
+      + '<b>' + graduados + '</b> se graduarán</div>'
+      + detalleHtml,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e94560',
+    cancelButtonColor:  '#636e72',
+    confirmButtonText:  '<i class="fas fa-check"></i> Sí, Finalizar',
+    cancelButtonText:   'Revisar',
+    reverseButtons: true
+  }).then(function(result) {
+    if (!result.isConfirmed) return;
+
+    document.getElementById('btnFinalizar').disabled = true;
+
+    Swal.fire({
+      title: 'Procesando...',
+      html: 'Moviendo <b>' + totalNinos + '</b> niños',
+      allowOutsideClick: false,
+      didOpen: function() { Swal.showLoading(); }
+    });
+
+    $.ajax({
+      url:         '{% url "guarderia:finalizar_ciclo_escolar" %}',
+      type:        'POST',
+      data:        JSON.stringify({ promociones: promociones }),
+      contentType: 'application/json',
+      headers:     { 'X-CSRFToken': getCookie('csrftoken') },
+      success: function(response) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Ciclo Finalizado!',
+          html: '<div style="font-size:1rem;">'
+              + '<p>✅ Promovidos: <strong>' + response.total_promovidos + '</strong></p>'
+              + '<p>🎓 Graduados: &nbsp;<strong>' + response.total_graduados + '</strong></p>'
+              + '</div>',
+          confirmButtonText:  'Ver Grupos',
+          confirmButtonColor: '#0f3460'
+        }).then(function() {
+          window.location.href = '{% url "guarderia:lista_grupos" %}';
+        });
+      },
+      error: function(xhr) {
+        var msg = (xhr.responseJSON && xhr.responseJSON.mensaje)
+          ? xhr.responseJSON.mensaje : 'Error desconocido';
+        Swal.fire('Error', msg, 'error');
+        document.getElementById('btnFinalizar').disabled = false;
+      }
+    });
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) {
+    document.cookie.split(';').forEach(function(c) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+    });
+  }
+  return v;
+}
+</script>
+{% endblock %}

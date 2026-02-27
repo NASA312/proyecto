@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle del Usuario{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Detalle del Usuario</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'auth:lista_usuarios' %}">Usuarios</a></li>
+          <li class="breadcrumb-item active">Detalle</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Columna Principal -->
+      <div class="col-md-4">
+        <!-- Información del Perfil -->
+        <div class="card card-primary card-outline">
+          <div class="card-body box-profile">
+            <div class="text-center">
+              {% if perfil.foto_perfil %}
+                <img class="profile-user-img img-fluid img-circle" 
+                     src="{{ perfil.foto_perfil.url }}" 
+                     alt="{{ usuario.get_full_name }}"
+                     style="width: 128px; height: 128px; object-fit: cover;">
+              {% else %}
+                <div class="profile-user-img img-fluid img-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                     style="width: 128px; height: 128px;">
+                  <i class="fas fa-user fa-4x text-white"></i>
+                </div>
+              {% endif %}
+            </div>
+
+            <h3 class="profile-username text-center">{{ usuario.get_full_name }}</h3>
+
+            <p class="text-muted text-center">
+              {% if perfil.rol %}
+                <span class="badge badge-{% if perfil.rol.nombre == 'ADMIN' %}primary{% elif perfil.rol.nombre == 'OBSERVADOR' %}info{% else %}success{% endif %} badge-lg">
+                  {{ perfil.rol }}
+                </span>
+              {% else %}
+                <span class="badge badge-secondary">Sin rol</span>
+              {% endif %}
+            </p>
+
+            <ul class="list-group list-group-unbordered mb-3">
+              <li class="list-group-item">
+                <b>Usuario</b> <a class="float-right">{{ usuario.username }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Email</b> <a class="float-right">{{ usuario.email|default:"—" }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Teléfono</b> <a class="float-right">{{ perfil.telefono|default:"—" }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Estado</b> 
+                <span class="float-right">
+                  {% if usuario.is_active %}
+                    <span class="badge badge-success">Activo</span>
+                  {% else %}
+                    <span class="badge badge-danger">Inactivo</span>
+                  {% endif %}
+                </span>
+              </li>
+            </ul>
+
+            <a href="{% url 'auth:editar_usuario' usuario.id %}" class="btn btn-warning btn-block">
+              <i class="fas fa-edit"></i> <b>Editar Usuario</b>
+            </a>
+            
+            {% if usuario.id != request.user.id %}
+              <a href="{% url 'auth:desactivar_usuario' usuario.id %}" 
+                 class="btn btn-{% if usuario.is_active %}danger{% else %}success{% endif %} btn-block"
+                 onclick="return confirm('¿Estás seguro de {% if usuario.is_active %}desactivar{% else %}activar{% endif %} este usuario?')">
+                <i class="fas fa-{% if usuario.is_active %}ban{% else %}check{% endif %}"></i> 
+                <b>{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %} Usuario</b>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna de Información Detallada -->
+      <div class="col-md-8">
+        <!-- Información de la Cuenta -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-key"></i> Información de la Cuenta</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-user mr-1"></i> Nombre de Usuario</strong>
+                <p class="text-muted">{{ usuario.username }}</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-envelope mr-1"></i> Correo Electrónico</strong>
+                <p class="text-muted">{{ usuario.email|default:"No especificado" }}</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-calendar-alt mr-1"></i> Fecha de Registro</strong>
+                <p class="text-muted">{{ usuario.date_joined|date:"d/m/Y H:i" }}</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-clock mr-1"></i> Último Acceso</strong>
+                <p class="text-muted">
+                  {% if usuario.last_login %}
+                    {{ usuario.last_login|date:"d/m/Y H:i" }}
+                  {% else %}
+                    Nunca
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-id-badge mr-1"></i> Número de Empleado</strong>
+                <p class="text-muted">{{ perfil.numero_empleado|default:"No asignado" }}</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-shield-alt mr-1"></i> Permisos</strong>
+                <p class="text-muted">
+                  {% if usuario.is_superuser %}
+                    <span class="badge badge-danger">Superadministrador</span>
+                  {% elif usuario.is_staff %}
+                    <span class="badge badge-info">Staff</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Usuario Normal</span>
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información Personal -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-user"></i> Información Personal</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-signature mr-1"></i> Nombre Completo</strong>
+                <p class="text-muted">
+                  {{ usuario.first_name }} {{ usuario.last_name }}
+                </p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-phone mr-1"></i> Teléfono</strong>
+                <p class="text-muted">{{ perfil.telefono|default:"No especificado" }}</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <strong><i class="fas fa-birthday-cake mr-1"></i> Fecha de Nacimiento</strong>
+                <p class="text-muted">
+                  {% if perfil.fecha_nacimiento %}
+                    {{ perfil.fecha_nacimiento|date:"d/m/Y" }}
+                  {% else %}
+                    No especificada
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <strong><i class="fas fa-map-marker-alt mr-1"></i> Dirección</strong>
+                <p class="text-muted">{{ perfil.direccion|default:"No especificada" }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información Laboral -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-briefcase"></i> Información Laboral</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-user-tag mr-1"></i> Rol en el Sistema</strong>
+                <p class="text-muted">
+                  {% if perfil.rol %}
+                    <span class="badge badge-{% if perfil.rol.nombre == 'ADMIN' %}primary{% elif perfil.rol.nombre == 'OBSERVADOR' %}info{% else %}success{% endif %}">
+                      {{ perfil.rol }}
+                    </span>
+                  {% else %}
+                    No asignado
+                  {% endif %}
+                </p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-calendar-check mr-1"></i> Fecha de Ingreso</strong>
+                <p class="text-muted">
+                  {% if perfil.fecha_ingreso %}
+                    {{ perfil.fecha_ingreso|date:"d/m/Y" }}
+                  {% else %}
+                    No especificada
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-id-badge mr-1"></i> Número de Empleado</strong>
+                <p class="text-muted">{{ perfil.numero_empleado|default:"No asignado" }}</p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-toggle-on mr-1"></i> Estado del Perfil</strong>
+                <p class="text-muted">
+                  {% if perfil.activo %}
+                    <span class="badge badge-success">Activo</span>
+                  {% else %}
+                    <span class="badge badge-danger">Inactivo</span>
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            {% if perfil.notas %}
+              <div class="row">
+                <div class="col-md-12">
+                  <strong><i class="fas fa-sticky-note mr-1"></i> Notas</strong>
+                  <p class="text-muted">{{ perfil.notas }}</p>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="row">
+          <div class="col-12">
+            <a href="{% url 'auth:lista_usuarios' %}" class="btn btn-default">
+              <i class="fas fa-arrow-left"></i> Volver a la Lista
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

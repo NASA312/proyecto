@@ -26,14 +26,14 @@
       <div class="col-12">
 
         {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-          {% endfor %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        {% endfor %}
         {% endif %}
 
         <div class="card">
@@ -43,6 +43,12 @@
               <a href="{% url 'guarderia:registrar_grupo' %}" class="btn btn-success btn-sm">
                 <i class="fas fa-plus"></i> Nuevo Grupo
               </a>
+
+              {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+              <a href="{% url 'guarderia:finalizar_ciclo_escolar' %}" class="btn btn-danger btn-sm ml-2">
+                <i class="fas fa-graduation-cap"></i> Finalizar Ciclo
+              </a>
+              {% endif %}
             </div>
           </div>
           <div class="card-body">
@@ -94,35 +100,33 @@
                           <div class="progress-bar
                             {% if item.porcentaje_ocupacion >= 90 %}bg-danger
                             {% elif item.porcentaje_ocupacion >= 75 %}bg-warning
-                            {% else %}bg-success{% endif %}"
-                               role="progressbar"
-                               style="width:{{ item.porcentaje_ocupacion }}%"
-                               aria-valuenow="{{ item.porcentaje_ocupacion }}"
-                               aria-valuemin="0" aria-valuemax="100">
+                            {% else %}bg-success{% endif %}" role="progressbar"
+                            style="width:{{ item.porcentaje_ocupacion }}%"
+                            aria-valuenow="{{ item.porcentaje_ocupacion }}" aria-valuemin="0" aria-valuemax="100">
                             {{ item.porcentaje_ocupacion }}%
                           </div>
                         </div>
                       </td>
                       <td class="text-center">
                         {% if item.esta_lleno %}
-                          <span class="badge badge-danger">Lleno</span>
+                        <span class="badge badge-danger">Lleno</span>
                         {% else %}
-                          <span class="badge badge-success">Disponible</span>
+                        <span class="badge badge-success">Disponible</span>
                         {% endif %}
                       </td>
                       <td class="text-center">
                         <div class="btn-group btn-group-sm">
-                          <a href="{% url 'guarderia:detalle_grupo' item.grupo.id %}"
-                             class="btn btn-info" title="Ver detalles">
+                          <a href="{% url 'guarderia:detalle_grupo' item.grupo.id %}" class="btn btn-info"
+                            title="Ver detalles">
                             <i class="fas fa-eye"></i>
                           </a>
-                          <a href="{% url 'guarderia:editar_grupo' item.grupo.id %}"
-                             class="btn btn-warning" title="Editar">
+                          <a href="{% url 'guarderia:editar_grupo' item.grupo.id %}" class="btn btn-warning"
+                            title="Editar">
                             <i class="fas fa-edit"></i>
                           </a>
                           <button type="button" class="btn btn-danger"
-                                  onclick="enviarAPapelera({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
-                                  title="Enviar a papelera">
+                            onclick="enviarAPapelera({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
+                            title="Enviar a papelera">
                             <i class="fas fa-trash"></i>
                           </button>
                         </div>
@@ -157,14 +161,13 @@
                       <td><del>{{ item.grupo.nombre }}</del></td>
                       <td><span class="badge badge-secondary">{{ item.grupo.get_tipo_display }}</span></td>
                       <td><small class="text-muted">{{ item.grupo.grado|default:"—" }}</small></td>
-                      <td><small class="text-muted">{{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima }}</small></td>
+                      <td><small class="text-muted">{{ item.ninos_asignados }} / {{ item.grupo.capacidad_maxima
+                          }}</small></td>
                       <td>
                         <div class="progress" style="height:20px;">
-                          <div class="progress-bar bg-secondary"
-                               role="progressbar"
-                               style="width:{{ item.porcentaje_ocupacion }}%"
-                               aria-valuenow="{{ item.porcentaje_ocupacion }}"
-                               aria-valuemin="0" aria-valuemax="100">
+                          <div class="progress-bar bg-secondary" role="progressbar"
+                            style="width:{{ item.porcentaje_ocupacion }}%"
+                            aria-valuenow="{{ item.porcentaje_ocupacion }}" aria-valuemin="0" aria-valuemax="100">
                             {{ item.porcentaje_ocupacion }}%
                           </div>
                         </div>
@@ -174,8 +177,8 @@
                       </td>
                       <td class="text-center">
                         <button type="button" class="btn btn-success btn-sm"
-                                onclick="restaurar({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
-                                title="Restaurar">
+                          onclick="restaurar({{ item.grupo.id }}, '{{ item.grupo.nombre|escapejs }}')"
+                          title="Restaurar">
                           <i class="fas fa-undo"></i> Restaurar
                         </button>
                       </td>
@@ -196,84 +199,84 @@
 
 {% block scripts %}
 <script>
-$(document).ready(function () {
+  $(document).ready(function () {
 
-  var opts = function (emptyMsg) {
-    return {
-      responsive: true, autoWidth: false, pageLength: 25,
-      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
-      // Columnas con barras de progreso/badges: sin ordenar por HTML
-      columnDefs: [
-        { orderable: false, searchable: false, targets: [4, 5, 6] }
-      ],
-      language: {
-        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-        emptyTable: emptyMsg
-      }
+    var opts = function (emptyMsg) {
+      return {
+        responsive: true, autoWidth: false, pageLength: 25,
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+        // Columnas con barras de progreso/badges: sin ordenar por HTML
+        columnDefs: [
+          { orderable: false, searchable: false, targets: [4, 5, 6] }
+        ],
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+          emptyTable: emptyMsg
+        }
+      };
     };
-  };
 
-  $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay grupos activos</span>'));
-  $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
+    $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay grupos activos</span>'));
+    $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
 
-  $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-    $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
+    });
   });
-});
 
-function enviarAPapelera(id, nombre) {
-  Swal.fire({
-    title: '¿Enviar a papelera?',
-    html: 'El grupo <strong>' + nombre + '</strong> quedará inactivo.',
-    icon: 'warning', showCancelButton: true,
-    confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
-    confirmButtonText: '<i class="fas fa-trash"></i> Sí, enviar',
-    cancelButtonText: 'Cancelar'
-  }).then(function (r) {
-    if (r.isConfirmed) {
-      $.post('/guarderia/grupos/' + id + '/enviar-papelera/',
-        { csrfmiddlewaretoken: getCookie('csrftoken') },
-        function (res) {
-          if (res.success) {
-            Swal.fire({ icon: 'success', title: '¡Enviado!', text: res.message, timer: 2000, showConfirmButton: false });
-            setTimeout(function () { location.reload(); }, 1500);
+  function enviarAPapelera(id, nombre) {
+    Swal.fire({
+      title: '¿Enviar a papelera?',
+      html: 'El grupo <strong>' + nombre + '</strong> quedará inactivo.',
+      icon: 'warning', showCancelButton: true,
+      confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+      confirmButtonText: '<i class="fas fa-trash"></i> Sí, enviar',
+      cancelButtonText: 'Cancelar'
+    }).then(function (r) {
+      if (r.isConfirmed) {
+        $.post('/guarderia/grupos/' + id + '/enviar-papelera/',
+          { csrfmiddlewaretoken: getCookie('csrftoken') },
+          function (res) {
+            if (res.success) {
+              Swal.fire({ icon: 'success', title: '¡Enviado!', text: res.message, timer: 2000, showConfirmButton: false });
+              setTimeout(function () { location.reload(); }, 1500);
+            }
           }
-        }
-      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar a papelera.' }); });
-    }
-  });
-}
+        ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar a papelera.' }); });
+      }
+    });
+  }
 
-function restaurar(id, nombre) {
-  Swal.fire({
-    title: '¿Restaurar grupo?',
-    html: '¿Desea restaurar el grupo <strong>' + nombre + '</strong>?',
-    icon: 'question', showCancelButton: true,
-    confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
-    confirmButtonText: '<i class="fas fa-undo"></i> Sí, restaurar',
-    cancelButtonText: 'Cancelar'
-  }).then(function (r) {
-    if (r.isConfirmed) {
-      $.post('/guarderia/grupos/' + id + '/restaurar/',
-        { csrfmiddlewaretoken: getCookie('csrftoken') },
-        function (res) {
-          if (res.success) {
-            Swal.fire({ icon: 'success', title: '¡Restaurado!', text: res.message, timer: 2000, showConfirmButton: false });
-            setTimeout(function () { location.reload(); }, 1500);
+  function restaurar(id, nombre) {
+    Swal.fire({
+      title: '¿Restaurar grupo?',
+      html: '¿Desea restaurar el grupo <strong>' + nombre + '</strong>?',
+      icon: 'question', showCancelButton: true,
+      confirmButtonColor: '#28a745', cancelButtonColor: '#6c757d',
+      confirmButtonText: '<i class="fas fa-undo"></i> Sí, restaurar',
+      cancelButtonText: 'Cancelar'
+    }).then(function (r) {
+      if (r.isConfirmed) {
+        $.post('/guarderia/grupos/' + id + '/restaurar/',
+          { csrfmiddlewaretoken: getCookie('csrftoken') },
+          function (res) {
+            if (res.success) {
+              Swal.fire({ icon: 'success', title: '¡Restaurado!', text: res.message, timer: 2000, showConfirmButton: false });
+              setTimeout(function () { location.reload(); }, 1500);
+            }
           }
-        }
-      ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo restaurar.' }); });
-    }
-  });
-}
+        ).fail(function () { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo restaurar.' }); });
+      }
+    });
+  }
 
-function getCookie(name) {
-  var v = null;
-  if (document.cookie) document.cookie.split(';').forEach(function (c) {
-    c = c.trim();
-    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
-  });
-  return v;
-}
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) document.cookie.split(';').forEach(function (c) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+    });
+    return v;
+  }
 </script>
 {% endblock scripts %}
