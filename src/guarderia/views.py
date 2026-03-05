@@ -364,10 +364,85 @@ def verificar_huella_tutor(request):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def historial_accesos(request):
-    """Historial de entradas y salidas"""
-    registros = RegistroAcceso.objects.all().select_related('nino', 'tutor').order_by('-fecha_hora')[:100]
-    ctx = {'registros': registros}
-    return render(request, 'guarderia/registros/historial.html', ctx)
+    """Historial de entradas y salidas con filtros avanzados"""
+    
+    # Obtener parámetros de filtro
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+    nino_id = request.GET.get('nino', '')
+    tutor_id = request.GET.get('tutor', '')
+    tipo = request.GET.get('tipo', '')  # ENTRADA o SALIDA
+    grupo_id = request.GET.get('grupo', '')
+    
+    # Query base
+    registros = RegistroAcceso.objects.select_related(
+        'nino', 
+        'tutor', 
+        'nino__grupo'
+    )
+    
+    # ⚠️ APLICAR TODOS LOS FILTROS ANTES DEL SLICE
+    if fecha_desde:
+        try:
+            fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+            registros = registros.filter(fecha_hora__date__gte=fecha_desde_obj)
+        except ValueError:
+            messages.warning(request, 'Formato de fecha desde inválido')
+    
+    if fecha_hasta:
+        try:
+            fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+            registros = registros.filter(fecha_hora__date__lte=fecha_hasta_obj)
+        except ValueError:
+            messages.warning(request, 'Formato de fecha hasta inválido')
+    
+    if nino_id:
+        registros = registros.filter(nino_id=nino_id)
+    
+    if tutor_id:
+        registros = registros.filter(tutor_id=tutor_id)
+    
+    if tipo:
+        registros = registros.filter(tipo=tipo)
+    
+    if grupo_id:
+        registros = registros.filter(nino__grupo_id=grupo_id)
+    
+    # ⚠️ CALCULAR ESTADÍSTICAS ANTES DEL SLICE
+    total_registros = registros.count()
+    entradas = registros.filter(tipo='ENTRADA').count()
+    salidas = registros.filter(tipo='SALIDA').count()
+    
+    # ⚠️ APLICAR ORDER BY Y SLICE AL FINAL
+    registros = registros.order_by('-fecha_hora')[:500]
+    
+    # Datos para los select de filtros
+    ninos = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    tutores = Tutor.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    grupos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+    
+    context = {
+        'registros': registros,
+        'ninos': ninos,
+        'tutores': tutores,
+        'grupos': grupos,
+        'tipo_choices': RegistroAcceso.TIPO_CHOICES,
+        
+        # Estadísticas
+        'total_registros': total_registros,
+        'entradas': entradas,
+        'salidas': salidas,
+        
+        # Mantener valores de filtros
+        'filtro_fecha_desde': fecha_desde,
+        'filtro_fecha_hasta': fecha_hasta,
+        'filtro_nino': nino_id,
+        'filtro_tutor': tutor_id,
+        'filtro_tipo': tipo,
+        'filtro_grupo': grupo_id,
+    }
+    
+    return render(request, 'guarderia/registros/historial.html', context)
 
 # Agregar esta nueva función en views.py
 
