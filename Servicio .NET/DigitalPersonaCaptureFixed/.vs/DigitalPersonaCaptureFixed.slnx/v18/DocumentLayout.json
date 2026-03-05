@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\maimm\\source\\repos\\DigitalPersonaCaptureFixed\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{6D1B536D-54E1-418B-A0D2-8D2191B5DFB3}|DigitalPersonaCaptureFixed\\DigitalPersonaCaptureFixed.csproj|c:\\users\\maimm\\source\\repos\\digitalpersonacapturefixed\\digitalpersonacapturefixed\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6D1B536D-54E1-418B-A0D2-8D2191B5DFB3}|DigitalPersonaCaptureFixed\\DigitalPersonaCaptureFixed.csproj|solutionrelative:digitalpersonacapturefixed\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\maimm\\source\\repos\\DigitalPersonaCaptureFixed\\DigitalPersonaCaptureFixed\\Program.cs",
+              "RelativeDocumentMoniker": "DigitalPersonaCaptureFixed\\Program.cs",
+              "ToolTip": "C:\\Users\\maimm\\source\\repos\\DigitalPersonaCaptureFixed\\DigitalPersonaCaptureFixed\\Program.cs",
+              "RelativeToolTip": "DigitalPersonaCaptureFixed\\Program.cs",
+              "ViewState": "AgIAALkCAAAAAAAAAAAYwMkCAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-14T19:46:57.98Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
