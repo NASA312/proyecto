@@ -110,8 +110,15 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmColor: '#3085d6'
     });
 
-    // Manejo de formularios (manteniendo tu código existente)
+    // ⭐ MANEJO DE FORMULARIOS - EXCLUIR FORMULARIOS CON MANEJO PERSONALIZADO
     document.querySelectorAll("form").forEach((formulario) => {
+        // ⭐ IGNORAR formularios que tienen data-custom-submit o un ID específico
+        if (formulario.hasAttribute('data-custom-submit') || 
+            formulario.id === 'formObservacion' ||
+            formulario.classList.contains('no-auto-submit')) {
+            return; // Saltar este formulario
+        }
+
         formulario.addEventListener("submit", function(event) {
             event.preventDefault();
             const datosFormulario = new FormData(formulario);

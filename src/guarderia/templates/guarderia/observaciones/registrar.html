@@ -1,21 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Registrar Observación{% endblock %}
+{% block title %}Editar Observación{% endblock %}
 
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="m-0">Registrar Nueva Observación</h1>
-      </div>
-      <div class="col-sm-6">
-        <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="/">Inicio</a></li>
-          <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_observaciones' %}">Observaciones</a></li>
-          <li class="breadcrumb-item active">Registrar</li>
-        </ol>
+        <h1 class="m-0">Editar Observación</h1>
       </div>
     </div>
   </div>
@@ -24,109 +17,65 @@
 <section class="content">
   <div class="container-fluid">
     <div class="row">
-      <div class="col-md-10 offset-md-1">
-        <!-- Mostrar mensajes de Django -->
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-          {% endfor %}
-        {% endif %}
-
+      <div class="col-md-8 offset-md-2">
         <div class="card card-warning">
           <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Información de la Observación</h3>
+            <h3 class="card-title"><i class="fas fa-edit"></i> Editar Observación</h3>
           </div>
-          <form method="post" id="formObservacion">
+          <form id="formObservacion" method="post" data-custom-submit="true">
             {% csrf_token %}
             <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label>Niño *</label>
-                    {{ form.nino }}
-                    <span class="text-danger error-nino"></span>
-                    {% if form.nino.errors %}
-                      <span class="text-danger">{{ form.nino.errors.0 }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>Tipo de Observación *</label>
-                    {{ form.tipo }}
-                    <span class="text-danger error-tipo"></span>
-                    {% if form.tipo.errors %}
-                      <span class="text-danger">{{ form.tipo.errors.0 }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="col-md-3">
-                  <div class="form-group">
-                    <label>Fecha *</label>
-                    {{ form.fecha }}
-                    <span class="text-danger error-fecha"></span>
-                    {% if form.fecha.errors %}
-                      <span class="text-danger">{{ form.fecha.errors.0 }}</span>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-
               <div class="form-group">
-                <label>Descripción de la Observación *</label>
+                <label>Niño</label>
+                {{ form.nino }}
+              </div>
+              
+              <div class="form-group">
+                <label>Tipo</label>
+                {{ form.tipo }}
+              </div>
+              
+              <div class="form-group">
+                <label>Descripción</label>
                 {{ form.descripcion }}
-                <span class="text-danger error-descripcion"></span>
-                {% if form.descripcion.errors %}
-                  <span class="text-danger">{{ form.descripcion.errors.0 }}</span>
-                {% endif %}
               </div>
-
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                      {{ form.importante }}
-                      <label class="custom-control-label" for="id_importante">
-                        <strong>Marcar como Importante</strong>
-                      </label>
-                    </div>
-                    <small class="form-text text-muted">
-                      Las observaciones importantes se destacarán en el sistema
-                    </small>
-                  </div>
-                </div>
-
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                      {{ form.notificar_tutor }}
-                      <label class="custom-control-label" for="id_notificar_tutor">
-                        <strong>Notificar al Tutor</strong>
-                      </label>
-                    </div>
-                    <small class="form-text text-muted">
-                      Se registrará como pendiente de notificación
-                    </small>
-                  </div>
+              
+              <div class="form-group">
+                <label>Fecha</label>
+                {{ form.fecha }}
+              </div>
+              
+              <!-- ⭐ CHECKBOXES SIN AUTO-SUBMIT -->
+              <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" 
+                         class="custom-control-input no-ajax-checkbox" 
+                         id="id_importante" 
+                         name="importante"
+                         {% if form.importante.value %}checked{% endif %}>
+                  <label class="custom-control-label" for="id_importante">
+                    Marcar como importante
+                  </label>
                 </div>
               </div>
-
-              <div class="alert alert-info">
-                <i class="icon fas fa-info-circle"></i>
-                <strong>Información:</strong> Esta observación quedará registrada en el expediente del niño y podrá ser consultada posteriormente.
+              
+              <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" 
+                         class="custom-control-input no-ajax-checkbox" 
+                         id="id_notificar_tutor" 
+                         name="notificar_tutor"
+                         {% if form.notificar_tutor.value %}checked{% endif %}>
+                  <label class="custom-control-label" for="id_notificar_tutor">
+                    Notificar al tutor
+                  </label>
+                </div>
               </div>
             </div>
-
+            
             <div class="card-footer">
-              <button type="submit" class="btn btn-warning" id="btnGuardar">
-                <i class="fas fa-save"></i> Guardar Observación
+              <button type="submit" class="btn btn-warning">
+                <i class="fas fa-save"></i> Actualizar
               </button>
               <a href="{% url 'guarderia:lista_observaciones' %}" class="btn btn-default">
                 <i class="fas fa-times"></i> Cancelar
@@ -143,13 +92,16 @@
 {% block scripts %}
 <script>
 $(document).ready(function() {
-  // Establecer fecha actual por defecto si no viene pre-cargada
-  if (!$('#id_fecha').val()) {
-    const today = new Date().toISOString().split('T')[0];
-    $('#id_fecha').val(today);
-  }
+  // ⭐ BLOQUEAR CUALQUIER LISTENER DE CHECKBOXES EN ESTE FORMULARIO
+  $('#formObservacion').on('submit click change', '.no-ajax-checkbox', function(e) {
+    // Solo permitir el cambio visual, no AJAX
+    if (e.type === 'change') {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  });
 
-  // Mejorar el select de niños con Select2 (si está disponible)
+  // Mejorar el select de niños con Select2
   if ($.fn.select2) {
     $('#id_nino').select2({
       placeholder: 'Seleccione un niño',
@@ -158,48 +110,108 @@ $(document).ready(function() {
     });
   }
 
-  // Limpiar errores anteriores al enviar
+  // ⭐ DESACTIVAR LISTENERS GLOBALES PARA ESTE FORMULARIO
+  $('#formObservacion').off(); // Limpiar cualquier listener previo
+  
+  // INTERCEPTAR EL SUBMIT Y ENVIAR CON AJAX
   $('#formObservacion').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    const form = $(this);
+    const submitBtn = form.find('button[type="submit"]');
+    const btnText = submitBtn.html();
+    
+    // Deshabilitar botón
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+    
+    // Limpiar errores anteriores
     $('.text-danger[class^="error-"]').text('');
     $('.form-control').removeClass('is-invalid');
-  });
-
-  // Interceptar la respuesta exitosa (si se usa AJAX)
-  $(document).ajaxComplete(function(event, xhr, settings) {
-    if (settings.url && settings.url.includes('registrar_observacion')) {
-      try {
-        const response = JSON.parse(xhr.responseText);
-        
-        if (response.success) {
+    
+    $.ajax({
+      url: form.attr('action') || window.location.href,
+      method: 'POST',
+      data: form.serialize(),
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      success: function(response) {
+        // Verificar si la respuesta es HTML (redirección exitosa)
+        if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
           Swal.fire({
             icon: 'success',
-            title: '¡Éxito!',
-            text: response.message,
-            timer: 2000,
+            title: '¡Actualizado!',
+            text: 'La observación se actualizó correctamente.',
+            timer: 1500,
             showConfirmButton: false
           }).then(() => {
-            window.location.href = '{% url "guarderia:lista_observaciones" %}';
+            window.location.href = "{% url 'guarderia:lista_observaciones' %}";
           });
-        } else if (!response.success && response.errors) {
-          for (let field in response.errors) {
-            $(`.error-${field}`).text(response.errors[field].join(', '));
-            $(`#id_${field}`).addClass('is-invalid');
-          }
-          
+        } 
+        else if (response.success) {
           Swal.fire({
-            icon: 'error',
-            title: 'Error en el formulario',
-            text: 'Por favor corrija los errores',
-            confirmButtonText: 'Entendido'
+            icon: 'success',
+            title: '¡Actualizado!',
+            text: response.mensaje || 'La observación se actualizó correctamente.',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            if (response.redirect_url) {
+              window.location.href = response.redirect_url;
+            } else {
+              window.location.href = "{% url 'guarderia:lista_observaciones' %}";
+            }
           });
         }
-      } catch (e) {
-        console.log('No es JSON o no es nuestra petición');
+        // ⭐ RESTAURAR BOTÓN SI NO HAY REDIRECCIÓN
+        else {
+          submitBtn.prop('disabled', false).html(btnText);
+        }
+      },
+      error: function(xhr) {
+        let errorMsg = 'Ocurrió un problema al guardar el registro.';
+        
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.errors) {
+            let erroresHTML = '<ul class="text-left">';
+            Object.keys(response.errors).forEach(campo => {
+              erroresHTML += `<li><strong>${campo}:</strong> ${response.errors[campo]}</li>`;
+              $(`#id_${campo}`).addClass('is-invalid');
+            });
+            erroresHTML += '</ul>';
+            
+            Swal.fire({
+              icon: 'error',
+              title: 'Errores de validación',
+              html: erroresHTML
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.mensaje || errorMsg
+            });
+          }
+        } catch (e) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: errorMsg
+          });
+        }
+        
+        // Restaurar botón
+        submitBtn.prop('disabled', false).html(btnText);
       }
-    }
+    });
+    
+    return false; // Extra seguridad
   });
 
-  // Si hay errores de Django en el template, mostrarlos
+  // Mostrar errores de Django si existen
   {% if form.errors %}
     let errores = [];
     {% for field, errors in form.errors.items %}

@@ -22,7 +22,7 @@
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-edit"></i> Editar Observación</h3>
           </div>
-          <form method="post">
+          <form id="formObservacion" method="post" data-custom-submit="true">
             {% csrf_token %}
             <div class="card-body">
               <div class="form-group">
@@ -45,7 +45,6 @@
                 {{ form.fecha }}
               </div>
               
-              <!-- ⭐ CHECKBOXES CORREGIDOS -->
               <div class="form-group">
                 <div class="custom-control custom-checkbox">
                   {{ form.importante }}
@@ -84,7 +83,7 @@
 {% block scripts %}
 <script>
 $(document).ready(function() {
-  // Mejorar el select de niños con Select2 (si está disponible)
+  // Mejorar el select de niños con Select2
   if ($.fn.select2) {
     $('#id_nino').select2({
       placeholder: 'Seleccione un niño',
@@ -93,13 +92,102 @@ $(document).ready(function() {
     });
   }
 
-  // Limpiar errores anteriores al enviar
+  // ⭐ INTERCEPTAR EL SUBMIT Y ENVIAR CON AJAX
   $('#formObservacion').on('submit', function(e) {
+    e.preventDefault(); // Prevenir envío normal
+    
+    const form = $(this);
+    const submitBtn = form.find('button[type="submit"]');
+    const btnText = submitBtn.html();
+    
+    // Deshabilitar botón
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+    
+    // Limpiar errores anteriores
     $('.text-danger[class^="error-"]').text('');
     $('.form-control').removeClass('is-invalid');
+    
+    $.ajax({
+      url: form.attr('action') || window.location.href,
+      method: 'POST',
+      data: form.serialize(),
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest' // Identificar como petición AJAX
+      },
+      success: function(response) {
+        // ⭐ VERIFICAR SI LA RESPUESTA ES HTML (redirección exitosa)
+        if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
+          // Es HTML, significa que Django hizo redirect = éxito
+          Swal.fire({
+            icon: 'success',
+            title: '¡Actualizado!',
+            text: 'La observación se actualizó correctamente.',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = "{% url 'guarderia:lista_observaciones' %}";
+          });
+        } 
+        // Si es JSON con success
+        else if (response.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Actualizado!',
+            text: response.mensaje || 'La observación se actualizó correctamente.',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            if (response.redirect_url) {
+              window.location.href = response.redirect_url;
+            } else {
+              window.location.href = "{% url 'guarderia:lista_observaciones' %}";
+            }
+          });
+        }
+      },
+      error: function(xhr) {
+        let errorMsg = 'Ocurrió un problema al guardar el registro.';
+        
+        // ⭐ INTENTAR PARSEAR ERRORES DEL FORMULARIO
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.errors) {
+            // Mostrar errores de campo
+            let erroresHTML = '<ul class="text-left">';
+            Object.keys(response.errors).forEach(campo => {
+              erroresHTML += `<li><strong>${campo}:</strong> ${response.errors[campo]}</li>`;
+              $(`#id_${campo}`).addClass('is-invalid');
+            });
+            erroresHTML += '</ul>';
+            
+            Swal.fire({
+              icon: 'error',
+              title: 'Errores de validación',
+              html: erroresHTML
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: response.mensaje || errorMsg
+            });
+          }
+        } catch (e) {
+          // Si no se puede parsear, mostrar error genérico
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: errorMsg
+          });
+        }
+        
+        // Restaurar botón
+        submitBtn.prop('disabled', false).html(btnText);
+      }
+    });
   });
 
-  // Si hay errores de Django en el template, mostrarlos
+  // Mostrar errores de Django si existen
   {% if form.errors %}
     let errores = [];
     {% for field, errors in form.errors.items %}
