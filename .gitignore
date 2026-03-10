@@ -136,3 +136,5 @@ GitHub.sublime-settings
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+.vscode/settings.json
+Servicio .NET/DigitalPersonaCaptureFixed/DigitalPersonaCaptureFixed/obj/Debug/DigitalPersonaCaptureFixed.csproj.AssemblyReference.cache

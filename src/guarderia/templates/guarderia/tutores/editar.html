@@ -169,39 +169,24 @@ tutor.nombre_completo }}{% endblock %} {% block content %}
   </div>
 </div>
 
-              <!-- Resultados del autocomplete -->
-              <div class="row">
-                <div class="col-12">
-                  <div
-                    id="colonia_resultados"
-                    class="list-group shadow-sm"
-                    style="
-                      display: none;
-                      max-height: 200px;
-                      overflow-y: auto;
-                      position: relative;
-                      z-index: 1050;
-                    "
-                  ></div>
-                  <div
-                    id="colonia_seleccionada"
-                    class="alert alert-success py-2 mb-2"
-                    style="display: none"
-                  >
-                    <i class="fas fa-map-marker-alt mr-1"></i>
-                    <span id="colonia_seleccionada_texto"></span>
-                    <button
-                      type="button"
-                      id="btn_limpiar_colonia"
-                      class="close ml-2"
-                      style="font-size: 1rem"
-                      aria-label="Cambiar"
-                    >
-                      <span aria-hidden="true">&times;</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+<!-- Resultados del autocomplete -->
+<div class="row">
+  <div class="col-12">
+    <div id="colonia_resultados"
+         class="list-group shadow-sm"
+         style="display:none; max-height:200px; overflow-y:auto; position:relative; z-index:1050;">
+    </div>
+<div id="colonia_seleccionada" class="alert alert-success py-2 mb-2" style="display:none;">
+  <i class="fas fa-map-marker-alt mr-1"></i>
+  <span id="colonia_seleccionada_texto"></span>
+  <button type="button" id="btn_limpiar_colonia"
+          class="badge badge-light float-right"
+          style="font-size: 1.1rem; padding: 4px 10px; cursor: pointer; border: 1px solid #ddd;">
+    ×
+  </button>
+</div>
+  </div>
+</div>
 
               <div class="row">
                 <div class="col-md-6">
