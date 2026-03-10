@@ -15,67 +15,32 @@
 
   <style>
     html, body { height: 100%; background: #0d1117; margin: 0; padding: 0; }
-
     .kiosk-wrapper { min-height: 100vh; display: flex; flex-direction: column; }
-
     .kiosk-topbar {
       background: #0d1117;
       border-bottom: 1px solid rgba(255,255,255,.07);
       padding: 10px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
     .kiosk-topbar .brand {
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: .5px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
+      color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: .5px;
+      display: flex; align-items: center; gap: 10px; text-decoration: none;
     }
     .kiosk-topbar .brand i { color: #e94560; font-size: 1.2rem; }
-
     .btn-login-kiosk {
-      color: rgba(255,255,255,.5);
-      font-size: .8rem;
-      text-decoration: none;
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 8px;
-      padding: 6px 14px;
-      transition: color .2s, border-color .2s;
-      white-space: nowrap;
+      color: rgba(255,255,255,.5); font-size: .8rem; text-decoration: none;
+      border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 6px 14px;
+      transition: color .2s, border-color .2s; white-space: nowrap;
     }
-    .btn-login-kiosk:hover {
-      color: #fff;
-      border-color: rgba(255,255,255,.4);
-      text-decoration: none;
-    }
-
-    .hora {
-      color: rgba(255,255,255,.45);
-      font-size: .85rem;
-      font-weight: 600;
-      letter-spacing: .5px;
-      white-space: nowrap;
-    }
-
+    .btn-login-kiosk:hover { color: #fff; border-color: rgba(255,255,255,.4); text-decoration: none; }
+    .hora { color: rgba(255,255,255,.45); font-size: .85rem; font-weight: 600; letter-spacing: .5px; white-space: nowrap; }
     .kiosk-content { flex: 1; padding: 0; background: #0d1117; }
-
     .kiosk-footer {
-      background: #0d1117;
-      border-top: 1px solid rgba(255,255,255,.07);
-      color: rgba(255,255,255,.25);
-      text-align: center;
-      font-size: .72rem;
-      padding: 10px;
+      background: #0d1117; border-top: 1px solid rgba(255,255,255,.07);
+      color: rgba(255,255,255,.25); text-align: center; font-size: .72rem; padding: 10px;
     }
   </style>
 </head>
-
 <body>
 <div class="kiosk-wrapper">
 
@@ -84,9 +49,11 @@
       <i class="fas fa-baby"></i> Guardería — Control de Acceso
     </span>
 
+    {% if not user.is_authenticated %}
     <a href="{% url 'auth:login' %}" class="btn-login-kiosk">
       <i class="fas fa-lock" style="margin-right:6px;"></i>Iniciar Sesión
     </a>
+    {% endif %}
 
     <span class="hora" id="reloj-kiosk">--:--:--</span>
   </div>
@@ -110,13 +77,13 @@
 
 <script>
   function tickReloj() {
-    var a      = new Date();
-    var h24    = a.getHours();
-    var h      = String(h24 % 12 || 12).padStart(2, '0');
-    var m      = String(a.getMinutes()).padStart(2, '0');
-    var s      = String(a.getSeconds()).padStart(2, '0');
-    var ampm   = h24 >= 12 ? 'PM' : 'AM';
-    var el     = document.getElementById('reloj-kiosk');
+    var a    = new Date();
+    var h24  = a.getHours();
+    var h    = String(h24 % 12 || 12).padStart(2, '0');
+    var m    = String(a.getMinutes()).padStart(2, '0');
+    var s    = String(a.getSeconds()).padStart(2, '0');
+    var ampm = h24 >= 12 ? 'PM' : 'AM';
+    var el   = document.getElementById('reloj-kiosk');
     if (el) el.textContent = h + ':' + m + ':' + s + ' ' + ampm;
   }
   tickReloj();
