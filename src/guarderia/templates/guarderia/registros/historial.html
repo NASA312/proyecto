@@ -87,7 +87,7 @@
               <tbody>
                 {% for registro in registros %}
                 <tr>
-                  <td>
+                  <td data-order="{{ registro.fecha_hora|date:'Y-m-d H:i:s' }}">
                     {{ registro.fecha_hora|date:"d/m/Y" }}<br>
                     <small class="text-muted">{{ registro.fecha_hora|time:"H:i:s" }}</small>
                   </td>
