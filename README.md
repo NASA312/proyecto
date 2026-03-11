@@ -1,4 +1,4 @@
-# 🏫 Guardería Digital
+# 🏫 SISTEMA DE CONTROL DE ACCESO CENDI 2
 
 ## 📋 Instalación
 
