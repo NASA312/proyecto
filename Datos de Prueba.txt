@@ -1,0 +1,410 @@
+-- ============================================================
+-- SCRIPT DE LIMPIEZA Y CARGA DE DATOS - GUARDERÍA NAYARIT
+-- Base de datos: PostgreSQL
+-- Región: Tepic, Nayarit, México
+-- ============================================================
+
+-- ============================================================
+-- PASO 1: LIMPIAR BASE DE DATOS (orden inverso por FK)
+-- ============================================================
+TRUNCATE TABLE
+    guarderia_registroacceso,
+    guarderia_observacionnino,
+    guarderia_nino_tutores,
+    guarderia_nino,
+    guarderia_tutor,
+    guarderia_grupo,
+    guarderia_serviciomedico,
+    guarderia_departamento,
+    guarderia_dependencia,
+    login_perfil,
+    login_rol,
+    auth_user
+RESTART IDENTITY CASCADE;
+
+-- ============================================================
+-- NOTA: Prefijos de tabla:
+--   App "guarderia" → guarderia_<modelo>
+--   App "login"     → login_<modelo>
+--   Tabla colonias  → NO se toca (se carga desde Excel)
+-- ============================================================
+
+
+-- ============================================================
+-- PASO 2: ROLES
+-- ============================================================
+
+INSERT INTO login_rol (nombre, descripcion, activo, fecha_creacion, fecha_modificacion) VALUES
+('ADMIN',      'Administrador del sistema con acceso total a todas las funciones y configuraciones', true, NOW(), NOW()),
+('OBSERVADOR', 'Usuario con acceso de solo lectura para monitoreo y reportes', true, NOW(), NOW()),
+('EMPLEADO',   'Trabajador operativo de la guardería con acceso a funciones básicas del sistema', true, NOW(), NOW());
+
+
+-- ============================================================
+-- PASO 3: USUARIOS DE DJANGO (auth_user)
+-- ============================================================
+-- Contraseñas hasheadas con pbkdf2_sha256 → valor: "Admin1234!"
+-- Para producción regenera los hashes con: python manage.py changepassword
+
+INSERT INTO auth_user (password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined) VALUES
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, true,  'admin',           'Carlos',    'Medina Flores',     'admin@guarderia-nayarit.gob.mx',      true,  true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'mlopez',          'María',     'López Sandoval',    'mlopez@guarderia-nayarit.gob.mx',     true,  true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'jgonzalez',       'Jorge',     'González Ruiz',     'jgonzalez@guarderia-nayarit.gob.mx',  false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'aherrera',        'Ana',       'Herrera Cisneros',  'aherrera@guarderia-nayarit.gob.mx',   false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'lramirez',        'Laura',     'Ramírez Torres',    'lramirez@guarderia-nayarit.gob.mx',   false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'rcervantes',      'Roberto',   'Cervantes Ibarra',  'rcervantes@guarderia-nayarit.gob.mx', false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'pmorales',        'Patricia',  'Morales Ávila',     'pmorales@guarderia-nayarit.gob.mx',   false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'fdiaz',           'Fernando',  'Díaz Pacheco',      'fdiaz@guarderia-nayarit.gob.mx',      false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'scastillo',       'Sofía',     'Castillo Leal',     'scastillo@guarderia-nayarit.gob.mx',  false, true, NOW()),
+('pbkdf2_sha256$600000$test$hashedpassword=', NULL, false, 'egutiérrez',      'Eduardo',   'Gutiérrez Palma',   'egutierrez@guarderia-nayarit.gob.mx', false, true, NOW());
+
+
+-- ============================================================
+-- PASO 4: PERFILES DE TRABAJADORES
+-- ============================================================
+
+INSERT INTO login_perfil (
+    user_id, rol_id, telefono, fecha_nacimiento, direccion,
+    cargo, numero_empleado, fecha_ingreso,
+    huella_registrada, activo, fecha_creacion, fecha_modificacion, notas
+) VALUES
+(1,  1, '311-123-4567', '1985-03-15', 'Av. México 245, Col. Centro, Tepic, Nayarit',           'Director General',              'EMP-001', '2015-01-10', true,  true, NOW(), NOW(), 'Administrador principal del sistema'),
+(2,  1, '311-234-5678', '1988-07-22', 'Calle Amado Nervo 89, Col. Las Palmas, Tepic',          'Subdirectora Administrativa',   'EMP-002', '2016-03-01', true,  true, NOW(), NOW(), NULL),
+(3,  3, '311-345-6789', '1990-11-05', 'Blvd. Tepic-Xalisco 1200, Col. Mololoa, Tepic',         'Educadora Lactantes A',         'EMP-003', '2018-08-15', true,  true, NOW(), NOW(), NULL),
+(4,  3, '311-456-7890', '1992-04-18', 'Calle Insurgentes 456, Col. Independencia, Tepic',      'Educadora Maternales',          'EMP-004', '2019-01-20', true,  true, NOW(), NOW(), NULL),
+(5,  3, '311-567-8901', '1989-09-30', 'Av. Allende 310, Col. Centro, Tepic, Nayarit',          'Educadora Preescolar',          'EMP-005', '2017-06-01', true,  true, NOW(), NOW(), NULL),
+(6,  2, '311-678-9012', '1983-12-14', 'Calle Hidalgo 77, Col. Burócratas, Tepic',              'Observador de Seguridad',       'EMP-006', '2020-02-10', false, true, NOW(), NOW(), NULL),
+(7,  3, '311-789-0123', '1994-06-25', 'Av. Universidad 550, Col. Ciudad del Valle, Tepic',     'Asistente Educativa',           'EMP-007', '2021-03-15', true,  true, NOW(), NOW(), NULL),
+(8,  3, '311-890-1234', '1991-02-08', 'Calle Venustiano Carranza 123, Col. Miramar, Tepic',    'Cocinera/Nutrióloga',           'EMP-008', '2018-09-01', false, true, NOW(), NOW(), NULL),
+(9,  2, '311-901-2345', '1987-08-19', 'Av. Insurgentes 789, Fracc. Jardines del Sol, Tepic',   'Auxiliar Administrativa',       'EMP-009', '2019-07-01', true,  true, NOW(), NOW(), NULL),
+(10, 3, '311-012-3456', '1993-10-11', 'Blvd. Francisco Villa 234, Col. Lázaro Cárdenas, Tepic','Enfermera',                     'EMP-010', '2020-11-01', true,  true, NOW(), NOW(), 'Responsable área médica');
+
+
+-- ============================================================
+-- PASO 5: DEPENDENCIAS DE GOBIERNO (Nayarit)
+-- ============================================================
+
+INSERT INTO guarderia_dependencia (nombre, siglas, direccion, telefono, activo, fecha_registro) VALUES
+('Secretaría de Educación Pública de Nayarit',                         'SEPN',     'Av. México 70 Nte., Col. Centro, Tepic, Nayarit C.P. 63000',              '311-213-0600', true, NOW()),
+('Secretaría de Salud de Nayarit',                                     'SSN',      'Calle Zaragoza 22 Nte., Col. Centro, Tepic, Nayarit C.P. 63000',          '311-213-7800', true, NOW()),
+('Secretaría de Administración y Gestión Pública de Nayarit',          'SAGPN',    'Palacio de Gobierno, Av. México s/n, Col. Centro, Tepic',                 '311-213-0600', true, NOW()),
+('Secretaría de Hacienda de Nayarit',                                  'SHN',      'Av. México 58, Col. Centro, Tepic, Nayarit C.P. 63000',                   '311-213-0800', true, NOW()),
+('Secretaría de Desarrollo Social de Nayarit',                         'SEDESOL',  'Blvd. Tepic-Xalisco km 0.5, Col. Ciudad del Valle, Tepic',                '311-216-3500', true, NOW()),
+('Secretaría de Seguridad Pública de Nayarit',                         'SSPN',     'Av. Insurgentes 400, Col. Miramar, Tepic, Nayarit',                       '311-214-5100', true, NOW()),
+('Secretaría de Obras Públicas de Nayarit',                            'SOPN',     'Av. Allende 50, Col. Centro, Tepic, Nayarit',                             '311-213-0900', true, NOW()),
+('Instituto de Seguridad y Servicios Sociales de los Trabajadores',    'ISSSTE',   'Av. Insurgentes 850, Col. Los Fresnos, Tepic, Nayarit',                   '311-215-8800', true, NOW()),
+('Presidencia Municipal de Tepic',                                     'PMT',      'Av. México 260, Col. Centro, Tepic, Nayarit C.P. 63000',                  '311-213-1000', true, NOW()),
+('Universidad Autónoma de Nayarit',                                    'UAN',      'Cd. de la Cultura Amado Nervo s/n, Col. Ciudad del Valle, Tepic',          '311-211-8800', true, NOW()),
+('Instituto Nacional Electoral - Junta Local Nayarit',                 'INE-NAY',  'Av. Allende 305 Nte., Col. Centro, Tepic',                               '311-213-4500', true, NOW()),
+('Servicio de Administración Tributaria - Delegación Nayarit',         'SAT-NAY',  'Av. México 600, Col. Burócratas, Tepic, Nayarit',                         '55-6272-2728', true, NOW());
+
+
+-- ============================================================
+-- PASO 6: DEPARTAMENTOS
+-- ============================================================
+
+INSERT INTO guarderia_departamento (dependencia_id, nombre, descripcion, activo, fecha_registro) VALUES
+-- SEPN (id=1)
+(1, 'Recursos Humanos',              'Gestión del personal docente y administrativo',                         true, NOW()),
+(1, 'Planeación Educativa',          'Planificación y seguimiento de programas educativos',                   true, NOW()),
+(1, 'Finanzas y Presupuesto',        'Control presupuestal y financiero de la dependencia',                   true, NOW()),
+(1, 'Tecnologías de la Información', 'Soporte y desarrollo de sistemas de información',                       true, NOW()),
+-- SSN (id=2)
+(2, 'Epidemiología',                 'Vigilancia epidemiológica del estado',                                  true, NOW()),
+(2, 'Jurisdicción Sanitaria No. 1',  'Atención a la zona norte del estado',                                   true, NOW()),
+(2, 'Recursos Materiales',           'Adquisición y control de insumos médicos',                              true, NOW()),
+-- SAGPN (id=3)
+(3, 'Adquisiciones',                 'Proceso de compras y licitaciones del gobierno',                         true, NOW()),
+(3, 'Capital Humano',                'Administración de personal de toda la APE',                              true, NOW()),
+(3, 'Patrimonio del Estado',         'Gestión de bienes inmuebles del gobierno',                               true, NOW()),
+-- SHN (id=4)
+(4, 'Tesorería',                     'Control de ingresos y egresos del estado',                              true, NOW()),
+(4, 'Auditoría Interna',             'Revisión y control interno de las finanzas',                            true, NOW()),
+-- ISSSTE (id=8)
+(8, 'Prestaciones Económicas',       'Gestión de créditos, pensiones y jubilaciones',                          true, NOW()),
+(8, 'Medicina Familiar',             'Atención médica primaria a derechohabientes',                           true, NOW()),
+(8, 'Guarderías y Estancias',        'Administración del programa de guarderías ISSSTE',                      true, NOW()),
+-- PMT (id=9)
+(9, 'Obras Públicas Municipales',    'Infraestructura y mantenimiento urbano',                                 true, NOW()),
+(9, 'Servicios Públicos',            'Limpia, alumbrado y parques',                                           true, NOW()),
+(9, 'Desarrollo Urbano',             'Planificación territorial y licencias de construcción',                  true, NOW()),
+-- UAN (id=10)
+(10, 'Rectoría',                     'Dirección general de la universidad',                                    true, NOW()),
+(10, 'Servicios Escolares',          'Control escolar y expedición de documentos',                             true, NOW()),
+(10, 'Investigación Científica',     'Coordinación de proyectos de investigación',                             true, NOW());
+
+
+-- ============================================================
+-- PASO 7: COLONIAS
+-- ⚠️ Esta tabla se llena automáticamente desde el archivo Excel.
+--    NO se insertan datos aquí para no sobrescribir los existentes.
+-- ============================================================
+
+
+-- ============================================================
+-- PASO 8: SERVICIOS MÉDICOS
+-- ============================================================
+
+INSERT INTO guarderia_serviciomedico (nombre, siglas, descripcion, activo, fecha_registro) VALUES
+('Instituto de Seguridad y Servicios Sociales de los Trabajadores del Estado', 'ISSSTE', 'Servicio médico para trabajadores del gobierno federal y estatal', true, NOW()),
+('Instituto Mexicano del Seguro Social',                                       'IMSS',   'Servicio médico para trabajadores del sector privado',             true, NOW()),
+('Secretaría de Salud',                                                        'SS',     'Seguro Popular / IMSS-Bienestar para población abierta',           true, NOW()),
+('Petróleos Mexicanos',                                                        'PEMEX',  'Servicio médico exclusivo para trabajadores de PEMEX',             true, NOW()),
+('Secretaría de la Defensa Nacional',                                          'SEDENA', 'Servicio médico para militares en activo y retirados',             true, NOW()),
+('Seguro Médico Particular',                                                   'PART',   'Seguro privado contratado de forma individual',                    true, NOW()),
+('Sin Servicio Médico',                                                        'NINGUNO','Sin afiliación a servicio médico',                                 true, NOW());
+
+
+-- ============================================================
+-- PASO 9: GRUPOS DE LA GUARDERÍA
+-- ============================================================
+
+INSERT INTO guarderia_grupo (nombre, tipo, grado, capacidad_maxima, activo, fecha_creacion) VALUES
+('Grupo A', 'LACTANTE',   '1er año (0-12 meses)',  8,  true, NOW()),
+('Grupo B', 'LACTANTE',   '2do año (12-18 meses)', 8,  true, NOW()),
+('Grupo C', 'MATERNAL',   '1er año (18-24 meses)', 12, true, NOW()),
+('Grupo D', 'MATERNAL',   '2do año (2-3 años)',    12, true, NOW()),
+('Grupo E', 'MATERNAL',   '3er año (2-3 años)',    12, true, NOW()),
+('Grupo F', 'PREESCOLAR', '1er año (3-4 años)',    15, true, NOW()),
+('Grupo G', 'PREESCOLAR', '2do año (4-5 años)',    15, true, NOW()),
+('Grupo H', 'PREESCOLAR', '3er año (5-6 años)',    15, true, NOW());
+
+
+-- ============================================================
+-- PASO 10: TUTORES AUTORIZADOS (con datos de Tepic, Nayarit)
+-- ============================================================
+select * from guarderia_colonia
+select * from guarderia_tutor
+INSERT INTO guarderia_tutor (
+    nombre, apellido_paterno, apellido_materno,
+    telefono, telefono_emergencia, email,
+    codigo_postal, calle, numero_exterior, numero_interior,
+    tipo_identificacion, numero_identificacion, parentesco,
+    servicio_medico_id, numero_seguro_social,
+    es_trabajador, dependencia_id, departamento_id,
+    estatus_laboral, numero_empleado, fecha_alta,
+    huella_registrada, activo, fecha_registro, fecha_modificacion, notas
+) VALUES
+-- Tutor 1: Madre trabajadora de SEP
+('Gabriela',   'Hernández', 'Vega',     '311-100-1111', '311-100-2222', 'ghernandez@sep.nayarit.gob.mx',  '63010',   'Calle Libertad',         '155', NULL, 'INE', 'NAYE8503152H1',   'MADRE', 1, '82734561290', true,  1, 1,  'ALTA', 'SEP-1234', '2019-02-01', true,  true, NOW(), NOW(), 'Madre biológica'),
+-- Tutor 2: Padre trabajador de SSN
+('Ricardo',    'Torres',    'Morales',  '311-200-2222', '311-200-3333', 'rtorres@salud.nayarit.gob.mx',   '63020',  'Blvd. Tepic-Xalisco',    '450', NULL, 'INE', 'TORM7801204V2',   'PADRE', 1, '73821049283', true,  2, 5,  'ALTA', 'SSN-0892', '2017-06-15', true,  true, NOW(), NOW(), NULL),
+-- Tutor 3: Madre trabajadora ISSSTE
+('Leticia',    'Sandoval',  'Jiménez',  '311-300-3333', '311-300-4444', 'lsandoval@issste.gob.mx',        '63000',  'Av. México',             '320', 'B', 'INE', 'SAJL9204183K3',   'MADRE', 1, '91203847561', true,  8, 14, 'ALTA', 'ISS-5512', '2020-09-01', true,  true, NOW(), NOW(), NULL),
+-- Tutor 4: Padre trabajador Presidencia
+('Arturo',     'Guzmán',    'Reyes',    '311-400-4444', '311-400-5555', 'aguzman@tepic.gob.mx',           '63090', 'Calle 5 de Mayo',        '88',  NULL, 'PASAPORTE', 'G87654321',   'PADRE', 2, '65471829304', true,  9, 16, 'ALTA', 'PMT-3301', '2021-01-10', false, true, NOW(), NOW(), NULL),
+-- Tutor 5: Madre trabajadora UAN
+('Verónica',   'Campos',    'Luna',     '311-500-5555', '311-500-6666', 'vcampos@uan.edu.mx',             '63060',   'Av. Universidad',        '1100','104','INE', 'CALV9601287P5',   'MADRE', 1, '18273645091', true,  10, 20, 'ALTA', 'UAN-7890', '2018-03-20', true,  true, NOW(), NOW(), NULL),
+-- Tutor 6: Abuelo (no trabajador)
+('Manuel',     'Rivas',     'Escobedo', '311-600-6666', '311-600-7777', NULL,                             '63040',   'Calle Juárez',           '23',  NULL, 'INE', 'RIEM5011147Q6',   'ABUELO',3, '47382910293', false, NULL, NULL, NULL, NULL, NULL, false, true, NOW(), NOW(), 'Recoge al niño por las tardes'),
+-- Tutor 7: Madre trabajadora SAGPN
+('Carmen',     'Flores',    'Martínez', '311-700-7777', '311-700-8888', 'cflores@nayarit.gob.mx',         '63050',  'Av. Insurgentes',        '780', NULL, 'INE', 'FOMC8809224R7',   'MADRE', 1, '29301847563', true,  3, 8,  'ALTA', 'SAG-2210', '2016-10-05', true,  true, NOW(), NOW(), NULL),
+-- Tutor 8: Padre trabajador SHN
+('Óscar',      'Peña',      'Delgado',  '311-800-8888', '311-800-9999', 'opena@hacienda.nayarit.gob.mx',  '63080',  'Blvd. Francisco Villa',  '345', NULL, 'INE', 'PEDO8207188S8',   'PADRE', 1, '38291047362', true,  4, 11, 'ALTA', 'SHA-4401', '2020-04-12', true,  true, NOW(), NOW(), NULL),
+-- Tutor 9: Madre sin empleo gobierno
+('Diana',      'Aguilar',   'Soto',     '311-900-9999', '311-900-0000', 'daguilar@gmail.com',             '63110',  'Calle Amado Nervo',      '67',  NULL, 'INE', 'AUSD9412209T9',   'MADRE', 2, '56473829104', false, NULL, NULL, NULL, NULL, NULL, true,  true, NOW(), NOW(), NULL),
+-- Tutor 10: Padre trabajador SSP
+('Héctor',     'Ibarra',    'Núñez',    '311-010-1010', '311-010-2020', 'hibarra@ssp.nayarit.gob.mx',     '63100',  'Calle Venustiano Carranza','190',NULL, 'LICENCIA','N18392847',   'PADRE', 1, '67382910456', true,  6, NULL,'ALTA', 'SSP-6670', '2019-08-01', false, true, NOW(), NOW(), NULL),
+-- Tutor 11: Madre trabajadora SSN
+('Alejandra',  'Méndez',    'Rojas',    '311-111-1111', '311-111-2222', 'amendez@salud.nayarit.gob.mx',   '63070',  'Av. Allende',            '510', NULL, 'INE', 'MERA9103104U1',   'MADRE', 1, '74839201047', true,  2, 6,  'ALTA', 'SSN-1134', '2021-05-01', true,  true, NOW(), NOW(), NULL),
+-- Tutor 12: Padre trabajador SEP
+('Francisco',  'Vargas',    'Castillo', '311-222-2222', '311-222-3333', 'fvargas@sep.nayarit.gob.mx',     '63140',  'Privada Las Jacarandas', '12',  NULL, 'INE', 'VACF8806195V2',   'PADRE', 1, '82930174856', true,  1, 2,  'ALTA', 'SEP-5678', '2018-11-20', true,  true, NOW(), NOW(), NULL),
+-- Tutor 13: Tío/a (no trabajador)
+('Isabel',     'Cruz',      'Portillo', '311-333-3333', '311-333-4444', NULL,                             '63030',  'Calle Hidalgo',          '220', NULL, 'INE', 'CUPI9507236W3',   'TIO',   3, '93847201038', false, NULL, NULL, NULL, NULL, NULL, false, true, NOW(), NOW(), 'Solo autorizada los viernes'),
+-- Tutor 14: Madre trabajadora SAGPN
+('Norma',      'Salinas',   'Ríos',     '311-444-4444', '311-444-5555', 'nsalinas@nayarit.gob.mx',        '63020',  'Calle Morelos',          '99',  NULL, 'INE', 'SARN8705148X4',   'MADRE', 1, '10293847561', true,  3, 9,  'ALTA', 'SAG-8830', '2017-03-15', true,  true, NOW(), NOW(), NULL),
+-- Tutor 15: Padre IMSS
+('Ernesto',    'Leal',      'Zavala',   '311-555-5555', '311-555-6666', 'eleal@imss.gob.mx',              '63150',  'Av. Valle Dorado',       '75',  NULL, 'INE', 'LAZE8910127Y5',   'PADRE', 2, '83920147382', true,  2, NULL,'ALTA', NULL,       '2022-01-10', false, true, NOW(), NOW(), NULL);
+
+
+-- ============================================================
+-- PASO 11: NIÑOS DE LA GUARDERÍA
+-- ============================================================
+
+INSERT INTO guarderia_nino (
+    nombre, apellido_paterno, apellido_materno,
+    fecha_nacimiento, alergias, medicamentos, tipo_sangre,
+    grupo_id, activo, fecha_ingreso
+) VALUES
+('Sofía',      'Hernández', 'Sandoval', '2024-03-10', NULL,              NULL,              'A+',  1, true, '2024-08-26'),
+('Mateo',      'Torres',    'Campos',   '2023-11-20', 'Polen',           NULL,              'O+',  2, true, '2024-08-26'),
+('Isabella',   'Sandoval',  'López',    '2023-06-15', NULL,              NULL,              'B+',  2, true, '2024-08-26'),
+('Sebastián',  'Guzmán',    'Flores',   '2023-01-08', 'Lactosa',         'Lactasa enzimática','AB+',3, true, '2024-08-26'),
+('Valentina',  'Campos',    'Ruiz',     '2022-09-22', NULL,              NULL,              'O-',  3, true, '2024-08-26'),
+('Santiago',   'Flores',    'Morales',  '2022-05-30', NULL,              NULL,              'A-',  4, true, '2024-08-26'),
+('Camila',     'Peña',      'Torres',   '2022-03-14', 'Nueces',          'Antihistamínico', 'O+',  4, true, '2024-08-26'),
+('Emiliano',   'Aguilar',   'Vega',     '2021-12-01', NULL,              NULL,              'B-',  5, true, '2024-08-26'),
+('Lucía',      'Ibarra',    'Soto',     '2021-08-18', NULL,              NULL,              'A+',  5, true, '2024-08-26'),
+('Benjamín',   'Méndez',    'Díaz',     '2021-04-25', 'Mariscos',        NULL,              'AB-', 5, true, '2024-08-26'),
+('María José', 'Vargas',    'Castillo', '2020-11-10', NULL,              NULL,              'O+',  6, true, '2023-08-28'),
+('Ángel',      'Cruz',      'Ibarra',   '2020-07-05', 'Polvo',           'Loratadina',      'A+',  6, true, '2023-08-28'),
+('Renata',     'Salinas',   'Guzmán',   '2020-03-19', NULL,              NULL,              'O-',  6, true, '2023-08-28'),
+('Emilio',     'Leal',      'Campos',   '2019-10-28', NULL,              NULL,              'B+',  7, true, '2023-08-28'),
+('Paulina',    'Hernández', 'Reyes',    '2019-06-12', 'Cacahuate',       'Epipen disponible','A-', 7, true, '2023-08-28'),
+('Ximena',     'Torres',    'Sandoval', '2019-02-22', NULL,              NULL,              'AB+', 7, true, '2023-08-28'),
+('Rodrigo',    'Guzmán',    'Soto',     '2018-09-07', NULL,              NULL,              'O+',  8, true, '2022-08-29'),
+('Mariana',    'Aguilar',   'Vega',     '2018-05-15', NULL,              NULL,              'A+',  8, true, '2022-08-29'),
+('Tomás',      'Ibarra',    'Cruz',     '2018-01-30', 'Gluten',          'Dieta sin gluten','B+',  8, true, '2022-08-29'),
+('Daniela',    'Méndez',    'Leal',     '2018-04-11', NULL,              NULL,              'O+',  8, true, '2022-08-29');
+
+
+-- ============================================================
+-- PASO 12: RELACIÓN NIÑO-TUTOR (ManyToMany)
+-- ============================================================
+
+INSERT INTO guarderia_nino_tutores (nino_id, tutor_id) VALUES
+-- Sofía ↔ Gabriela (madre) + Ricardo (padre)
+(1,  1), (1,  2),
+-- Mateo ↔ Ricardo (padre) + Leticia (madre)
+(2,  2), (2,  3),
+-- Isabella ↔ Leticia (madre) + Manuel Rivas (abuelo)
+(3,  3), (3,  6),
+-- Sebastián ↔ Arturo Guzmán (padre) + Carmen Flores (madre)
+(4,  4), (4,  7),
+-- Valentina ↔ Verónica Campos (madre) + Arturo Guzmán
+(5,  5), (5,  4),
+-- Santiago ↔ Carmen Flores (madre) + Óscar Peña (padre)
+(6,  7), (6,  8),
+-- Camila ↔ Óscar Peña (padre) + Diana Aguilar (madre)
+(7,  8), (7,  9),
+-- Emiliano ↔ Diana Aguilar (madre) + Héctor Ibarra (padre)
+(8,  9), (8,  10),
+-- Lucía ↔ Héctor Ibarra (padre) + Alejandra Méndez (madre)
+(9,  10), (9,  11),
+-- Benjamín ↔ Alejandra Méndez (madre) + Francisco Vargas
+(10, 11), (10, 12),
+-- María José ↔ Francisco Vargas (padre) + Isabel Cruz (tía)
+(11, 12), (11, 13),
+-- Ángel ↔ Isabel Cruz (tía) + Norma Salinas (madre)
+(12, 13), (12, 14),
+-- Renata ↔ Norma Salinas (madre) + Ernesto Leal (padre)
+(13, 14), (13, 15),
+-- Emilio ↔ Ernesto Leal (padre) + Gabriela Hernández
+(14, 15), (14, 1),
+-- Paulina ↔ Gabriela Hernández + Ricardo Torres
+(15, 1),  (15, 2),
+-- Ximena ↔ Verónica Campos (madre) + Manuel Rivas (abuelo)
+(16, 5),  (16, 6),
+-- Rodrigo ↔ Carmen Flores + Óscar Peña
+(17, 7),  (17, 8),
+-- Mariana ↔ Diana Aguilar (madre) + Héctor Ibarra
+(18, 9),  (18, 10),
+-- Tomás ↔ Alejandra Méndez + Francisco Vargas
+(19, 11), (19, 12),
+-- Daniela ↔ Norma Salinas (madre) + Ernesto Leal (padre)
+(20, 14), (20, 15);
+
+
+-- ============================================================
+-- PASO 13: OBSERVACIONES DE NIÑOS
+-- ============================================================
+
+INSERT INTO guarderia_observacionnino (
+    nino_id, tipo, descripcion, fecha, hora, importante,
+    notificar_tutor, notificado, fecha_notificacion, registrado_por_id
+) VALUES
+(1,  'SALUD',       'La niña llegó con temperatura de 37.8°C. Se notificó a la madre. Se mantuvo bajo observación el resto del día.', '2025-11-10', '08:30:00', true,  true,  true,  '2025-11-10 09:30:00', 10),
+(2,  'CONDUCTA',    'Mateo mostró episodios de llanto sin causa aparente. Se le consoló y restableció el ánimo durante el recreo.', '2025-11-11', '10:15:00', false, false, false, NULL, 3),
+(3,  'HIGIENE',     'Isabella asistió sin bañar. Se habló discretamente con la tutora al momento de la salida.', '2025-11-12', '08:10:00', false, true,  true,  '2025-11-12 16:00:00', 4),
+(4,  'ALIMENTACION','Sebastián rechazó el almuerzo. No consumió proteínas. Se sugiere revisar si hay malestar estomacal.', '2025-11-12', '12:30:00', true,  true,  false, NULL, 8),
+(5,  'GENERAL',     'Valentina participó activamente en todas las actividades del día. Excelente comportamiento.', '2025-11-13', '15:00:00', false, false, false, NULL, 4),
+(6,  'MATERIAL',    'Santiago no trajo lonchera ni mochila. Se le proporcionó material de la guardería para el día.', '2025-11-13', '08:05:00', false, true,  true,  '2025-11-13 14:30:00', 3),
+(7,  'SALUD',       'Camila presentó erupción leve en el cuello. Enfermera evaluó y descartó reacción alérgica. Se recomienda seguimiento.', '2025-11-14', '09:45:00', true,  true,  true,  '2025-11-14 10:00:00', 10),
+(8,  'CONDUCTA',    'Emiliano golpeó a otro niño del grupo por un juguete. Se habló con él y se notificará a padres.', '2025-11-14', '11:20:00', true,  true,  false, NULL, 5),
+(9,  'ACADEMICO',   'Lucía logró reconocer los colores primarios y trazar su nombre. Avance notable.', '2025-11-15', '14:00:00', false, false, false, NULL, 5),
+(10, 'SALUD',       'Benjamín llegó con estornudos frecuentes. Posible inicio de resfriado. Se recomienda al tutor llevarlo al médico.', '2025-11-15', '08:40:00', true,  true,  true,  '2025-11-15 08:45:00', 10),
+(11, 'GENERAL',     'María José fue elegida por sus compañeros como líder del equipo verde durante los juegos del día.', '2025-11-11', '13:30:00', false, false, false, NULL, 5),
+(12, 'HIGIENE',     'Ángel presentó uñas largas y sucias. Se informó a la tutora para atención en casa.', '2025-11-12', '09:00:00', false, true,  true,  '2025-11-12 16:05:00', 4),
+(13, 'ALIMENTACION','Renata comió muy bien todo el día. Primera vez que termina el plato completo.', '2025-11-13', '12:45:00', false, false, false, NULL, 8),
+(14, 'CONDUCTA',    'Emilio estuvo distraído durante la clase de música. Se habló con él sin mayor incidente.', '2025-11-14', '10:50:00', false, false, false, NULL, 7),
+(15, 'SALUD',       'Paulina tuvo episodio de urticaria después del recreo. Se aplicó antihistamínico según indicación médica. Tutor notificado.', '2025-11-15', '11:25:00', true,  true,  true,  '2025-11-15 11:30:00', 10),
+(16, 'ACADEMICO',   'Ximena terminó el ejercicio de seriación con éxito. Se recomienda material adicional de preescolar 2.', '2025-11-11', '14:10:00', false, false, false, NULL, 5),
+(17, 'GENERAL',     'Rodrigo festejó su cumpleaños en la guardería. Se organizó una pequeña celebración con el grupo.', '2025-11-12', '11:00:00', false, false, false, NULL, 3),
+(18, 'HIGIENE',     'Mariana llegó con el uniforme incompleto. Se le facilitó una bata de repuesto del inventario.', '2025-11-13', '08:20:00', false, true,  false, NULL, 7),
+(19, 'SALUD',       'Tomás refirió dolor de estómago a media mañana. Se le dio reposo y agua. Mejoró a los 30 minutos.', '2025-11-14', '10:40:00', true,  true,  true,  '2025-11-14 10:45:00', 10),
+(20, 'CONDUCTA',    'Daniela se integró perfectamente con el nuevo grupo tras el cambio de sección la semana pasada.', '2025-11-15', '09:30:00', false, false, false, NULL, 5);
+
+
+-- ============================================================
+-- PASO 14: REGISTROS DE ACCESO (ENTRADAS Y SALIDAS)
+-- ============================================================
+
+INSERT INTO guarderia_registroacceso (
+    nino_id, tutor_id, tipo, fecha_hora,
+    verificacion_exitosa, metodo_verificacion,
+    observaciones, registrado_por_id
+) VALUES
+-- Lunes 10 Nov 2025
+(1,  1,  'ENTRADA', '2025-11-10 07:45:00', true,  'HUELLA', NULL,                                       3),
+(2,  2,  'ENTRADA', '2025-11-10 08:00:00', true,  'HUELLA', NULL,                                       3),
+(3,  3,  'ENTRADA', '2025-11-10 08:10:00', true,  'HUELLA', NULL,                                       3),
+(4,  4,  'ENTRADA', '2025-11-10 08:15:00', true,  'MANUAL', 'Huella sin leer, se verificó INE',         3),
+(5,  5,  'ENTRADA', '2025-11-10 08:20:00', true,  'HUELLA', NULL,                                       3),
+(1,  1,  'SALIDA',  '2025-11-10 17:00:00', true,  'HUELLA', NULL,                                       4),
+(2,  2,  'SALIDA',  '2025-11-10 17:10:00', true,  'HUELLA', NULL,                                       4),
+(3,  6,  'SALIDA',  '2025-11-10 17:15:00', true,  'HUELLA', 'La recoge el abuelo hoy',                  4),
+(4,  7,  'SALIDA',  '2025-11-10 17:30:00', true,  'HUELLA', NULL,                                       4),
+(5,  5,  'SALIDA',  '2025-11-10 17:45:00', true,  'HUELLA', NULL,                                       4),
+-- Martes 11 Nov 2025
+(6,  7,  'ENTRADA', '2025-11-11 07:50:00', true,  'HUELLA', NULL,                                       3),
+(7,  8,  'ENTRADA', '2025-11-11 08:05:00', true,  'HUELLA', NULL,                                       3),
+(8,  9,  'ENTRADA', '2025-11-11 08:20:00', true,  'HUELLA', NULL,                                       3),
+(9,  10, 'ENTRADA', '2025-11-11 08:30:00', true,  'HUELLA', NULL,                                       3),
+(10, 11, 'ENTRADA', '2025-11-11 08:35:00', true,  'HUELLA', NULL,                                       3),
+(6,  7,  'SALIDA',  '2025-11-11 17:00:00', true,  'HUELLA', NULL,                                       4),
+(7,  8,  'SALIDA',  '2025-11-11 17:05:00', true,  'HUELLA', NULL,                                       4),
+(8,  10, 'SALIDA',  '2025-11-11 17:15:00', true,  'HUELLA', 'Recogido por el padre esta vez',           4),
+(9,  10, 'SALIDA',  '2025-11-11 17:20:00', true,  'HUELLA', NULL,                                       4),
+(10, 11, 'SALIDA',  '2025-11-11 17:30:00', true,  'HUELLA', NULL,                                       4),
+-- Miércoles 12 Nov 2025
+(11, 12, 'ENTRADA', '2025-11-12 07:55:00', true,  'HUELLA', NULL,                                       3),
+(12, 13, 'ENTRADA', '2025-11-12 08:00:00', true,  'HUELLA', NULL,                                       3),
+(13, 14, 'ENTRADA', '2025-11-12 08:10:00', true,  'HUELLA', NULL,                                       3),
+(14, 15, 'ENTRADA', '2025-11-12 08:25:00', true,  'HUELLA', NULL,                                       3),
+(15, 1,  'ENTRADA', '2025-11-12 08:40:00', false, 'HUELLA', 'Fallo de huella, se verificó con INE',     9),
+(11, 12, 'SALIDA',  '2025-11-12 17:00:00', true,  'HUELLA', NULL,                                       4),
+(12, 13, 'SALIDA',  '2025-11-12 17:05:00', true,  'HUELLA', NULL,                                       4),
+(13, 14, 'SALIDA',  '2025-11-12 17:10:00', true,  'HUELLA', NULL,                                       4),
+(14, 15, 'SALIDA',  '2025-11-12 17:20:00', true,  'HUELLA', NULL,                                       4),
+(15, 1,  'SALIDA',  '2025-11-12 17:35:00', true,  'HUELLA', NULL,                                       4),
+-- Jueves 13 Nov 2025
+(16, 5,  'ENTRADA', '2025-11-13 07:48:00', true,  'HUELLA', NULL,                                       3),
+(17, 7,  'ENTRADA', '2025-11-13 08:02:00', true,  'HUELLA', NULL,                                       3),
+(18, 9,  'ENTRADA', '2025-11-13 08:15:00', true,  'HUELLA', NULL,                                       3),
+(19, 11, 'ENTRADA', '2025-11-13 08:22:00', true,  'HUELLA', NULL,                                       3),
+(20, 14, 'ENTRADA', '2025-11-13 08:38:00', true,  'MANUAL', 'Lector en mantenimiento',                  9),
+(16, 6,  'SALIDA',  '2025-11-13 17:00:00', true,  'HUELLA', 'Recogida por el abuelo materno',           4),
+(17, 8,  'SALIDA',  '2025-11-13 17:05:00', true,  'HUELLA', NULL,                                       4),
+(18, 9,  'SALIDA',  '2025-11-13 17:10:00', true,  'HUELLA', NULL,                                       4),
+(19, 12, 'SALIDA',  '2025-11-13 17:20:00', true,  'HUELLA', 'Recogido por el padre',                    4),
+(20, 14, 'SALIDA',  '2025-11-13 17:40:00', true,  'HUELLA', 'Salida tardía autorizada',                 4),
+-- Viernes 14 Nov 2025
+(1,  1,  'ENTRADA', '2025-11-14 07:55:00', true,  'HUELLA', NULL,                                       3),
+(5,  5,  'ENTRADA', '2025-11-14 08:05:00', true,  'HUELLA', NULL,                                       3),
+(10, 11, 'ENTRADA', '2025-11-14 08:15:00', true,  'HUELLA', NULL,                                       3),
+(15, 2,  'ENTRADA', '2025-11-14 08:25:00', true,  'HUELLA', NULL,                                       3),
+(20, 15, 'ENTRADA', '2025-11-14 08:35:00', true,  'HUELLA', NULL,                                       3),
+(1,  2,  'SALIDA',  '2025-11-14 14:00:00', true,  'HUELLA', 'Salida temprana por cita médica',          4),
+(5,  5,  'SALIDA',  '2025-11-14 17:00:00', true,  'HUELLA', NULL,                                       4),
+(10, 11, 'SALIDA',  '2025-11-14 17:05:00', true,  'HUELLA', NULL,                                       4),
+(15, 1,  'SALIDA',  '2025-11-14 17:10:00', true,  'HUELLA', NULL,                                       4),
+(20, 15, 'SALIDA',  '2025-11-14 17:15:00', true,  'HUELLA', NULL,                                       4);
+
+
+-- ============================================================
+-- FIN DEL SCRIPT
+-- Registros insertados:
+--   login_rol:                    3
+--   auth_user:                   10
+--   login_perfil:                10
+--   guarderia_dependencia:       12
+--   guarderia_departamento:      21
+--   guarderia_colonia:    (omitida — se carga desde Excel)
+--   guarderia_servicio_medico:    7
+--   guarderia_grupo:              8
+--   guarderia_tutor:             15
+--   guarderia_nino:              20
+--   guarderia_nino_tutores:      40
+--   guarderia_observacionnino:   20
+--   guarderia_registroacdeso:    50
+-- ============================================================
