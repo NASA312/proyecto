@@ -39,12 +39,26 @@ def lista_tutores(request):
         'tutores_inactivos': tutores_inactivos,
     })
 
+
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_tutor(request):
     """Registrar nuevo tutor"""
     if request.method == 'POST':
-        form = TutorForm(request.POST)
+        # ✅ CORRECCIÓN: Hacer una copia mutable del POST data
+        post_data = request.POST.copy()
+        
+        # ✅ Si NO es trabajador, limpiar campos laborales para evitar errores de validación
+        if not post_data.get('es_trabajador'):
+            post_data['dependencia'] = ''
+            post_data['departamento'] = ''
+            post_data['estatus_laboral'] = ''
+            post_data['numero_empleado'] = ''
+            post_data['fecha_alta'] = ''
+            post_data['fecha_baja'] = ''
+        
+        # Crear el formulario con los datos modificados
+        form = TutorForm(post_data)
         
         # Detectar si es petición AJAX
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -629,45 +643,62 @@ def registrar_salida(request):
     return JsonResponse({'success': False}, status=405)
 
 
-# AGREGAR función para obtener el estado actual de un niño
+# ============================================
+# REEMPLAZAR la función obtener_estado_nino en guarderia/views.py
+# (Está alrededor de la línea 500)
+# ============================================
 
-@login_required
+@csrf_exempt  # Agregar esto si no lo tiene
 def obtener_estado_nino(request, nino_id):
-    """Obtener el estado actual de un niño (dentro o fuera)"""
+    """
+    Obtener el estado actual de un niño (DENTRO o FUERA)
+    Lógica corregida
+    """
     try:
         nino = Nino.objects.get(id=nino_id, activo=True)
         
-        # Buscar el último registro
-        ultimo_registro = RegistroAcceso.objects.filter(
-            nino=nino
+        # Buscar la última ENTRADA
+        ultima_entrada = RegistroAcceso.objects.filter(
+            nino=nino,
+            tipo='ENTRADA'
         ).order_by('-fecha_hora').first()
         
-        estado_actual = None
-        if ultimo_registro:
-            if ultimo_registro.tipo == 'ENTRADA':
-                # Verificar si hay salida posterior
-                tiene_salida = RegistroAcceso.objects.filter(
-                    nino=nino,
-                    tipo='SALIDA',
-                    fecha_hora__gt=ultimo_registro.fecha_hora
-                ).exists()
-                
-                estado_actual = 'FUERA' if tiene_salida else 'DENTRO'
-            else:
-                estado_actual = 'FUERA'
+        # Si NO tiene ninguna entrada → está FUERA
+        if not ultima_entrada:
+            return JsonResponse({
+                'success': True,
+                'nino_id': nino.id,
+                'nombre': nino.nombre_completo(),
+                'estado': 'FUERA',
+                'ultimo_registro': None
+            })
+        
+        # Buscar si hay SALIDA después de la última entrada
+        salida_posterior = RegistroAcceso.objects.filter(
+            nino=nino,
+            tipo='SALIDA',
+            fecha_hora__gt=ultima_entrada.fecha_hora
+        ).order_by('-fecha_hora').first()
+        
+        # Si hay salida posterior → está FUERA
+        # Si NO hay salida posterior → está DENTRO
+        if salida_posterior:
+            estado = 'FUERA'
+            ultimo = salida_posterior
         else:
-            estado_actual = 'SIN_REGISTROS'
+            estado = 'DENTRO'
+            ultimo = ultima_entrada
         
         return JsonResponse({
             'success': True,
             'nino_id': nino.id,
             'nombre': nino.nombre_completo(),
-            'estado': estado_actual,
+            'estado': estado,
             'ultimo_registro': {
-                'tipo': ultimo_registro.tipo if ultimo_registro else None,
-                'fecha_hora': ultimo_registro.fecha_hora.isoformat() if ultimo_registro else None,
-                'tutor': ultimo_registro.tutor.nombre_completo() if ultimo_registro else None
-            } if ultimo_registro else None
+                'tipo': ultimo.tipo,
+                'fecha_hora': ultimo.fecha_hora.isoformat(),
+                'tutor': ultimo.tutor.nombre_completo()
+            }
         })
         
     except Nino.DoesNotExist:
@@ -675,6 +706,14 @@ def obtener_estado_nino(request, nino_id):
             'success': False,
             'error': 'Niño no encontrado'
         }, status=404)
+    except Exception as e:
+        print(f"❌ Error en obtener_estado_nino: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 # ============================================
 # APIs para .NET - MÉTODO DE CONSULTA
