@@ -275,6 +275,22 @@
     padding: 2px 8px;
     margin-left: 8px;
   }
+  
+  /* ── INFO BOX ── */
+  .info-box {
+    background: linear-gradient(90deg, #dbeafe, #fff);
+    border-left: 5px solid #3b82f6;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: .88rem;
+    color: #1e3a8a;
+    box-shadow: 0 2px 8px rgba(59,130,246,.12);
+  }
+  .info-box i { font-size: 1.2rem; color: #3b82f6; }
 </style>
 
 <!-- Header -->
@@ -284,8 +300,7 @@
       <h1><i class="fas fa-graduation-cap mr-2"></i> Finalizar Ciclo Escolar</h1>
       <p>Revisa y confirma la promoción masiva de grupos. El sistema propone el destino lógico.</p>
     </div>
-    <!-- PON esto: -->
-<div class="year-badge">{% now "Y" %}</div>
+    <div class="year-badge">{% now "Y" %}</div>
   </div>
 </div>
 
@@ -299,6 +314,15 @@
         <strong>Acción irreversible.</strong> Revisa cada fila antes de confirmar.
         Los niños del último grado serán <strong>graduados</strong> automáticamente.
         Los grupos sin niños serán ignorados.
+      </div>
+    </div>
+
+    <!-- Info Box NUEVA -->
+    <div class="info-box">
+      <i class="fas fa-info-circle"></i>
+      <div>
+        <strong>Cambios Flexibles:</strong> Solo se aplicarán cambios a los grupos que selecciones.
+        Si dejas un grupo en "-- Seleccionar destino --", ese grupo permanecerá sin cambios.
       </div>
     </div>
 
@@ -409,7 +433,6 @@
 document.addEventListener('DOMContentLoaded', function() {
   var selects = document.querySelectorAll('.select-destino');
   selects.forEach(function(sel) {
-    // Aplicar clase visual según el valor sugerido ya seleccionado
     onSelectChange(sel);
   });
   actualizarResumen();
@@ -459,48 +482,38 @@ function confirmar() {
   var form        = document.getElementById('formPromociones');
   var selects     = form.querySelectorAll('.select-destino');
 
-  // Validar que los grupos CON niños tengan destino
+  // ✅ VALIDACIÓN FLEXIBLE: Solo procesar grupos con destino seleccionado
   for (var i = 0; i < selects.length; i++) {
     var sel   = selects[i];
     var total = parseInt(sel.getAttribute('data-total') || '0');
-    if (total > 0 && !sel.value) {
-      var nombre = sel.getAttribute('data-nombre') || 'desconocido';
-      Swal.fire({
-        icon: 'warning',
-        title: 'Falta selección',
-        text: 'Selecciona un destino para "' + nombre + '" (' + total + ' niños)',
-        confirmButtonColor: '#0f3460'
-      });
-      return;
+    
+    // Si el grupo NO tiene niños, ignorar
+    if (total === 0) continue;
+    
+    // Si el grupo SÍ tiene niños Y tiene destino seleccionado, agregarlo
+    if (sel.value && sel.value !== '') {
+      var grupoId  = sel.name.replace('promocion_', '');
+      var nombre   = sel.getAttribute('data-nombre') || grupoId;
+      var destTxt  = sel.options[sel.selectedIndex].text;
+
+      promociones[grupoId] = sel.value;
+      totalNinos += total;
+
+      if (sel.value === 'graduar') {
+        graduados += total;
+        detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
+          + '<span style="font-weight:600;">' + nombre + '</span>'
+          + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
+          + ' <span style="color:#e94560;margin-left:6px;">🎓 Graduar</span></div>';
+      } else {
+        promovidos += total;
+        detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
+          + '<span style="font-weight:600;">' + nombre + '</span>'
+          + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
+          + ' <span style="color:#00b894;margin-left:6px;">→ ' + destTxt.replace(/^[^—]+— /, '') + '</span></div>';
+      }
     }
-  }
-
-  // Construir resumen
-  for (var j = 0; j < selects.length; j++) {
-    var sel   = selects[j];
-    var total = parseInt(sel.getAttribute('data-total') || '0');
-    if (!sel.value || total === 0) continue;
-
-    var grupoId  = sel.name.replace('promocion_', '');
-    var nombre   = sel.getAttribute('data-nombre') || grupoId;
-    var destTxt  = sel.options[sel.selectedIndex].text;
-
-    promociones[grupoId] = sel.value;
-    totalNinos += total;
-
-    if (sel.value === 'graduar') {
-      graduados += total;
-      detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
-        + '<span style="font-weight:600;">' + nombre + '</span>'
-        + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
-        + ' <span style="color:#e94560;margin-left:6px;">🎓 Graduar</span></div>';
-    } else {
-      promovidos += total;
-      detalleHtml += '<div style="padding:5px 0;border-bottom:1px solid #eee;">'
-        + '<span style="font-weight:600;">' + nombre + '</span>'
-        + ' <small style="color:#636e72;">(' + total + ' niños)</small>'
-        + ' <span style="color:#00b894;margin-left:6px;">→ ' + destTxt.replace(/^[^—]+— /, '') + '</span></div>';
-    }
+    // Si está vacío, simplemente lo ignora (NO es error)
   }
   detalleHtml += '</div>';
 
@@ -508,7 +521,7 @@ function confirmar() {
     Swal.fire({
       icon: 'info',
       title: 'Nada que procesar',
-      text: 'No hay grupos con niños para mover.',
+      text: 'No hay grupos con destino seleccionado. Selecciona al menos un grupo para continuar.',
       confirmButtonColor: '#0f3460'
     });
     return;

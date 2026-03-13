@@ -317,13 +317,13 @@
 
               <div class="alert alert-info">
                 <i class="icon fas fa-info-circle"></i>
-                <strong>Nota:</strong> Después de registrar al tutor, será redirigido para registrar su huella dactilar.
+                <strong>Nota:</strong> Después de registrar al tutor, podrás registrar su huella dactilar.
               </div>
             </div>
 
             <div class="card-footer">
               <button type="submit" class="btn btn-primary" id="btnGuardar">
-                <i class="fas fa-save"></i> Guardar y Registrar Huella
+                <i class="fas fa-save"></i> Guardar Tutor
               </button>
               <a href="{% url 'guarderia:lista_tutores' %}" class="btn btn-default">
                 <i class="fas fa-times"></i> Cancelar
@@ -430,17 +430,17 @@ $(document).ready(function () {
 
     colonias.forEach(function (col) {
       const btn = $(
-        `<button type="button" class="list-group-item list-group-item-action py-2">
-          <strong>${col.nombre}</strong>
-          <small class="text-muted d-block">
-            ${col.municipio}, ${col.estado} &nbsp;·&nbsp; CP ${col.cp}
-          </small>
-        </button>`
+        '<button type="button" class="list-group-item list-group-item-action py-2">' +
+          '<strong>' + col.nombre + '</strong>' +
+          '<small class="text-muted d-block">' +
+            col.municipio + ', ' + col.estado + ' &nbsp;·&nbsp; CP ' + col.cp +
+          '</small>' +
+        '</button>'
       );
       btn.on('click', function () {
         hiddenColonia.val(col.id);
-        cpInput.val(col.cp);  // ← siempre actualiza el CP con la colonia seleccionada
-        const texto = `${col.nombre} — ${col.municipio}, ${col.estado} (CP ${col.cp})`;
+        cpInput.val(col.cp);
+        const texto = col.nombre + ' — ' + col.municipio + ', ' + col.estado + ' (CP ' + col.cp + ')';
         mostrarSeleccion(texto);
         ocultarResultados();
         searchInput.val('');
@@ -470,18 +470,18 @@ $(document).ready(function () {
 
   function toggleCamposLaborales() {
     const activo = $('#id_es_trabajador').is(':checked');
-    $('#campos-laborales').slideToggle(activo);  // slideDown si true, slideUp si false
-    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', !activo));
+    $('#campos-laborales').slideToggle(activo);
+    camposLaborales.forEach(f => $('#id_' + f).prop('disabled', !activo));
   }
 
   // Inicializar estado correcto
   const esTrabajador = $('#id_es_trabajador').is(':checked');
   if (esTrabajador) {
     $('#campos-laborales').show();
-    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', false));
+    camposLaborales.forEach(f => $('#id_' + f).prop('disabled', false));
   } else {
     $('#campos-laborales').hide();
-    camposLaborales.forEach(f => $(`#id_${f}`).prop('disabled', true));
+    camposLaborales.forEach(f => $('#id_' + f).prop('disabled', true));
   }
   $('#id_es_trabajador').on('change', toggleCamposLaborales);
 
@@ -500,9 +500,9 @@ $(document).ready(function () {
       data: { dependencia_id: id },
       success: function (data) {
         dept.html('<option value="">Seleccione un departamento</option>');
-        data.departamentos.forEach(d =>
-          dept.append(`<option value="${d.id}">${d.nombre}</option>`)
-        );
+        data.departamentos.forEach(function(d) {
+          dept.append('<option value="' + d.id + '">' + d.nombre + '</option>');
+        });
       }
     });
   });
@@ -526,31 +526,54 @@ $('form').on('submit', function (e) {
     return false;
   }
 
-  // Si el formulario usa AJAX, capturar la respuesta
-  const form = $(this);
-  const isAjax = form.data('ajax') === true; // puedes agregar data-ajax="true" al form
-
-  // Si quieres forzar AJAX siempre:
+  // Forzar AJAX
   e.preventDefault();
   
   $.ajax({
-    url: form.attr('action') || window.location.href,
+    url: $(this).attr('action') || window.location.href,
     method: 'POST',
-    data: form.serialize(),
+    data: $(this).serialize(),
     headers: {
       'X-Requested-With': 'XMLHttpRequest'
     },
     success: function(response) {
       if (response.success) {
+        // ✅ PRIMER SWAL: Éxito (con timer más largo para que se lea bien)
         Swal.fire({
           icon: 'success',
-          title: '¡Éxito!',
-          text: response.message,
-          confirmButtonText: 'Continuar'
+          title: '¡Tutor Registrado!',
+          html: '<p style="font-size:16px; margin:15px 0;">' + response.message + '</p>',
+          showConfirmButton: true,
+          confirmButtonText: 'Continuar',
+          confirmButtonColor: '#28a745',
+          allowOutsideClick: false,
+          timer: 3000,  // ← 3 segundos visible (se cierra solo o con botón)
+          timerProgressBar: true  // ← Barra de progreso
         }).then(() => {
-          if (response.redirect_url) {
-            window.location.href = response.redirect_url;
-          }
+          // ✅ SEGUNDO SWAL: ¿Registrar huella? (SIN timer, espera decisión)
+          Swal.fire({
+            title: '¿Registrar huella dactilar?',
+            html: '<p style="color:#555; margin-top:10px; font-size:15px; line-height:1.5;">Es necesario registrar la huella del tutor para el sistema de acceso biométrico.</p>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-fingerprint"></i> Registrar ahora',
+            cancelButtonText: '<i class="fas fa-clock"></i> En otro momento',
+            reverseButtons: true,
+            allowOutsideClick: false,
+            width: '500px'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Usuario eligió registrar AHORA → ir a registrar huella
+              if (response.redirect_url) {
+                window.location.href = response.redirect_url;
+              }
+            } else {
+              // Usuario eligió DESPUÉS → ir a lista de tutores
+              window.location.href = '{% url "guarderia:lista_tutores" %}';
+            }
+          });
         });
       }
     },
@@ -564,13 +587,13 @@ $('form').on('submit', function (e) {
           
           $.each(data.errors, function(field, errors) {
             // Mostrar en el campo
-            $(`.error-${field}`).text(errors.join(', '));
-            $(`#id_${field}`).addClass('is-invalid');
+            $('.error-' + field).text(errors.join(', '));
+            $('#id_' + field).addClass('is-invalid');
             
             // Agregar al HTML del SweetAlert
-            const fieldLabel = $(`label[for="id_${field}"]`).text() || field;
+            const fieldLabel = $('label[for="id_' + field + '"]').text() || field;
             errors.forEach(function(error) {
-              erroresHTML += `<li><strong>${fieldLabel}:</strong> ${error}</li>`;
+              erroresHTML += '<li><strong>' + fieldLabel + ':</strong> ' + error + '</li>';
             });
           });
           
@@ -622,7 +645,7 @@ $('form').on('submit', function (e) {
   {% for field, errors in form.errors.items %}
     const fieldLabel = $('label[for="id_{{ field }}"]').text() || '{{ field }}';
     {% for error in errors %}
-      errores.push(`<strong>${fieldLabel}:</strong> {{ error }}`);
+      errores.push('<strong>' + fieldLabel + ':</strong> {{ error }}');
       $('.error-{{ field }}').text('{{ error }}');
       $('#id_{{ field }}').addClass('is-invalid');
     {% endfor %}
@@ -633,7 +656,7 @@ $('form').on('submit', function (e) {
       icon: 'error',
       title: 'Errores en el formulario',
       html: '<ul class="text-left" style="margin: 0; padding-left: 20px;">' + 
-            errores.map(e => `<li>${e}</li>`).join('') + 
+            errores.map(function(e) { return '<li>' + e + '</li>'; }).join('') + 
             '</ul>',
       confirmButtonText: 'Corregir',
       width: '600px'

@@ -148,7 +148,7 @@
     <div class="huella-ring">
       <i class="fas fa-fingerprint huella-icono" id="icono-mano"></i>
     </div>
-    <div class="estado-titulo"    id="mensaje-estado">Coloque su dedo en el lector</div>
+    <div class="estado-titulo" id="mensaje-estado">Coloque su dedo en el lector</div>
     <div class="estado-subtitulo">El sistema verificará su identidad automáticamente</div>
     <div class="scan-bar" id="barra-progreso">
       <div class="scan-bar-inner"></div>
@@ -174,6 +174,17 @@
         </div>
       </div>
       <div class="ninos-label"><i class="fas fa-child" style="margin-right:6px;"></i>Niños autorizados</div>
+      
+      <!-- Botones de Registro Masivo -->
+      <div id="botones-masivos" style="display:none; margin-bottom: 20px;">
+        <button class="btn-entrada" style="width: 48%; margin-right: 2%;" onclick="registrarTodosMasivo('ENTRADA')">
+          <i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar TODOS Entrada
+        </button>
+        <button class="btn-salida" style="width: 48%;" onclick="registrarTodosMasivo('SALIDA')">
+          <i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar TODOS Salida
+        </button>
+      </div>
+      
       <div id="lista-ninos"></div>
       <button class="btn-nueva" onclick="reiniciar()">
         <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Nueva Verificación
@@ -222,8 +233,11 @@ document.addEventListener('DOMContentLoaded', function() { iniciarVerificacion()
 function iniciarVerificacion() {
   if (verificando) return;
   verificando = true;
+  
+  // CAMBIO 4: Solo mostrar mensaje "Coloque su dedo"
   document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector';
   document.getElementById('icono-mano').className = 'fas fa-fingerprint huella-icono';
+  
   fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
@@ -234,25 +248,37 @@ function iniciarVerificacion() {
 }
 
 function iniciarPolling() {
-  let intentos = 0;
+  // CAMBIO 3: Eliminar timeout - polling infinito
   intervalPolling = setInterval(function() {
-    intentos++;
-    document.getElementById('mensaje-estado').textContent = 'Procesando' + '.'.repeat((intentos % 3) + 1);
-    if (intentos > 30) { clearInterval(intervalPolling); mostrarError('Tiempo agotado. Intente nuevamente.'); return; }
     fetch("{% url 'guarderia:verificar_huella_estado' %}")
       .then(r => r.json())
-      .then(d => { if (d.completado) { clearInterval(intervalPolling); d.success ? mostrarTutorVerificado(d) : mostrarError(d.mensaje || 'Huella no reconocida'); } })
+      .then(d => { 
+        if (d.completado) { 
+          clearInterval(intervalPolling); 
+          d.success ? mostrarTutorVerificado(d) : mostrarError(d.mensaje || 'Huella no reconocida'); 
+        } 
+      })
       .catch(e => console.error(e));
   }, 1000);
 }
 
 function mostrarTutorVerificado(data) {
+  tutorActualId = data.tutor.id;
+  
+  // CAMBIO 2: Si solo tiene 1 niño, registro automático
+  if (data.ninos && data.ninos.length === 1) {
+    procesarRegistroAutomatico(data.ninos[0], data.tutor);
+    return;
+  }
+  
+  // Si tiene varios niños, mostrar panel normal
   document.getElementById('card-inicial').style.display    = 'none';
   document.getElementById('card-error').style.display      = 'none';
   document.getElementById('card-verificado').style.display = 'block';
   document.getElementById('tutor-nombre').textContent     = data.tutor.nombre;
   document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
   document.getElementById('tutor-telefono').textContent   = data.tutor.telefono;
+  
   if (data.tutor.foto_url) {
     document.getElementById('tutor-foto').src = data.tutor.foto_url;
     document.getElementById('tutor-foto').style.display  = 'block';
@@ -261,18 +287,254 @@ function mostrarTutorVerificado(data) {
     document.getElementById('tutor-foto').style.display  = 'none';
     document.getElementById('tutor-icono').style.display = 'block';
   }
-  tutorActualId = data.tutor.id;
+  
   var ln = document.getElementById('lista-ninos');
   ln.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+  
   if (data.ninos && data.ninos.length > 0) {
     Promise.all(data.ninos.map(n => obtenerEstadoNino(n.id))).then(function(estados) {
       ln.innerHTML = '';
-      data.ninos.forEach(function(n, i) { ninosEstados[n.id] = estados[i].estado; mostrarTarjetaNino(n, estados[i].estado); });
+      
+      // Clasificar niños por estado
+      let ninosDentro = [];
+      let ninosFuera = [];
+      
+      data.ninos.forEach(function(n, i) { 
+        ninosEstados[n.id] = estados[i].estado;
+        
+        if (estados[i].estado === 'DENTRO') {
+          ninosDentro.push({nino: n, estado: estados[i].estado});
+        } else {
+          ninosFuera.push({nino: n, estado: estados[i].estado});
+        }
+      });
+      
+      // Mostrar SOLO niños DENTRO (si hay)
+      if (ninosDentro.length > 0) {
+        ln.innerHTML += '<div style="background: rgba(72,187,120,.1); border: 1px solid rgba(72,187,120,.3); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;">'
+                      + '<small style="color: #68d391; font-weight: 600;"><i class="fas fa-user-check"></i> Niños DENTRO de la guardería (' + ninosDentro.length + ')</small>'
+                      + '</div>';
+        
+        ninosDentro.forEach(function(item) {
+          mostrarTarjetaNino(item.nino, item.estado);
+        });
+      }
+      
+      // Mostrar SOLO niños FUERA (si hay)
+      if (ninosFuera.length > 0) {
+        ln.innerHTML += '<div style="background: rgba(160,174,192,.1); border: 1px solid rgba(160,174,192,.3); border-radius: 8px; padding: 8px 12px; margin: 15px 0 10px 0;">'
+                      + '<small style="color: #a0aec0; font-weight: 600;"><i class="fas fa-home"></i> Niños FUERA de la guardería (' + ninosFuera.length + ')</small>'
+                      + '</div>';
+        
+        ninosFuera.forEach(function(item) {
+          mostrarTarjetaNino(item.nino, item.estado);
+        });
+      }
+      
+      // Mostrar botones masivos inteligentes
+      mostrarBotonesMasivos(ninosDentro.length, ninosFuera.length);
     });
   } else {
     ln.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:16px;">No hay niños asignados a este tutor</p>';
   }
+  
   verificando = false;
+}
+
+// NUEVA FUNCIÓN: Mostrar botones masivos inteligentes
+function mostrarBotonesMasivos(cantidadDentro, cantidadFuera) {
+  const contenedor = document.getElementById('botones-masivos');
+  const totalNinos = cantidadDentro + cantidadFuera;
+  
+  if (totalNinos < 2) {
+    contenedor.style.display = 'none';
+    return;
+  }
+  
+  contenedor.innerHTML = '';
+  let htmlBotones = '';
+  
+  // Botón "TODOS Entrada" - Solo si hay niños FUERA
+  if (cantidadFuera > 0) {
+    htmlBotones += `
+      <button class="btn-entrada" style="width: ${cantidadDentro > 0 ? '48%' : '100%'}; ${cantidadDentro > 0 ? 'margin-right: 2%;' : ''}" 
+              onclick="registrarTodosMasivo('ENTRADA')">
+        <i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar ${cantidadFuera} Entrada
+      </button>`;
+  }
+  
+  // Botón "TODOS Salida" - Solo si hay niños DENTRO
+  if (cantidadDentro > 0) {
+    htmlBotones += `
+      <button class="btn-salida" style="width: ${cantidadFuera > 0 ? '48%' : '100%'};" 
+              onclick="registrarTodosMasivo('SALIDA')">
+        <i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar ${cantidadDentro} Salida
+      </button>`;
+  }
+  
+  // Mostrar advertencia si hay estados mixtos
+  if (cantidadDentro > 0 && cantidadFuera > 0) {
+    contenedor.innerHTML = `
+      <div style="background: rgba(99,179,237,.1); border: 1px solid rgba(99,179,237,.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
+        <small style="color: rgba(99,179,237,.9);">
+          <i class="fas fa-info-circle"></i> ${cantidadDentro} dentro, ${cantidadFuera} fuera. Usa los botones rápidos o regístralos individualmente.
+        </small>
+      </div>` + htmlBotones;
+  } else {
+    contenedor.innerHTML = htmlBotones;
+  }
+  
+  contenedor.style.display = 'block';
+}
+
+// NUEVA FUNCIÓN: Registrar todos los niños según su ESTADO CORRECTO
+function registrarTodosMasivo(tipoAccion) {
+  // Filtrar niños según la acción
+  let ninosParaRegistrar = [];
+  
+  for (let ninoId in ninosEstados) {
+    let estado = ninosEstados[ninoId];
+    
+    // Para ENTRADA: solo niños FUERA
+    if (tipoAccion === 'ENTRADA' && (estado === 'FUERA' || estado === 'SIN_REGISTROS')) {
+      ninosParaRegistrar.push(ninoId);
+    }
+    // Para SALIDA: solo niños DENTRO
+    else if (tipoAccion === 'SALIDA' && estado === 'DENTRO') {
+      ninosParaRegistrar.push(ninoId);
+    }
+  }
+  
+  if (ninosParaRegistrar.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'No hay niños para ' + tipoAccion,
+      text: 'No hay niños en el estado correcto para esta acción',
+      background: '#161b22',
+      color: '#fff'
+    });
+    return;
+  }
+  
+  Swal.fire({
+    title: '¿Registrar como ' + tipoAccion + '?',
+    html: '<p style="color:#ccc;margin-bottom:8px;">Se registrarán <strong>' + ninosParaRegistrar.length + '</strong> niño' + (ninosParaRegistrar.length > 1 ? 's' : '') + '</p>'
+        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+    icon: 'question',
+    background: '#161b22',
+    color: '#fff',
+    showCancelButton: true,
+    confirmButtonColor: tipoAccion === 'ENTRADA' ? '#276749' : '#2b4c7e',
+    confirmButtonText: 'Sí, registrar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => document.getElementById('swal-obs').value
+  }).then(function(result) {
+    if (!result.isConfirmed) return;
+    
+    const observaciones = result.value || '';
+    
+    // Mostrar loading
+    Swal.fire({
+      title: 'Registrando...',
+      html: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+    });
+    
+    // Registrar cada niño secuencialmente
+    let promesas = [];
+    ninosParaRegistrar.forEach(function(ninoId) {
+      promesas.push(ejecutarRegistro(ninoId, tipoAccion, observaciones));
+    });
+    
+    Promise.all(promesas).then(function() {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Completado!',
+        text: ninosParaRegistrar.length + ' niño' + (ninosParaRegistrar.length > 1 ? 's' : '') + ' registrado' + (ninosParaRegistrar.length > 1 ? 's' : '') + ' como ' + tipoAccion,
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#161b22',
+        color: '#fff'
+      }).then(reiniciar);
+    }).catch(function(error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Hubo un problema al registrar algunos niños',
+        background: '#161b22',
+        color: '#fff'
+      });
+    });
+  });
+}
+
+// CAMBIO 2: Función para registro automático (1 niño)
+function procesarRegistroAutomatico(nino, tutor) {
+  obtenerEstadoNino(nino.id).then(function(estadoData) {
+    const estado = estadoData.estado;
+    const accion = (estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
+    
+    Swal.fire({
+      title: 'Registro Automático',
+      html: '<p style="color:#fff;margin-bottom:12px;"><strong>' + nino.nombre + '</strong></p>'
+          + '<p style="color:#ccc;margin-bottom:8px;">Se registrará automáticamente: <strong>' + accion + '</strong></p>'
+          + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+      icon: 'question', background: '#161b22', color: '#fff',
+      showCancelButton: true,
+      confirmButtonColor: accion === 'ENTRADA' ? '#276749' : '#2b4c7e',
+      confirmButtonText: 'Sí, registrar ' + accion,
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => document.getElementById('swal-obs').value
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        ejecutarRegistro(nino.id, accion, result.value || '');
+      } else {
+        reiniciar();
+      }
+    });
+  });
+}
+
+function ejecutarRegistro(ninoId, tipoAccion, observaciones) {
+  var url = tipoAccion === 'ENTRADA' ? "{% url 'guarderia:registrar_entrada' %}" : "{% url 'guarderia:registrar_salida' %}";
+  
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: JSON.stringify({ nino_id: ninoId, tutor_id: tutorActualId, observaciones: observaciones })
+  })
+  .then(r => r.json())
+  .then(function(data) {
+    if (data.success) {
+      Swal.fire({ 
+        icon: 'success', 
+        title: tipoAccion + ' registrada', 
+        text: data.mensaje, 
+        timer: 3000, 
+        showConfirmButton: false, 
+        background: '#161b22', 
+        color: '#fff' 
+      }).then(reiniciar);
+    } else {
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Error', 
+        text: data.mensaje, 
+        background: '#161b22', 
+        color: '#fff' 
+      }).then(reiniciar);
+    }
+  })
+  .catch(function() {
+    Swal.fire({ 
+      icon: 'error', 
+      title: 'Error', 
+      text: 'No se pudo registrar', 
+      background: '#161b22', 
+      color: '#fff' 
+    }).then(reiniciar);
+  });
 }
 
 function obtenerEstadoNino(ninoId) {
@@ -283,17 +545,23 @@ function obtenerEstadoNino(ninoId) {
 function mostrarTarjetaNino(nino, estado) {
   var fotoHtml = nino.foto_url ? '<img src="' + nino.foto_url + '" alt="">' : '<i class="fas fa-child"></i>';
   var badge, boton;
+  
+  // CAMBIO 1: Botones dinámicos según estado real
   if (estado === 'DENTRO') {
     badge = '<span class="badge-dentro">● DENTRO</span>';
+    // Solo botón de SALIDA
     boton = '<button class="btn-salida" onclick="registrarAccion(' + nino.id + ',\'SALIDA\')"><i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar Salida</button>';
   } else if (estado === 'FUERA' || estado === 'SIN_REGISTROS') {
     badge = '<span class="badge-fuera">○ FUERA</span>';
+    // Solo botón de ENTRADA
     boton = '<button class="btn-entrada" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')"><i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar Entrada</button>';
   } else {
+    // Estado desconocido - mostrar ambos botones como fallback
     badge = '<span class="badge-fuera">? Desconocido</span>';
     boton = '<button class="btn-entrada" style="margin-right:6px;" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')">Entrada</button>'
           + '<button class="btn-salida"  onclick="registrarAccion(' + nino.id + ',\'SALIDA\')">Salida</button>';
   }
+  
   document.getElementById('lista-ninos').insertAdjacentHTML('beforeend',
     '<div class="nino-card" id="card-nino-' + nino.id + '">'
     + '<div class="nino-foto">' + fotoHtml + '</div>'
@@ -316,25 +584,7 @@ function registrarAccion(ninoId, tipoAccion) {
     if (!result.isConfirmed) return;
     var btn = document.querySelector('#card-nino-' + ninoId + ' button');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-    var url = tipoAccion === 'ENTRADA' ? "{% url 'guarderia:registrar_entrada' %}" : "{% url 'guarderia:registrar_salida' %}";
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-      body: JSON.stringify({ nino_id: ninoId, tutor_id: tutorActualId, observaciones: result.value || '' })
-    })
-    .then(r => r.json())
-    .then(function(data) {
-      if (data.success) {
-        Swal.fire({ icon: 'success', title: tipoAccion + ' registrada', text: data.mensaje, timer: 3000, showConfirmButton: false, background: '#161b22', color: '#fff' }).then(reiniciar);
-      } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje, background: '#161b22', color: '#fff' });
-        if (btn) { btn.disabled = false; btn.innerHTML = tipoAccion === 'ENTRADA' ? '<i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar Entrada' : '<i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar Salida'; }
-      }
-    })
-    .catch(function() {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo registrar', background: '#161b22', color: '#fff' });
-      if (btn) btn.disabled = false;
-    });
+    ejecutarRegistro(ninoId, tipoAccion, result.value || '');
   });
 }
 
@@ -353,8 +603,11 @@ function reiniciar() {
   document.getElementById('card-inicial').style.display    = 'block';
   document.getElementById('card-verificado').style.display = 'none';
   document.getElementById('card-error').style.display      = 'none';
+  
+  // CAMBIO 4: Siempre mostrar el mensaje original
   document.getElementById('mensaje-estado').textContent    = 'Coloque su dedo en el lector';
   document.getElementById('icono-mano').className          = 'fas fa-fingerprint huella-icono';
+  
   setTimeout(iniciarVerificacion, 2000);
 }
 </script>
