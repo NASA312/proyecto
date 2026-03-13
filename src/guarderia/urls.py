@@ -50,6 +50,8 @@ urlpatterns = [
     path('api/huella/tutor/<int:tutor_id>/verificar/', views.verificar_huella_capturada_tutor, name='verificar_huella_capturada_tutor'),
     path('api/huella/tutor/<int:tutor_id>/estado/', views.verificar_estado_huella, name='verificar_estado_huella'),
     
+    # API para obtener estado de niño (DENTRO/FUERA)
+    path('api/nino/<int:nino_id>/estado/', views.obtener_estado_nino, name='obtener_estado_nino'),
     # =====================================
     # COLONIAS
     # =====================================
