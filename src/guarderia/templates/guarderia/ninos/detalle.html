@@ -24,16 +24,22 @@
 <section class="content">
   <div class="container-fluid">
     <div class="row">
-      <!-- Información del Niño -->
+
+      <!-- ── Columna Izquierda ── -->
       <div class="col-md-4">
         <div class="card card-primary card-outline">
           <div class="card-body box-profile">
             <div class="text-center">
               {% if nino.foto %}
-                <img src="{{ nino.foto.url }}" class="profile-user-img img-fluid img-circle" alt="{{ nino.nombre_completo }}" style="width: 150px; height: 150px; object-fit: cover;">
+                <img src="{{ nino.foto.url }}"
+                     class="profile-user-img img-fluid img-circle"
+                     alt="{{ nino.nombre_completo }}"
+                     style="width:150px;height:150px;object-fit:cover;">
               {% else %}
-                <div class="profile-user-img img-fluid img-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
-                  <i class="fas fa-user fa-4x"></i>
+                <div class="profile-user-img img-fluid img-circle d-inline-flex align-items-center justify-content-center
+                     {% if nino.genero == 'F' %}bg-pink{% else %}bg-primary{% endif %} text-white"
+                     style="width:150px;height:150px;">
+                  <i class="fas fa-{% if nino.genero == 'F' %}female{% else %}male{% endif %} fa-4x"></i>
                 </div>
               {% endif %}
             </div>
@@ -42,21 +48,51 @@
             <p class="text-muted text-center">Grupo {{ nino.grupo }}</p>
 
             <ul class="list-group list-group-unbordered mb-3">
+
+              <!-- Matrícula -->
               <li class="list-group-item">
-                <b>Edad</b> <a class="float-right">{{ nino.edad }} años</a>
+                <b><i class="fas fa-id-badge mr-1"></i> Matrícula</b>
+                <span class="float-right">
+                  {% if nino.numero_matricula %}
+                    <code class="text-primary">{{ nino.numero_matricula }}</code>
+                  {% else %}
+                    <span class="text-muted">No asignada</span>
+                  {% endif %}
+                </span>
+              </li>
+
+              <!-- Género -->
+              <li class="list-group-item">
+                <b><i class="fas fa-venus-mars mr-1"></i> Género</b>
+                <span class="float-right">
+                  {% if nino.genero == 'F' %}
+                    <span class="badge" style="background-color:#e83e8c;color:#fff;">
+                      <i class="fas fa-venus mr-1"></i>Femenino
+                    </span>
+                  {% else %}
+                    <span class="badge badge-primary">
+                      <i class="fas fa-mars mr-1"></i>Masculino
+                    </span>
+                  {% endif %}
+                </span>
+              </li>
+
+              <li class="list-group-item">
+                <b><i class="fas fa-birthday-cake mr-1"></i> Edad</b>
+                <a class="float-right">{{ nino.edad }} años</a>
               </li>
               <li class="list-group-item">
-                <b>Fecha Nacimiento</b> 
+                <b><i class="fas fa-calendar-alt mr-1"></i> Fecha Nacimiento</b>
                 <a class="float-right">{{ nino.fecha_nacimiento|date:"d/m/Y" }}</a>
               </li>
               <li class="list-group-item">
-                <b>Tipo de Sangre</b> 
+                <b><i class="fas fa-tint mr-1"></i> Tipo de Sangre</b>
                 <span class="float-right">
                   <span class="badge badge-danger">{{ nino.tipo_sangre|default:"N/A" }}</span>
                 </span>
               </li>
               <li class="list-group-item">
-                <b>Tutores</b>
+                <b><i class="fas fa-user-friends mr-1"></i> Tutores</b>
                 <span class="float-right">
                   <span class="badge badge-info">{{ tutores.count }}</span>
                 </span>
@@ -79,20 +115,18 @@
           </div>
           <div class="card-body">
             <strong><i class="fas fa-allergies mr-1"></i> Alergias</strong>
-            <p class="text-muted">
-              {{ nino.alergias|default:"No registradas"|linebreaks }}
-            </p>
+            <p class="text-muted">{{ nino.alergias|default:"No registradas"|linebreaks }}</p>
             <hr>
             <strong><i class="fas fa-pills mr-1"></i> Medicamentos</strong>
-            <p class="text-muted">
-              {{ nino.medicamentos|default:"No registrados"|linebreaks }}
-            </p>
+            <p class="text-muted">{{ nino.medicamentos|default:"No registrados"|linebreaks }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Tutores Autorizados -->
+      <!-- ── Columna Derecha ── -->
       <div class="col-md-8">
+
+        <!-- Tutores Autorizados -->
         <div class="card">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-user-friends"></i> Tutores Autorizados</h3>
@@ -149,8 +183,8 @@
               </div>
             {% else %}
               <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i> 
-                No hay tutores asignados a este niño. 
+                <i class="fas fa-exclamation-triangle"></i>
+                No hay tutores asignados a este niño.
                 <a href="{% url 'guarderia:asignar_tutores' nino.id %}">Asignar tutores ahora</a>
               </div>
             {% endif %}
@@ -204,7 +238,9 @@
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="5" class="text-center">No hay registros de acceso</td>
+                  <td colspan="5" class="text-center text-muted">
+                    <i class="fas fa-info-circle mr-1"></i> No hay registros de acceso
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -218,7 +254,8 @@
           </div>
           {% endif %}
         </div>
-      </div>
+
+      </div><!-- /col-md-8 -->
     </div>
   </div>
 </section>

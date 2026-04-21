@@ -115,32 +115,34 @@ class NinoForm(forms.ModelForm):
     class Meta:
         model = Nino
         fields = [
-            'nombre', 'apellido_paterno', 'apellido_materno',
-            'fecha_nacimiento', 'tipo_sangre', 'grupo', 
+            'numero_matricula', 'nombre', 'apellido_paterno', 'apellido_materno',
+            'fecha_nacimiento', 'genero', 'tipo_sangre', 'grupo',
             'alergias', 'medicamentos', 'foto'
         ]
         widgets = {
+            'numero_matricula': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: MAT-2024-001'
+            }),
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control'}),
             'apellido_materno': forms.TextInput(attrs={'class': 'form-control'}),
-            
-            # ⭐ CORREGIDO: formato de fecha correcto
             'fecha_nacimiento': forms.DateInput(attrs={
-                'class': 'form-control', 
+                'class': 'form-control',
                 'type': 'date'
             }, format='%Y-%m-%d'),
-            
+            'genero': forms.Select(attrs={'class': 'form-control'}),
             'tipo_sangre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: O+, A-'}),
             'grupo': forms.Select(attrs={'class': 'form-control'}),
             'alergias': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'medicamentos': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'foto': forms.FileInput(attrs={'class': 'form-control-file'}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # ⭐ Asegurar que la fecha se muestre correctamente al editar
         self.fields['fecha_nacimiento'].input_formats = ['%Y-%m-%d']
+        self.fields['numero_matricula'].required = False
 
 
 class AsignarTutorForm(forms.Form):

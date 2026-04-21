@@ -254,6 +254,26 @@ class Nino(models.Model):
     apellido_materno = models.CharField(max_length=100, blank=True, null=True)
     fecha_nacimiento = models.DateField()
     
+    # Número de matrícula (único, obligatorio)
+    numero_matricula = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,   # 👈 importante
+        blank=True
+    )
+    
+    # Género del niño
+    GENERO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+    ]
+    genero = models.CharField(
+        max_length=1,
+        choices=GENERO_CHOICES,
+        default='M',
+        help_text="Género del niño"
+    )
+    
     # Foto del niño
     foto = models.ImageField(upload_to='fotos_ninos/', blank=True, null=True)
     

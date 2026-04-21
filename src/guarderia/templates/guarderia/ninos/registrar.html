@@ -25,7 +25,7 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-md-8 offset-md-2">
-        <!-- Mostrar mensajes de Django -->
+
         {% if messages %}
           {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -44,11 +44,35 @@
           <form method="post" enctype="multipart/form-data" id="formNino">
             {% csrf_token %}
             <div class="card-body">
-              <!-- Información Personal -->
+
+              <!-- ── Matrícula ── -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label><i class="fas fa-id-badge mr-1 text-muted"></i> Número de Matrícula</label>
+                    {{ form.numero_matricula }}
+                    {% if form.numero_matricula.errors %}
+                      <span class="text-danger">{{ form.numero_matricula.errors.0 }}</span>
+                    {% endif %}
+                    <small class="form-text text-muted">Opcional. Debe ser único por alumno.</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label><i class="fas fa-venus-mars mr-1 text-muted"></i> Género <span class="text-danger">*</span></label>
+                    {{ form.genero }}
+                    {% if form.genero.errors %}
+                      <span class="text-danger">{{ form.genero.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Nombre completo ── -->
               <div class="row">
                 <div class="col-md-4">
                   <div class="form-group">
-                    <label>Nombre(s) *</label>
+                    <label>Nombre(s) <span class="text-danger">*</span></label>
                     {{ form.nombre }}
                     {% if form.nombre.errors %}
                       <span class="text-danger">{{ form.nombre.errors.0 }}</span>
@@ -57,7 +81,7 @@
                 </div>
                 <div class="col-md-4">
                   <div class="form-group">
-                    <label>Apellido Paterno *</label>
+                    <label>Apellido Paterno <span class="text-danger">*</span></label>
                     {{ form.apellido_paterno }}
                     {% if form.apellido_paterno.errors %}
                       <span class="text-danger">{{ form.apellido_paterno.errors.0 }}</span>
@@ -75,18 +99,18 @@
                 </div>
               </div>
 
-              <!-- Fecha de Nacimiento y Tipo de Sangre -->
+              <!-- ── Fecha, Tipo de sangre y Grupo ── -->
               <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <div class="form-group">
-                    <label>Fecha de Nacimiento *</label>
+                    <label>Fecha de Nacimiento <span class="text-danger">*</span></label>
                     {{ form.fecha_nacimiento }}
                     {% if form.fecha_nacimiento.errors %}
                       <span class="text-danger">{{ form.fecha_nacimiento.errors.0 }}</span>
                     {% endif %}
                   </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <div class="form-group">
                     <label>Tipo de Sangre</label>
                     {{ form.tipo_sangre }}
@@ -95,18 +119,18 @@
                     {% endif %}
                   </div>
                 </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Grupo <span class="text-danger">*</span></label>
+                    {{ form.grupo }}
+                    {% if form.grupo.errors %}
+                      <span class="text-danger">{{ form.grupo.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
               </div>
 
-              <!-- Grupo -->
-              <div class="form-group">
-                <label>Grupo *</label>
-                {{ form.grupo }}
-                {% if form.grupo.errors %}
-                  <span class="text-danger">{{ form.grupo.errors.0 }}</span>
-                {% endif %}
-              </div>
-
-              <!-- Información Médica -->
+              <!-- ── Información Médica ── -->
               <div class="row">
                 <div class="col-md-6">
                   <div class="form-group">
@@ -128,7 +152,7 @@
                 </div>
               </div>
 
-              <!-- Foto -->
+              <!-- ── Foto ── -->
               <div class="form-group">
                 <label>Fotografía del Niño</label>
                 <div class="custom-file">
@@ -172,7 +196,6 @@ $(document).ready(function() {
     $(this).next('.custom-file-label').addClass("selected").html(fileName);
   });
 
-  // Si hay errores en el formulario, mostrarlos con SweetAlert
   {% if form.errors %}
     let errores = [];
     {% for field, errors in form.errors.items %}
@@ -180,7 +203,6 @@ $(document).ready(function() {
         errores.push("{{ field }}: {{ error }}");
       {% endfor %}
     {% endfor %}
-    
     if (errores.length > 0) {
       Swal.fire({
         icon: 'error',
@@ -191,15 +213,10 @@ $(document).ready(function() {
     }
   {% endif %}
 
-  // Validación del formulario antes de enviar
-  $('#formNino').on('submit', function(e) {
-    let btnGuardar = $('#btnGuardar');
-    
-    // Deshabilitar el botón para evitar doble envío
-    btnGuardar.prop('disabled', true);
-    btnGuardar.html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
-    
-    // Permitir el envío normal del formulario
+  $('#formNino').on('submit', function() {
+    let btn = $('#btnGuardar');
+    btn.prop('disabled', true);
+    btn.html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
     return true;
   });
 });

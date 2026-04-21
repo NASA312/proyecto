@@ -53,9 +53,10 @@
                        style="width:128px;height:128px;object-fit:cover;">
                 {% else %}
                   <div id="preview-foto"
-                       class="profile-user-img img-fluid img-circle bg-secondary d-flex align-items-center justify-content-center mx-auto"
+                       class="profile-user-img img-fluid img-circle d-flex align-items-center justify-content-center mx-auto
+                       {% if nino.genero == 'F' %}bg-pink{% else %}bg-primary{% endif %}"
                        style="width:128px;height:128px;">
-                    <i class="fas fa-child fa-4x text-white"></i>
+                    <i class="fas fa-{% if nino.genero == 'F' %}female{% else %}male{% endif %} fa-4x text-white"></i>
                   </div>
                 {% endif %}
               </div>
@@ -71,6 +72,35 @@
               </p>
 
               <ul class="list-group list-group-unbordered mb-3">
+
+                <!-- Matrícula -->
+                <li class="list-group-item">
+                  <b><i class="fas fa-id-badge mr-1"></i> Matrícula</b>
+                  <span class="float-right">
+                    {% if nino.numero_matricula %}
+                      <code class="text-primary">{{ nino.numero_matricula }}</code>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </span>
+                </li>
+
+                <!-- Género -->
+                <li class="list-group-item">
+                  <b><i class="fas fa-venus-mars mr-1"></i> Género</b>
+                  <span class="float-right">
+                    {% if nino.genero == 'F' %}
+                      <span class="badge" style="background-color:#e83e8c;color:#fff;">
+                        <i class="fas fa-venus mr-1"></i>Femenino
+                      </span>
+                    {% else %}
+                      <span class="badge badge-primary">
+                        <i class="fas fa-mars mr-1"></i>Masculino
+                      </span>
+                    {% endif %}
+                  </span>
+                </li>
+
                 <li class="list-group-item">
                   <b><i class="fas fa-birthday-cake mr-1"></i> Edad</b>
                   <span class="float-right">{{ nino.edad }} años</span>
@@ -109,6 +139,38 @@
 
         <!-- ── Columna Derecha: Formulario por secciones ── -->
         <div class="col-md-8">
+
+          <!-- Identificación -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-id-card mr-1"></i> Identificación</h3>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label><i class="fas fa-id-badge mr-1 text-muted"></i> Número de Matrícula</label>
+                    {{ form.numero_matricula }}
+                    <span class="text-danger error-numero_matricula"></span>
+                    {% if form.numero_matricula.errors %}
+                      <span class="text-danger">{{ form.numero_matricula.errors.0 }}</span>
+                    {% endif %}
+                    <small class="form-text text-muted">Opcional. Debe ser único por alumno.</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label><i class="fas fa-venus-mars mr-1 text-muted"></i> Género <span class="text-danger">*</span></label>
+                    {{ form.genero }}
+                    <span class="text-danger error-genero"></span>
+                    {% if form.genero.errors %}
+                      <span class="text-danger">{{ form.genero.errors.0 }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Datos Personales -->
           <div class="card">
@@ -257,14 +319,12 @@ $(document).ready(function() {
     let fileName = $(this).val().split('\\').pop();
     $(this).next('.custom-file-label').addClass("selected").html(fileName);
 
-    // Preview de la nueva foto en la columna izquierda
     let reader = new FileReader();
     reader.onload = function(e) {
       let preview = $('#preview-foto');
       if (preview.is('img')) {
         preview.attr('src', e.target.result);
       } else {
-        // Reemplazar el div placeholder por una img
         preview.replaceWith(
           $('<img>').attr({
             id: 'preview-foto',
@@ -315,7 +375,6 @@ $(document).ready(function() {
     }
   });
 
-  // Errores de Django en el template
   {% if form.errors %}
     let errores = [];
     {% for field, errors in form.errors.items %}
