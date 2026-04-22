@@ -255,6 +255,73 @@
           {% endif %}
         </div>
 
+        <!-- Observaciones del Niño -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Observaciones</h3>
+    <div class="card-tools">
+      <a href="{% url 'guarderia:registrar_observacion' %}?nino_id={{ nino.id }}"
+         class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> Nueva Observación
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+          <th>Registrado por</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for obs in observaciones %}
+        <tr>
+          <td>{{ obs.fecha|date:"d/m/Y" }} {{ obs.hora|time:"H:i" }}</td>
+          <td>
+            <span class="badge badge-secondary">{{ obs.get_tipo_display }}</span>
+          </td>
+          <td>
+            {% if obs.importante %}
+              <i class="fas fa-exclamation-circle text-danger mr-1" title="Importante"></i>
+            {% endif %}
+            {{ obs.descripcion|truncatechars:60 }}
+          </td>
+          <td>{{ obs.registrado_por.get_full_name|default:obs.registrado_por.username }}</td>
+          <td>
+            {% if obs.notificar_tutor %}
+              {% if obs.notificado %}
+                <span class="badge badge-success"><i class="fas fa-check"></i> Notificado</span>
+              {% else %}
+                <span class="badge badge-warning"><i class="fas fa-clock"></i> Pendiente</span>
+              {% endif %}
+            {% else %}
+              <span class="badge badge-light">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted">
+            <i class="fas fa-info-circle mr-1"></i> No hay observaciones registradas
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if observaciones %}
+  <div class="card-footer">
+    <a href="{% url 'guarderia:observaciones_nino' nino.id %}" class="btn btn-sm btn-default">
+      Ver todas las observaciones
+    </a>
+  </div>
+  {% endif %}
+</div>
+
       </div><!-- /col-md-8 -->
     </div>
   </div>

@@ -52,6 +52,8 @@ urlpatterns = [
     
     # API para obtener estado de niño (DENTRO/FUERA)
     path('api/nino/<int:nino_id>/estado/', views.obtener_estado_nino, name='obtener_estado_nino'),
+    path('api/buscar-nino/', views.buscar_nino_por_matricula, name='buscar_nino_por_matricula'),
+    
     # =====================================
     # COLONIAS
     # =====================================

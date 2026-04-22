@@ -241,11 +241,13 @@ def detalle_nino(request, nino_id):
     nino = get_object_or_404(Nino, id=nino_id)
     tutores = nino.tutores.filter(activo=True)
     registros = nino.registros.all().order_by('-fecha_hora')[:10]
-    
+    observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')[:10]
+
     ctx = {
         'nino': nino,
         'tutores': tutores,
-        'registros': registros
+        'registros': registros,
+        'observaciones': observaciones,  # <-- nuevo
     }
     return render(request, 'guarderia/ninos/detalle.html', ctx)
 
@@ -718,6 +720,32 @@ def obtener_estado_nino(request, nino_id):
 # ============================================
 # APIs para .NET - MÉTODO DE CONSULTA
 # ============================================
+
+def buscar_nino_por_matricula(request):
+    matricula = request.GET.get('matricula', '').strip()
+
+    if not matricula:
+        return JsonResponse({'success': False, 'mensaje': 'Ingrese una matrícula.'})
+
+    try:
+        nino = Nino.objects.get(numero_matricula=matricula, activo=True)
+    except Nino.DoesNotExist:
+        return JsonResponse({'success': False, 'mensaje': 'No se encontró ningún niño con esa matrícula.'})
+
+    ultimo = RegistroAcceso.objects.filter(nino=nino).order_by('-fecha_hora').first()
+    estado = 'DENTRO' if (ultimo and ultimo.tipo == 'ENTRADA') else 'FUERA'
+
+    return JsonResponse({
+        'success': True,
+        'nino': {
+            'id':       nino.id,
+            'nombre':   nino.nombre_completo(),
+            'grupo':    str(nino.grupo),
+            'edad':     nino.edad(),        # <-- agregar ()
+            'foto_url': nino.foto.url if nino.foto else None,
+            'estado':   estado,
+        }
+    })
 
 @csrf_exempt
 def verificar_huella_capturada_tutor(request, tutor_id):

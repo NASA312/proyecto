@@ -135,62 +135,109 @@
   .panel-error p  { color: rgba(255,255,255,.4); font-size: .86rem; margin-bottom: 24px; }
   .btn-reintentar { background: #63b3ed; color: #1a202c; border: none; border-radius: 10px; padding: 11px 28px; font-size: .88rem; font-weight: 700; cursor: pointer; }
   .btn-reintentar:hover { background: #90cdf4; }
+
+  /* Panel de búsqueda por matrícula */
+.matricula-input {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(99,179,237,.3);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 4px;
+  padding: 14px 20px;
+  width: 100%;
+  outline: none;
+  transition: border .2s;
+}
+.matricula-input:focus { border-color: #63b3ed; box-shadow: 0 0 0 3px rgba(99,179,237,.15); }
+.matricula-input::placeholder { color: rgba(255,255,255,.2); letter-spacing: 2px; font-size: 1rem; }
+
+.btn-buscar {
+  margin-top: 14px; width: 100%;
+  background: #2b6cb0; color: #fff;
+  border: none; border-radius: 12px;
+  padding: 13px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+}
+.btn-buscar:hover { background: #2c5282; }
+
+/* Panel de huella (paso 2) */
+.panel-huella { text-align: center; max-width: 520px; width: 100%; }
+.nino-encontrado-card {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(99,179,237,.2);
+  border-radius: 16px; padding: 18px 22px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 32px; text-align: left;
+}
+.nino-foto-kiosk {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #2d3748; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.nino-foto-kiosk img { width: 100%; height: 100%; object-fit: cover; }
+.nino-foto-kiosk i  { font-size: 1.8rem; color: #90cdf4; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="kiosk-main">
 
-  <!-- PANEL INICIAL -->
-  <div class="panel-inicial" id="card-inicial">
-    <div class="reloj-grande" id="reloj-kiosk-grande">--:--:--</div>
-    <div class="fecha-texto"  id="fecha-kiosk-grande">cargando...</div>
-    <div class="huella-ring">
-      <i class="fas fa-fingerprint huella-icono" id="icono-mano"></i>
+<!-- PASO 1: Ingresar matrícula -->
+<div class="panel-inicial" id="card-matricula">
+  <div class="reloj-grande" id="reloj-kiosk-grande">--:--:--</div>
+  <div class="fecha-texto"  id="fecha-kiosk-grande">cargando...</div>
+
+  <div style="margin-bottom: 28px;">
+    <i class="fas fa-id-card" style="font-size:3rem; color:#63b3ed; display:block; margin-bottom:16px;"></i>
+    <div class="estado-titulo">Ingrese la matrícula del niño</div>
+    <div class="estado-subtitulo">Escriba el número de matrícula y presione Buscar</div>
+  </div>
+
+  <input  type="text"
+          id="input-matricula"
+          class="matricula-input"
+          placeholder="Ej: 2024-001"
+          maxlength="20"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') buscarNino()">
+
+  <div id="error-matricula"
+       style="display:none; color:#fc8181; font-size:.85rem; margin-top:10px;">
+    <i class="fas fa-exclamation-circle"></i> <span id="msg-error-matricula"></span>
+  </div>
+
+  <button class="btn-buscar" id="btn-buscar" onclick="buscarNino()">
+    <i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño
+  </button>
+</div>
+
+<!-- PASO 2: Niño encontrado → poner huella -->
+<div class="panel-huella" id="card-huella" style="display:none;">
+  <div class="nino-encontrado-card" id="nino-card-info">
+    <div class="nino-foto-kiosk" id="nino-foto-wrap">
+      <i class="fas fa-child"></i>
     </div>
-    <div class="estado-titulo" id="mensaje-estado">Coloque su dedo en el lector</div>
-    <div class="estado-subtitulo">El sistema verificará su identidad automáticamente</div>
-    <div class="scan-bar" id="barra-progreso">
-      <div class="scan-bar-inner"></div>
+    <div>
+      <h5 style="color:#fff; margin:0 0 4px;" id="nino-nombre-encontrado">—</h5>
+      <small style="color:rgba(255,255,255,.45);" id="nino-grupo-encontrado">—</small><br>
+      <small id="nino-estado-badge"></small>
     </div>
   </div>
 
-  <!-- PANEL VERIFICADO -->
-  <div class="panel-verificado" id="card-verificado" style="display:none;">
-    <div class="verificado-header">
-      <i class="fas fa-check-circle"></i>
-      <h4>Tutor Verificado</h4>
-    </div>
-    <div class="verificado-body">
-      <div class="tutor-info">
-        <div class="tutor-avatar">
-          <img id="tutor-foto" src="" alt="" style="display:none;">
-          <i class="fas fa-user" id="tutor-icono"></i>
-        </div>
-        <div class="tutor-datos">
-          <h5 id="tutor-nombre"></h5>
-          <p id="tutor-parentesco"></p>
-          <p><i class="fas fa-phone" style="font-size:.72rem;margin-right:4px;"></i><span id="tutor-telefono"></span></p>
-        </div>
-      </div>
-      <div class="ninos-label"><i class="fas fa-child" style="margin-right:6px;"></i>Niños autorizados</div>
-      
-      <!-- Botones de Registro Masivo -->
-      <div id="botones-masivos" style="display:none; margin-bottom: 20px;">
-        <button class="btn-entrada" style="width: 48%; margin-right: 2%;" onclick="registrarTodosMasivo('ENTRADA')">
-          <i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar TODOS Entrada
-        </button>
-        <button class="btn-salida" style="width: 48%;" onclick="registrarTodosMasivo('SALIDA')">
-          <i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar TODOS Salida
-        </button>
-      </div>
-      
-      <div id="lista-ninos"></div>
-      <button class="btn-nueva" onclick="reiniciar()">
-        <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Nueva Verificación
-      </button>
-    </div>
+  <div class="huella-ring" id="huella-ring-paso2">
+    <i class="fas fa-fingerprint huella-icono" id="icono-huella-paso2"></i>
   </div>
+  <div class="estado-titulo"  id="msg-huella-paso2">Coloque su dedo en el lector</div>
+  <div class="estado-subtitulo">El tutor debe poner su huella para confirmar</div>
+  <div class="scan-bar"><div class="scan-bar-inner"></div></div>
+
+  <button class="btn-nueva" style="margin-top:24px;" onclick="volverAMatricula()">
+    <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Buscar otro niño
+  </button>
+</div>
 
   <!-- PANEL ERROR -->
   <div class="panel-error" id="card-error" style="display:none;">
@@ -209,13 +256,14 @@
 <script>
 var DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
 function tickReloj() {
   var a = new Date();
   var h24 = a.getHours();
-  var h = String(h24 % 12 || 12).padStart(2,'0');
+  var h    = String(h24 % 12 || 12).padStart(2,'0');
   var ampm = h24 >= 12 ? 'PM' : 'AM';
-  var m = String(a.getMinutes()).padStart(2,'0');
-  var s = String(a.getSeconds()).padStart(2,'0');
+  var m    = String(a.getMinutes()).padStart(2,'0');
+  var s    = String(a.getSeconds()).padStart(2,'0');
   var eg = document.getElementById('reloj-kiosk-grande');
   var ef = document.getElementById('fecha-kiosk-grande');
   var et = document.getElementById('reloj-kiosk');
@@ -226,376 +274,242 @@ function tickReloj() {
 tickReloj();
 setInterval(tickReloj, 1000);
 
-let verificando = false, intervalPolling = null, tutorActualId = null, ninosEstados = {};
+// ── Estado global ──────────────────────────────────────────────
+let intervalPolling = null;
+let ninoActual      = null;   // objeto con id, nombre, grupo, estado
+let tutorActualId   = null;
 
-document.addEventListener('DOMContentLoaded', function() { iniciarVerificacion(); });
+// ── Al cargar ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  mostrarPanelMatricula();
+  document.getElementById('input-matricula').focus();
+});
 
-function iniciarVerificacion() {
-  if (verificando) return;
-  verificando = true;
-  
-  // CAMBIO 4: Solo mostrar mensaje "Coloque su dedo"
-  document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector';
-  document.getElementById('icono-mano').className = 'fas fa-fingerprint huella-icono';
-  
+// ══════════════════════════════════════════════════════════════
+//  PASO 1 — BUSCAR NIÑO POR MATRÍCULA
+// ══════════════════════════════════════════════════════════════
+function mostrarPanelMatricula() {
+  document.getElementById('card-matricula').style.display  = 'block';
+  document.getElementById('card-huella').style.display     = 'none';
+  // card-verificado y card-error pueden no existir, verificar antes
+  var cv = document.getElementById('card-verificado');
+  var ce = document.getElementById('card-error');
+  if (cv) cv.style.display = 'none';
+  if (ce) ce.style.display = 'none';
+  document.getElementById('input-matricula').value = '';
+  ocultarErrorMatricula();
+  setTimeout(() => document.getElementById('input-matricula').focus(), 100);
+}
+
+function volverAMatricula() {
+  detenerPolling();
+  ninoActual    = null;
+  tutorActualId = null;
+  // Cancelar captura en el servidor .NET si estaba activa
+  fetch('/guarderia/api/cancelar-huella/', { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} }).catch(()=>{});
+  mostrarPanelMatricula();
+}
+
+function mostrarErrorMatricula(msg) {
+  document.getElementById('error-matricula').style.display = 'block';
+  document.getElementById('msg-error-matricula').textContent = msg;
+  document.getElementById('btn-buscar').disabled = false;
+  document.getElementById('btn-buscar').innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+}
+
+function ocultarErrorMatricula() {
+  document.getElementById('error-matricula').style.display = 'none';
+}
+
+function buscarNino() {
+  var matricula = document.getElementById('input-matricula').value.trim();
+  if (!matricula) {
+    mostrarErrorMatricula('Ingrese una matrícula.');
+    return;
+  }
+
+  ocultarErrorMatricula();
+  var btn = document.getElementById('btn-buscar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Buscando...';
+
+  fetch('/guarderia/api/buscar-nino/?matricula=' + encodeURIComponent(matricula))
+    .then(r => r.json())
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+
+      if (!data.success) {
+        mostrarErrorMatricula(data.mensaje || 'Niño no encontrado.');
+        return;
+      }
+
+      ninoActual = data.nino;  // { id, nombre, grupo, edad, foto_url, estado }
+      mostrarPanelHuella();
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+      mostrarErrorMatricula('Error de conexión. Intente de nuevo.');
+    });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PASO 2 — MOSTRAR PANEL DE HUELLA
+// ══════════════════════════════════════════════════════════════
+function mostrarPanelHuella() {
+  // Llenar datos del niño
+  document.getElementById('nino-nombre-encontrado').textContent = ninoActual.nombre;
+  document.getElementById('nino-grupo-encontrado').textContent  = 'Grupo: ' + ninoActual.grupo + ' · ' + ninoActual.edad + ' años';
+
+  // Badge de estado
+  var badge = '';
+  if (ninoActual.estado === 'DENTRO') {
+    badge = '<span style="background:rgba(72,187,120,.15);color:#68d391;border:1px solid rgba(72,187,120,.3);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">● DENTRO — se registrará SALIDA</span>';
+  } else {
+    badge = '<span style="background:rgba(160,174,192,.1);color:#a0aec0;border:1px solid rgba(160,174,192,.2);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">○ FUERA — se registrará ENTRADA</span>';
+  }
+  document.getElementById('nino-estado-badge').innerHTML = badge;
+
+  // Foto
+  var wrap = document.getElementById('nino-foto-wrap');
+  if (ninoActual.foto_url) {
+    wrap.innerHTML = '<img src="' + ninoActual.foto_url + '" alt="">';
+  } else {
+    wrap.innerHTML = '<i class="fas fa-child"></i>';
+  }
+
+  document.getElementById('card-matricula').style.display  = 'none';
+  document.getElementById('card-huella').style.display     = 'block';
+  var cv = document.getElementById('card-verificado');
+  if (cv) cv.style.display = 'none';
+  var ce = document.getElementById('card-error');
+  if (ce) ce.style.display = 'none';
+  document.getElementById('msg-huella-paso2').textContent  = 'Coloque su dedo en el lector';
+  document.getElementById('icono-huella-paso2').className  = 'fas fa-fingerprint huella-icono';
+
+  // Iniciar captura en el servidor .NET
+  iniciarCapturaHuella();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CAPTURA DE HUELLA (llama al backend Django que habla con .NET)
+// ══════════════════════════════════════════════════════════════
+function iniciarCapturaHuella() {
   fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
   })
   .then(r => r.json())
-  .then(d => d.success ? iniciarPolling() : mostrarError(d.mensaje || 'Error al iniciar captura'))
-  .catch(() => mostrarError('No se puede conectar con el servidor. Verifique que el lector esté conectado.'));
+  .then(function(d) {
+    if (d.success) {
+      iniciarPolling();
+    } else {
+      mostrarError(d.mensaje || 'Error al iniciar el lector.');
+    }
+  })
+  .catch(() => mostrarError('No se puede conectar con el lector. Verifique que esté conectado.'));
 }
 
 function iniciarPolling() {
-  // CAMBIO 3: Eliminar timeout - polling infinito
+  detenerPolling();
   intervalPolling = setInterval(function() {
     fetch("{% url 'guarderia:verificar_huella_estado' %}")
       .then(r => r.json())
-      .then(d => { 
-        if (d.completado) { 
-          clearInterval(intervalPolling); 
-          d.success ? mostrarTutorVerificado(d) : mostrarError(d.mensaje || 'Huella no reconocida'); 
-        } 
+      .then(function(d) {
+        if (!d.completado) return;
+        detenerPolling();
+        if (d.success) {
+          tutorActualId = d.tutor.id;
+          confirmarYRegistrar(d.tutor);
+        } else {
+          mostrarError(d.mensaje || 'Huella no reconocida.');
+        }
       })
       .catch(e => console.error(e));
   }, 1000);
 }
 
-function mostrarTutorVerificado(data) {
-  tutorActualId = data.tutor.id;
-  
-  // CAMBIO 2: Si solo tiene 1 niño, registro automático
-  if (data.ninos && data.ninos.length === 1) {
-    procesarRegistroAutomatico(data.ninos[0], data.tutor);
-    return;
-  }
-  
-  // Si tiene varios niños, mostrar panel normal
-  document.getElementById('card-inicial').style.display    = 'none';
-  document.getElementById('card-error').style.display      = 'none';
-  document.getElementById('card-verificado').style.display = 'block';
-  document.getElementById('tutor-nombre').textContent     = data.tutor.nombre;
-  document.getElementById('tutor-parentesco').textContent = data.tutor.parentesco;
-  document.getElementById('tutor-telefono').textContent   = data.tutor.telefono;
-  
-  if (data.tutor.foto_url) {
-    document.getElementById('tutor-foto').src = data.tutor.foto_url;
-    document.getElementById('tutor-foto').style.display  = 'block';
-    document.getElementById('tutor-icono').style.display = 'none';
-  } else {
-    document.getElementById('tutor-foto').style.display  = 'none';
-    document.getElementById('tutor-icono').style.display = 'block';
-  }
-  
-  var ln = document.getElementById('lista-ninos');
-  ln.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.4);padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-  
-  if (data.ninos && data.ninos.length > 0) {
-    Promise.all(data.ninos.map(n => obtenerEstadoNino(n.id))).then(function(estados) {
-      ln.innerHTML = '';
-      
-      // Clasificar niños por estado
-      let ninosDentro = [];
-      let ninosFuera = [];
-      
-      data.ninos.forEach(function(n, i) { 
-        ninosEstados[n.id] = estados[i].estado;
-        
-        if (estados[i].estado === 'DENTRO') {
-          ninosDentro.push({nino: n, estado: estados[i].estado});
-        } else {
-          ninosFuera.push({nino: n, estado: estados[i].estado});
-        }
-      });
-      
-      // Mostrar SOLO niños DENTRO (si hay)
-      if (ninosDentro.length > 0) {
-        ln.innerHTML += '<div style="background: rgba(72,187,120,.1); border: 1px solid rgba(72,187,120,.3); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;">'
-                      + '<small style="color: #68d391; font-weight: 600;"><i class="fas fa-user-check"></i> Niños DENTRO de la guardería (' + ninosDentro.length + ')</small>'
-                      + '</div>';
-        
-        ninosDentro.forEach(function(item) {
-          mostrarTarjetaNino(item.nino, item.estado);
-        });
-      }
-      
-      // Mostrar SOLO niños FUERA (si hay)
-      if (ninosFuera.length > 0) {
-        ln.innerHTML += '<div style="background: rgba(160,174,192,.1); border: 1px solid rgba(160,174,192,.3); border-radius: 8px; padding: 8px 12px; margin: 15px 0 10px 0;">'
-                      + '<small style="color: #a0aec0; font-weight: 600;"><i class="fas fa-home"></i> Niños FUERA de la guardería (' + ninosFuera.length + ')</small>'
-                      + '</div>';
-        
-        ninosFuera.forEach(function(item) {
-          mostrarTarjetaNino(item.nino, item.estado);
-        });
-      }
-      
-      // Mostrar botones masivos inteligentes
-      mostrarBotonesMasivos(ninosDentro.length, ninosFuera.length);
-    });
-  } else {
-    ln.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:16px;">No hay niños asignados a este tutor</p>';
-  }
-  
-  verificando = false;
+function detenerPolling() {
+  if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
 }
 
-// NUEVA FUNCIÓN: Mostrar botones masivos inteligentes
-function mostrarBotonesMasivos(cantidadDentro, cantidadFuera) {
-  const contenedor = document.getElementById('botones-masivos');
-  const totalNinos = cantidadDentro + cantidadFuera;
-  
-  if (totalNinos < 2) {
-    contenedor.style.display = 'none';
-    return;
-  }
-  
-  contenedor.innerHTML = '';
-  let htmlBotones = '';
-  
-  // Botón "TODOS Entrada" - Solo si hay niños FUERA
-  if (cantidadFuera > 0) {
-    htmlBotones += `
-      <button class="btn-entrada" style="width: ${cantidadDentro > 0 ? '48%' : '100%'}; ${cantidadDentro > 0 ? 'margin-right: 2%;' : ''}" 
-              onclick="registrarTodosMasivo('ENTRADA')">
-        <i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar ${cantidadFuera} Entrada
-      </button>`;
-  }
-  
-  // Botón "TODOS Salida" - Solo si hay niños DENTRO
-  if (cantidadDentro > 0) {
-    htmlBotones += `
-      <button class="btn-salida" style="width: ${cantidadFuera > 0 ? '48%' : '100%'};" 
-              onclick="registrarTodosMasivo('SALIDA')">
-        <i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar ${cantidadDentro} Salida
-      </button>`;
-  }
-  
-  // Mostrar advertencia si hay estados mixtos
-  if (cantidadDentro > 0 && cantidadFuera > 0) {
-    contenedor.innerHTML = `
-      <div style="background: rgba(99,179,237,.1); border: 1px solid rgba(99,179,237,.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; text-align: center;">
-        <small style="color: rgba(99,179,237,.9);">
-          <i class="fas fa-info-circle"></i> ${cantidadDentro} dentro, ${cantidadFuera} fuera. Usa los botones rápidos o regístralos individualmente.
-        </small>
-      </div>` + htmlBotones;
-  } else {
-    contenedor.innerHTML = htmlBotones;
-  }
-  
-  contenedor.style.display = 'block';
-}
+// ══════════════════════════════════════════════════════════════
+//  PASO 3 — CONFIRMAR Y REGISTRAR
+// ══════════════════════════════════════════════════════════════
+function confirmarYRegistrar(tutor) {
+  var accion = (ninoActual.estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
+  var colorBtn = accion === 'ENTRADA' ? '#276749' : '#2b4c7e';
+  var iconoBtn = accion === 'ENTRADA' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
-// NUEVA FUNCIÓN: Registrar todos los niños según su ESTADO CORRECTO
-function registrarTodosMasivo(tipoAccion) {
-  // Filtrar niños según la acción
-  let ninosParaRegistrar = [];
-  
-  for (let ninoId in ninosEstados) {
-    let estado = ninosEstados[ninoId];
-    
-    // Para ENTRADA: solo niños FUERA
-    if (tipoAccion === 'ENTRADA' && (estado === 'FUERA' || estado === 'SIN_REGISTROS')) {
-      ninosParaRegistrar.push(ninoId);
-    }
-    // Para SALIDA: solo niños DENTRO
-    else if (tipoAccion === 'SALIDA' && estado === 'DENTRO') {
-      ninosParaRegistrar.push(ninoId);
-    }
-  }
-  
-  if (ninosParaRegistrar.length === 0) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'No hay niños para ' + tipoAccion,
-      text: 'No hay niños en el estado correcto para esta acción',
-      background: '#161b22',
-      color: '#fff'
-    });
-    return;
-  }
-  
   Swal.fire({
-    title: '¿Registrar como ' + tipoAccion + '?',
-    html: '<p style="color:#ccc;margin-bottom:8px;">Se registrarán <strong>' + ninosParaRegistrar.length + '</strong> niño' + (ninosParaRegistrar.length > 1 ? 's' : '') + '</p>'
-        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+    title: 'Tutor verificado',
+    html:
+      '<p style="color:#fff;margin-bottom:4px;"><strong>' + tutor.nombre + '</strong></p>'
+    + '<p style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:16px;">' + tutor.parentesco + '</p>'
+    + '<p style="color:#ccc;margin-bottom:8px;">Se registrará: <strong>' + accion + '</strong> de <strong>' + ninoActual.nombre + '</strong></p>'
+    + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
     icon: 'question',
-    background: '#161b22',
-    color: '#fff',
+    background: '#161b22', color: '#fff',
     showCancelButton: true,
-    confirmButtonColor: tipoAccion === 'ENTRADA' ? '#276749' : '#2b4c7e',
-    confirmButtonText: 'Sí, registrar',
+    confirmButtonColor: colorBtn,
+    confirmButtonText: '<i class="fas ' + iconoBtn + '" style="margin-right:6px;"></i>Registrar ' + accion,
     cancelButtonText: 'Cancelar',
     preConfirm: () => document.getElementById('swal-obs').value
   }).then(function(result) {
-    if (!result.isConfirmed) return;
-    
-    const observaciones = result.value || '';
-    
-    // Mostrar loading
-    Swal.fire({
-      title: 'Registrando...',
-      html: 'Por favor espera',
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); }
-    });
-    
-    // Registrar cada niño secuencialmente
-    let promesas = [];
-    ninosParaRegistrar.forEach(function(ninoId) {
-      promesas.push(ejecutarRegistro(ninoId, tipoAccion, observaciones));
-    });
-    
-    Promise.all(promesas).then(function() {
-      Swal.fire({
-        icon: 'success',
-        title: '¡Completado!',
-        text: ninosParaRegistrar.length + ' niño' + (ninosParaRegistrar.length > 1 ? 's' : '') + ' registrado' + (ninosParaRegistrar.length > 1 ? 's' : '') + ' como ' + tipoAccion,
-        timer: 2000,
-        showConfirmButton: false,
-        background: '#161b22',
-        color: '#fff'
-      }).then(reiniciar);
-    }).catch(function(error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Hubo un problema al registrar algunos niños',
-        background: '#161b22',
-        color: '#fff'
-      });
-    });
-  });
-}
+    if (!result.isConfirmed) { volverAMatricula(); return; }
 
-// CAMBIO 2: Función para registro automático (1 niño)
-function procesarRegistroAutomatico(nino, tutor) {
-  obtenerEstadoNino(nino.id).then(function(estadoData) {
-    const estado = estadoData.estado;
-    const accion = (estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
-    
-    Swal.fire({
-      title: 'Registro Automático',
-      html: '<p style="color:#fff;margin-bottom:12px;"><strong>' + nino.nombre + '</strong></p>'
-          + '<p style="color:#ccc;margin-bottom:8px;">Se registrará automáticamente: <strong>' + accion + '</strong></p>'
-          + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
-      icon: 'question', background: '#161b22', color: '#fff',
-      showCancelButton: true,
-      confirmButtonColor: accion === 'ENTRADA' ? '#276749' : '#2b4c7e',
-      confirmButtonText: 'Sí, registrar ' + accion,
-      cancelButtonText: 'Cancelar',
-      preConfirm: () => document.getElementById('swal-obs').value
-    }).then(function(result) {
-      if (result.isConfirmed) {
-        ejecutarRegistro(nino.id, accion, result.value || '');
+    var url = accion === 'ENTRADA'
+      ? "{% url 'guarderia:registrar_entrada' %}"
+      : "{% url 'guarderia:registrar_salida' %}";
+
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({
+        nino_id:      ninoActual.id,
+        tutor_id:     tutorActualId,
+        observaciones: result.value || ''
+      })
+    })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.success) {
+        Swal.fire({
+          icon: 'success', title: accion + ' registrada',
+          text: data.mensaje, timer: 3000, showConfirmButton: false,
+          background: '#161b22', color: '#fff'
+        }).then(volverAMatricula);
       } else {
-        reiniciar();
+        Swal.fire({
+          icon: 'error', title: 'Error',
+          text: data.mensaje, background: '#161b22', color: '#fff'
+        }).then(volverAMatricula);
       }
+    })
+    .catch(() => {
+      Swal.fire({ icon:'error', title:'Error', text:'No se pudo registrar.', background:'#161b22', color:'#fff' })
+        .then(volverAMatricula);
     });
   });
 }
 
-function ejecutarRegistro(ninoId, tipoAccion, observaciones) {
-  var url = tipoAccion === 'ENTRADA' ? "{% url 'guarderia:registrar_entrada' %}" : "{% url 'guarderia:registrar_salida' %}";
-  
-  fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-    body: JSON.stringify({ nino_id: ninoId, tutor_id: tutorActualId, observaciones: observaciones })
-  })
-  .then(r => r.json())
-  .then(function(data) {
-    if (data.success) {
-      Swal.fire({ 
-        icon: 'success', 
-        title: tipoAccion + ' registrada', 
-        text: data.mensaje, 
-        timer: 3000, 
-        showConfirmButton: false, 
-        background: '#161b22', 
-        color: '#fff' 
-      }).then(reiniciar);
-    } else {
-      Swal.fire({ 
-        icon: 'error', 
-        title: 'Error', 
-        text: data.mensaje, 
-        background: '#161b22', 
-        color: '#fff' 
-      }).then(reiniciar);
-    }
-  })
-  .catch(function() {
-    Swal.fire({ 
-      icon: 'error', 
-      title: 'Error', 
-      text: 'No se pudo registrar', 
-      background: '#161b22', 
-      color: '#fff' 
-    }).then(reiniciar);
-  });
-}
-
-function obtenerEstadoNino(ninoId) {
-  return fetch('/guarderia/api/nino/' + ninoId + '/estado/')
-    .then(r => r.json()).catch(() => ({ estado: 'DESCONOCIDO' }));
-}
-
-function mostrarTarjetaNino(nino, estado) {
-  var fotoHtml = nino.foto_url ? '<img src="' + nino.foto_url + '" alt="">' : '<i class="fas fa-child"></i>';
-  var badge, boton;
-  
-  // CAMBIO 1: Botones dinámicos según estado real
-  if (estado === 'DENTRO') {
-    badge = '<span class="badge-dentro">● DENTRO</span>';
-    // Solo botón de SALIDA
-    boton = '<button class="btn-salida" onclick="registrarAccion(' + nino.id + ',\'SALIDA\')"><i class="fas fa-sign-out-alt" style="margin-right:5px;"></i>Registrar Salida</button>';
-  } else if (estado === 'FUERA' || estado === 'SIN_REGISTROS') {
-    badge = '<span class="badge-fuera">○ FUERA</span>';
-    // Solo botón de ENTRADA
-    boton = '<button class="btn-entrada" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')"><i class="fas fa-sign-in-alt" style="margin-right:5px;"></i>Registrar Entrada</button>';
-  } else {
-    // Estado desconocido - mostrar ambos botones como fallback
-    badge = '<span class="badge-fuera">? Desconocido</span>';
-    boton = '<button class="btn-entrada" style="margin-right:6px;" onclick="registrarAccion(' + nino.id + ',\'ENTRADA\')">Entrada</button>'
-          + '<button class="btn-salida"  onclick="registrarAccion(' + nino.id + ',\'SALIDA\')">Salida</button>';
-  }
-  
-  document.getElementById('lista-ninos').insertAdjacentHTML('beforeend',
-    '<div class="nino-card" id="card-nino-' + nino.id + '">'
-    + '<div class="nino-foto">' + fotoHtml + '</div>'
-    + '<div class="nino-datos"><h6>' + nino.nombre + '</h6>'
-    + '<small>Grupo: ' + nino.grupo + ' · ' + nino.edad + ' años' + badge + '</small></div>'
-    + '<div>' + boton + '</div></div>');
-}
-
-function registrarAccion(ninoId, tipoAccion) {
-  Swal.fire({
-    title: '¿Registrar ' + tipoAccion + '?',
-    html: '<p style="color:#ccc;margin-bottom:8px;">¿Desea agregar alguna observación?</p>'
-        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
-    icon: 'question', background: '#161b22', color: '#fff',
-    showCancelButton: true,
-    confirmButtonColor: tipoAccion === 'ENTRADA' ? '#276749' : '#2b4c7e',
-    confirmButtonText: 'Sí, registrar', cancelButtonText: 'Cancelar',
-    preConfirm: () => document.getElementById('swal-obs').value
-  }).then(function(result) {
-    if (!result.isConfirmed) return;
-    var btn = document.querySelector('#card-nino-' + ninoId + ' button');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-    ejecutarRegistro(ninoId, tipoAccion, result.value || '');
-  });
-}
-
+// ══════════════════════════════════════════════════════════════
+//  PANEL ERROR
+// ══════════════════════════════════════════════════════════════
 function mostrarError(mensaje) {
-  document.getElementById('card-inicial').style.display    = 'none';
-  document.getElementById('card-verificado').style.display = 'none';
-  document.getElementById('card-error').style.display      = 'block';
-  document.getElementById('mensaje-error').textContent     = mensaje;
-  verificando = false;
-  setTimeout(reiniciar, 5000);
+  detenerPolling();
+  document.getElementById('card-matricula').style.display = 'none';
+  document.getElementById('card-huella').style.display    = 'none';
+  var cv = document.getElementById('card-verificado');
+  if (cv) cv.style.display = 'none';
+  document.getElementById('card-error').style.display     = 'block';
+  document.getElementById('mensaje-error').textContent    = mensaje;
+  setTimeout(volverAMatricula, 5000);
 }
+
+// El botón reintentar del panel error vuelve al inicio
+function reiniciar() { volverAMatricula(); }
 
 function reiniciar() {
   if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
