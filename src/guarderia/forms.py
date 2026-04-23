@@ -248,3 +248,19 @@ class ObservacionNinoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Solo mostrar niños activos
         self.fields['nino'].queryset = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+        
+class ConfiguracionGuarderiaForm(forms.ModelForm):
+    class Meta:
+        model = ConfiguracionGuarderia
+        fields = ['tiempo_minimo_entre_registros']
+        widgets = {
+            'tiempo_minimo_entre_registros': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 1440,
+                'placeholder': 'Ej: 30',
+            })
+        }
+        labels = {
+            'tiempo_minimo_entre_registros': 'Tiempo mínimo entre registros (minutos)',
+        }

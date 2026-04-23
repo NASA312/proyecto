@@ -240,6 +240,39 @@
         {% endif %}
 
         <!-- ============================================ -->
+        <!-- REPORTES -->
+        <!-- ============================================ -->
+
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+        <li class="nav-item menu-close">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-chart-bar"></i>
+            <p>
+              Reportes
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+
+            <li class="nav-item">
+              <a href="{% url 'guarderia:reporte_tutores_dependencia' %}" class="nav-link">
+                <i class="fas fa-users nav-icon"></i>
+                <p>Tutores por Dependencia</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="{% url 'guarderia:reporte_asistencia_genero' %}" class="nav-link">
+                <i class="fas fa-venus-mars nav-icon"></i>
+                <p>Asistencia por Género</p>
+              </a>
+            </li>
+
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- ============================================ -->
         <!-- GRUPOS (ADMIN y EMPLEADO) -->
         <!-- ============================================ -->
         {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
@@ -296,6 +329,14 @@
             </li>
           </ul>
         </li>
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+<li class="nav-item">
+  <a href="{% url 'guarderia:configuracion_guarderia' %}" class="nav-link {% if request.resolver_match.url_name == 'configuracion_guarderia' %}active{% endif %}">
+    <i class="nav-icon fas fa-clock"></i>
+    <p>Tiempo entre registros</p>
+  </a>
+</li>
+{% endif %}
 
         <!-- ============================================ -->
         <!-- CONFIGURACIÓN (SOLO ADMIN y SUPERUSER) -->

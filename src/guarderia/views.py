@@ -464,21 +464,17 @@ def historial_accesos(request):
 
 @csrf_exempt  
 def registrar_entrada(request):
-    """Registrar entrada de un niño"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            nino_id = data.get('nino_id')
-            tutor_id = data.get('tutor_id')
+            nino_id   = data.get('nino_id')
+            tutor_id  = data.get('tutor_id')
             observaciones = data.get('observaciones', '').strip()
             
             if not nino_id or not tutor_id:
-                return JsonResponse({
-                    'success': False,
-                    'mensaje': 'Faltan datos'
-                }, status=400)
+                return JsonResponse({'success': False, 'mensaje': 'Faltan datos'}, status=400)
             
-            nino = Nino.objects.get(id=nino_id, activo=True)
+            nino  = Nino.objects.get(id=nino_id, activo=True)
             tutor = Tutor.objects.get(id=tutor_id, activo=True)
             
             # Verificar autorización
@@ -488,41 +484,58 @@ def registrar_entrada(request):
                     'mensaje': f'{tutor.nombre_completo()} no está autorizado para este niño'
                 }, status=403)
             
+            # ── Validación de tiempo mínimo ──────────────────────────
+            config = ConfiguracionGuarderia.get_solo()
+            minutos_minimo = config.tiempo_minimo_entre_registros
+            
+            ultimo_registro = RegistroAcceso.objects.filter(
+                nino=nino
+            ).order_by('-fecha_hora').first()
+            
+            if ultimo_registro:
+                delta = timezone.now() - ultimo_registro.fecha_hora
+                minutos_transcurridos = delta.total_seconds() / 60
+                
+                if minutos_transcurridos < minutos_minimo:
+                    faltan = minutos_minimo - minutos_transcurridos
+                    minutos_faltan = int(faltan)
+                    segundos_faltan = int((faltan - minutos_faltan) * 60)
+                    
+                    tipo_anterior = 'entrada' if ultimo_registro.tipo == 'ENTRADA' else 'salida'
+                    return JsonResponse({
+                        'success': False,
+                        'tiempo_bloqueado': True,
+                        'mensaje': (
+                            f'Debe esperar {minutos_faltan}m {segundos_faltan}s más. '
+                            f'El último registro ({tipo_anterior}) fue hace '
+                            f'{int(minutos_transcurridos)}m {int((minutos_transcurridos % 1) * 60)}s. '
+                            f'El tiempo mínimo entre registros es {minutos_minimo} minutos.'
+                        )
+                    }, status=400)
+            # ── Fin validación de tiempo ─────────────────────────────
+            
             # Verificar si ya hay una entrada sin salida
             ultima_entrada = RegistroAcceso.objects.filter(
-                nino=nino,
-                tipo='ENTRADA'
+                nino=nino, tipo='ENTRADA'
             ).order_by('-fecha_hora').first()
             
             if ultima_entrada:
-                # Buscar si hay una salida posterior
                 salida_posterior = RegistroAcceso.objects.filter(
-                    nino=nino,
-                    tipo='SALIDA',
+                    nino=nino, tipo='SALIDA',
                     fecha_hora__gt=ultima_entrada.fecha_hora
                 ).exists()
                 
                 if not salida_posterior:
                     return JsonResponse({
                         'success': False,
-                        'mensaje': f'{nino.nombre_completo()} ya tiene una entrada registrada sin salida. Debe registrar primero la salida.'
+                        'mensaje': f'{nino.nombre_completo()} ya tiene una entrada registrada sin salida.'
                     }, status=400)
             
-            # Registrar entrada
             registro = RegistroAcceso.objects.create(
-                nino=nino,
-                tutor=tutor,
-                tipo='ENTRADA',
-                verificacion_exitosa=True,
-                metodo_verificacion='HUELLA',
+                nino=nino, tutor=tutor, tipo='ENTRADA',
+                verificacion_exitosa=True, metodo_verificacion='HUELLA',
                 observaciones=observaciones if observaciones else None
             )
-            
-            print(f"✅ ENTRADA REGISTRADA:")
-            print(f"   Niño: {nino.nombre_completo()}")
-            print(f"   Tutor: {tutor.nombre_completo()}")
-            print(f"   Hora: {registro.fecha_hora}")
-            print(f"   Observaciones: {observaciones or 'Sin observaciones'}")
             
             return JsonResponse({
                 'success': True,
@@ -531,46 +544,31 @@ def registrar_entrada(request):
             })
             
         except Nino.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Niño no encontrado'
-            }, status=404)
+            return JsonResponse({'success': False, 'mensaje': 'Niño no encontrado'}, status=404)
         except Tutor.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Tutor no encontrado'
-            }, status=404)
+            return JsonResponse({'success': False, 'mensaje': 'Tutor no encontrado'}, status=404)
         except Exception as e:
-            print(f"❌ Error registrando entrada: {e}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({
-                'success': False,
-                'mensaje': f'Error: {str(e)}'
-            }, status=500)
+            return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
     
     return JsonResponse({'success': False}, status=405)
+
 
 
 # MODIFICAR la función registrar_salida existente para agregar validaciones
 
 @csrf_exempt  
 def registrar_salida(request):
-    """Registrar salida de un niño"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            nino_id = data.get('nino_id')
-            tutor_id = data.get('tutor_id')
+            nino_id   = data.get('nino_id')
+            tutor_id  = data.get('tutor_id')
             observaciones = data.get('observaciones', '').strip()
             
             if not nino_id or not tutor_id:
-                return JsonResponse({
-                    'success': False,
-                    'mensaje': 'Faltan datos'
-                }, status=400)
+                return JsonResponse({'success': False, 'mensaje': 'Faltan datos'}, status=400)
             
-            nino = Nino.objects.get(id=nino_id, activo=True)
+            nino  = Nino.objects.get(id=nino_id, activo=True)
             tutor = Tutor.objects.get(id=tutor_id, activo=True)
             
             # Verificar autorización
@@ -580,44 +578,60 @@ def registrar_salida(request):
                     'mensaje': f'{tutor.nombre_completo()} no está autorizado para recoger a {nino.nombre_completo()}'
                 }, status=403)
             
+            # ── Validación de tiempo mínimo ──────────────────────────
+            config = ConfiguracionGuarderia.get_solo()
+            minutos_minimo = config.tiempo_minimo_entre_registros
+            
+            ultimo_registro = RegistroAcceso.objects.filter(
+                nino=nino
+            ).order_by('-fecha_hora').first()
+            
+            if ultimo_registro:
+                delta = timezone.now() - ultimo_registro.fecha_hora
+                minutos_transcurridos = delta.total_seconds() / 60
+                
+                if minutos_transcurridos < minutos_minimo:
+                    faltan = minutos_minimo - minutos_transcurridos
+                    minutos_faltan = int(faltan)
+                    segundos_faltan = int((faltan - minutos_faltan) * 60)
+                    
+                    tipo_anterior = 'entrada' if ultimo_registro.tipo == 'ENTRADA' else 'salida'
+                    return JsonResponse({
+                        'success': False,
+                        'tiempo_bloqueado': True,
+                        'mensaje': (
+                            f'Debe esperar {minutos_faltan}m {segundos_faltan}s más. '
+                            f'El último registro ({tipo_anterior}) fue hace '
+                            f'{int(minutos_transcurridos)}m {int((minutos_transcurridos % 1) * 60)}s. '
+                            f'El tiempo mínimo entre registros es {minutos_minimo} minutos.'
+                        )
+                    }, status=400)
+            # ── Fin validación de tiempo ─────────────────────────────
+            
             # Verificar si hay una entrada previa
             ultima_entrada = RegistroAcceso.objects.filter(
-                nino=nino,
-                tipo='ENTRADA'
+                nino=nino, tipo='ENTRADA'
             ).order_by('-fecha_hora').first()
             
             if ultima_entrada:
-                # Verificar si ya tiene una salida posterior
                 salida_posterior = RegistroAcceso.objects.filter(
-                    nino=nino,
-                    tipo='SALIDA',
+                    nino=nino, tipo='SALIDA',
                     fecha_hora__gt=ultima_entrada.fecha_hora
                 ).exists()
                 
                 if salida_posterior:
                     return JsonResponse({
                         'success': False,
-                        'mensaje': f'{nino.nombre_completo()} ya tiene una salida registrada. Debe registrar primero una nueva entrada.'
+                        'mensaje': f'{nino.nombre_completo()} ya tiene una salida registrada.'
                     }, status=400)
             else:
-                # Si no hay entrada previa, advertir pero permitir
-                observaciones = (observaciones + " | " if observaciones else "") + "SALIDA SIN ENTRADA PREVIA REGISTRADA"
+                observaciones = (observaciones + ' | ' if observaciones else '') + 'SALIDA SIN ENTRADA PREVIA REGISTRADA'
             
-            # Registrar salida
             registro = RegistroAcceso.objects.create(
-                nino=nino,
-                tutor=tutor,
-                tipo='SALIDA',
-                verificacion_exitosa=True,
-                metodo_verificacion='HUELLA',
+                nino=nino, tutor=tutor, tipo='SALIDA',
+                verificacion_exitosa=True, metodo_verificacion='HUELLA',
                 observaciones=observaciones if observaciones else None
             )
-            
-            print(f"✅ SALIDA REGISTRADA:")
-            print(f"   Niño: {nino.nombre_completo()}")
-            print(f"   Tutor: {tutor.nombre_completo()}")
-            print(f"   Hora: {registro.fecha_hora}")
-            print(f"   Observaciones: {observaciones or 'Sin observaciones'}")
             
             return JsonResponse({
                 'success': True,
@@ -626,21 +640,11 @@ def registrar_salida(request):
             })
             
         except Nino.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Niño no encontrado'
-            }, status=404)
+            return JsonResponse({'success': False, 'mensaje': 'Niño no encontrado'}, status=404)
         except Tutor.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'mensaje': 'Tutor no encontrado'
-            }, status=404)
+            return JsonResponse({'success': False, 'mensaje': 'Tutor no encontrado'}, status=404)
         except Exception as e:
-            print(f"❌ Error registrando salida: {e}")
-            return JsonResponse({
-                'success': False,
-                'mensaje': f'Error: {str(e)}'
-            }, status=500)
+            return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
     
     return JsonResponse({'success': False}, status=405)
 
@@ -2138,4 +2142,272 @@ def finalizar_ciclo_escolar(request):
     return render(request, 'guarderia/grupos/finalizar_ciclo.html', {
         'grupos_info':    grupos_info,
         'grupos_destino': grupos_destino,
+    })
+    
+# ============================================================
+# AGREGAR ESTAS DOS FUNCIONES AL FINAL DE guarderia/views.py
+# ============================================================
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def reporte_tutores_dependencia(request):
+    """
+    Reporte: cuántos tutores hay por dependencia, quiénes son y cuáles son sus hijos.
+    """
+    filtro_dependencia = request.GET.get('dependencia', '')
+    filtro_q           = request.GET.get('q', '').strip()
+
+    # ── Queryset base de tutores activos ──────────────────────────────
+    tutores_qs = Tutor.objects.filter(activo=True).select_related(
+        'dependencia', 'departamento'
+    ).prefetch_related('ninos')
+
+    if filtro_dependencia:
+        tutores_qs = tutores_qs.filter(dependencia_id=filtro_dependencia)
+
+    if filtro_q:
+        tutores_qs = tutores_qs.filter(
+            Q(nombre__icontains=filtro_q) |
+            Q(apellido_paterno__icontains=filtro_q) |
+            Q(apellido_materno__icontains=filtro_q) |
+            Q(numero_empleado__icontains=filtro_q)
+        )
+
+    # ── Agrupar por dependencia ───────────────────────────────────────
+    from collections import defaultdict
+
+    grupos_dep   = defaultdict(list)      # dependencia_pk  → [filas]
+    sin_dep_list = []
+
+    for tutor in tutores_qs:
+        ninos_del_tutor = tutor.ninos.filter(activo=True)
+        fila = {
+            'tutor': tutor,
+            'ninos': list(ninos_del_tutor),
+        }
+        if tutor.dependencia_id:
+            grupos_dep[tutor.dependencia_id].append(fila)
+        else:
+            sin_dep_list.append(fila)
+
+    # Construir lista ordenada
+    dependencias_obj = {
+        d.id: d
+        for d in Dependencia.objects.filter(activo=True).order_by('nombre')
+    }
+
+    datos = []
+    total_ninos_rel = set()
+
+    for dep_id, filas in sorted(grupos_dep.items(),
+                                 key=lambda x: dependencias_obj.get(x[0], type('', (), {'nombre': ''})()).nombre):
+        dep_obj = dependencias_obj.get(dep_id)
+        if dep_obj is None:
+            try:
+                dep_obj = Dependencia.objects.get(id=dep_id)
+            except Dependencia.DoesNotExist:
+                continue
+
+        total_n = sum(len(f['ninos']) for f in filas)
+        for f in filas:
+            for n in f['ninos']:
+                total_ninos_rel.add(n.id)
+
+        datos.append({
+            'dependencia': dep_obj,
+            'tutores':     filas,
+            'total_ninos': total_n,
+        })
+
+    # Niños de tutores sin dependencia
+    for f in sin_dep_list:
+        for n in f['ninos']:
+            total_ninos_rel.add(n.id)
+
+    # ── Estadísticas de cabecera ──────────────────────────────────────
+    total_tutores_qs = Tutor.objects.filter(activo=True)
+    total_dep_ids    = total_tutores_qs.exclude(
+        dependencia__isnull=True
+    ).values_list('dependencia_id', flat=True).distinct()
+
+    context = {
+        'datos':                   datos,
+        'sin_dependencia':         sin_dep_list,
+        'dependencias':            Dependencia.objects.filter(activo=True).order_by('nombre'),
+
+        # Filtros activos
+        'filtro_dependencia':      filtro_dependencia,
+        'filtro_q':                filtro_q,
+
+        # Estadísticas
+        'total_dependencias':      total_dep_ids.count(),
+        'total_tutores_con_dep':   total_tutores_qs.exclude(dependencia__isnull=True).count(),
+        'tutores_sin_dep':         total_tutores_qs.filter(dependencia__isnull=True).count(),
+        'total_ninos_relacionados': len(total_ninos_rel),
+    }
+
+    return render(request, 'guarderia/reportes/tutores_dependencia.html', context)
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def reporte_asistencia_genero(request):
+    """
+    Reporte de asistencia filtrado por género (M / F / todos),
+    con resumen por grupo y tabla detallada de registros.
+    """
+    from datetime import date as date_type
+
+    filtro_genero     = request.GET.get('genero', '')
+    filtro_grupo      = request.GET.get('grupo', '')
+    filtro_fecha_desde = request.GET.get('fecha_desde', '')
+    filtro_fecha_hasta = request.GET.get('fecha_hasta', '')
+    filtro_tipo       = request.GET.get('tipo', '')
+
+    # ── Niños inscritos (para tabla inferior) ────────────────────────
+    ninos_qs = Nino.objects.filter(activo=True).select_related('grupo').prefetch_related('tutores')
+
+    if filtro_genero:
+        ninos_qs = ninos_qs.filter(genero=filtro_genero)
+    if filtro_grupo:
+        ninos_qs = ninos_qs.filter(grupo_id=filtro_grupo)
+
+    ninos_list = list(ninos_qs.order_by('grupo__tipo', 'grupo__grado', 'apellido_paterno', 'nombre'))
+
+    # ── Estadísticas generales (sin filtro de género) ────────────────
+    total_activos    = Nino.objects.filter(activo=True).count()
+    total_masculino  = Nino.objects.filter(activo=True, genero='M').count()
+    total_femenino   = Nino.objects.filter(activo=True, genero='F').count()
+    pct_masculino    = round(total_masculino / total_activos * 100, 1) if total_activos else 0
+    pct_femenino     = round(total_femenino  / total_activos * 100, 1) if total_activos else 0
+
+    # ── Resumen por grupo ─────────────────────────────────────────────
+    grupos_activos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+    resumen_por_grupo = []
+
+    for grupo in grupos_activos:
+        base = Nino.objects.filter(activo=True, grupo=grupo)
+        if filtro_genero:
+            base = base.filter(genero=filtro_genero)
+        masc = base.filter(genero='M').count()
+        fem  = base.filter(genero='F').count()
+        tot  = masc + fem
+        if tot > 0 or not filtro_genero:
+            resumen_por_grupo.append({
+                'grupo':     str(grupo),
+                'masculino': masc,
+                'femenino':  fem,
+                'total':     tot,
+            })
+
+    # Sin grupo
+    base_sg = Nino.objects.filter(activo=True, grupo__isnull=True)
+    if filtro_genero:
+        base_sg = base_sg.filter(genero=filtro_genero)
+    m_sg = base_sg.filter(genero='M').count()
+    f_sg = base_sg.filter(genero='F').count()
+    t_sg = m_sg + f_sg
+    if t_sg > 0:
+        resumen_por_grupo.append({
+            'grupo':     'Sin grupo asignado',
+            'masculino': m_sg,
+            'femenino':  f_sg,
+            'total':     t_sg,
+        })
+
+    # ── Registros de acceso (tabla superior derecha) ──────────────────
+    registros_qs = RegistroAcceso.objects.select_related(
+        'nino', 'tutor', 'nino__grupo'
+    )
+
+    if filtro_genero:
+        registros_qs = registros_qs.filter(nino__genero=filtro_genero)
+    if filtro_grupo:
+        registros_qs = registros_qs.filter(nino__grupo_id=filtro_grupo)
+    if filtro_tipo:
+        registros_qs = registros_qs.filter(tipo=filtro_tipo)
+
+    if filtro_fecha_desde:
+        try:
+            registros_qs = registros_qs.filter(
+                fecha_hora__date__gte=datetime.strptime(filtro_fecha_desde, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+    if filtro_fecha_hasta:
+        try:
+            registros_qs = registros_qs.filter(
+                fecha_hora__date__lte=datetime.strptime(filtro_fecha_hasta, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    # Si no hay filtro de fechas se muestran los últimos 200 registros
+    registros_list = list(registros_qs.order_by('-fecha_hora')[:200])
+
+    context = {
+        # Datos tablas
+        'ninos':              ninos_list,
+        'registros':          registros_list,
+        'resumen_por_grupo':  resumen_por_grupo,
+        'grupos':             grupos_activos,
+
+        # Filtros activos
+        'filtro_genero':      filtro_genero,
+        'filtro_grupo':       filtro_grupo,
+        'filtro_fecha_desde': filtro_fecha_desde,
+        'filtro_fecha_hasta': filtro_fecha_hasta,
+        'filtro_tipo':        filtro_tipo,
+
+        # Estadísticas
+        'total_ninos':           total_activos,
+        'total_masculino':       total_masculino,
+        'total_femenino':        total_femenino,
+        'pct_masculino':         pct_masculino,
+        'pct_femenino':          pct_femenino,
+        'total_registros_periodo': len(registros_list),
+    }
+
+    return render(request, 'guarderia/reportes/asistencia_genero.html', context)
+
+@login_required
+@admin_requerido
+def configuracion_guarderia(request):
+    config = ConfiguracionGuarderia.get_solo()
+    lista_minutos = [5,10,15,20,30,45,60,90,120]
+    
+    if request.method == 'POST':
+        form = ConfiguracionGuarderiaForm(request.POST, instance=config)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if form.is_valid():
+            cfg = form.save(commit=False)
+            cfg.actualizado_por = request.user
+            cfg.save()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Configuración guardada: {cfg.tiempo_minimo_entre_registros} minutos entre registros.',
+                    'tiempo': cfg.tiempo_minimo_entre_registros,
+                })
+            messages.success(request, 'Configuración actualizada correctamente.')
+            return redirect('guarderia:configuracion_guarderia')
+        else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            messages.error(request, 'Por favor corrige los errores.')
+    else:
+        form = ConfiguracionGuarderiaForm(instance=config)
+    
+    # Últimas 10 modificaciones de registros para mostrar contexto
+    ultimos_registros = RegistroAcceso.objects.select_related(
+        'nino', 'tutor'
+    ).order_by('-fecha_hora')[:10]
+    
+    return render(request, 'guarderia/configuracion/tiempo_limite.html', {
+        'form': form,
+        'config': config,
+        'ultimos_registros': ultimos_registros,
+        "lista_minutos": lista_minutos
     })

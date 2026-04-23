@@ -143,5 +143,7 @@ urlpatterns = [
      views.finalizar_ciclo_escolar, 
      name='finalizar_ciclo_escolar'),
     
-    
+    path('reportes/tutores-dependencia/', views.reporte_tutores_dependencia, name='reporte_tutores_dependencia'),
+    path('reportes/asistencia-genero/',   views.reporte_asistencia_genero,   name='reporte_asistencia_genero'),
+    path('configuracion/tiempo-limite/', views.configuracion_guarderia, name='configuracion_guarderia'),
 ]

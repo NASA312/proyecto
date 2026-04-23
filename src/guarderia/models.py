@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 class Dependencia(models.Model):
     """Dependencias de gobierno"""
@@ -429,3 +430,35 @@ class RegistroAcceso(models.Model):
     
     def __str__(self):
         return f"{self.tipo} - {self.nino} por {self.tutor} ({self.fecha_hora.strftime('%d/%m/%Y %H:%M')})"
+    
+class ConfiguracionGuarderia(models.Model):
+
+    nombre = models.CharField(max_length=200, default='Mi Guardería')
+    
+    # Tiempo mínimo entre registros del mismo niño (en minutos)
+    tiempo_minimo_entre_registros = models.PositiveIntegerField(
+        default=30,
+        verbose_name='Tiempo mínimo entre registros (minutos)',
+        help_text='Minutos que deben pasar entre una entrada y una salida, o viceversa, para el mismo niño.'
+    )
+    
+    # Metadata
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configuraciones_actualizadas'
+    )
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+ 
+    class Meta:
+        verbose_name = 'Configuración de Guardería'
+        verbose_name_plural = 'Configuración de Guardería'
+ 
+    def __str__(self):
+        return f'Configuración – {self.tiempo_minimo_entre_registros} min entre registros'
+ 
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
