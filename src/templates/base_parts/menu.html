@@ -329,6 +329,26 @@
             </li>
           </ul>
         </li>
+        <!-- COLONIAS (solo ADMIN) -->
+{% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-map-marker-alt"></i>
+    <p>
+      Colonias
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_colonias' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Colonias</p>
+      </a>
+    </li>
+  </ul>
+</li>
+{% endif %}
         {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
 <li class="nav-item">
   <a href="{% url 'guarderia:configuracion_guarderia' %}" class="nav-link {% if request.resolver_match.url_name == 'configuracion_guarderia' %}active{% endif %}">

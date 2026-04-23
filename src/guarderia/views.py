@@ -1079,90 +1079,76 @@ def verificar_huella_estado(request):
 def buscar_colonias_cp(request):
     """Busca colonias por código postal o por nombre desde la base de datos"""
     cp = request.GET.get('cp', '').strip()
-    q  = request.GET.get('q', '').strip()   # ← NUEVO
+    q  = request.GET.get('q', '').strip()
 
-    # ── Búsqueda por CP (lógica existente, sin tocar) ──
+    def serializar(col):
+        """Convierte un objeto o dict de Colonia al formato que espera el JS"""
+        if isinstance(col, dict):
+            return {
+                "id":       col['id'],
+                "nombre":   col['d_asenta'],
+                "municipio": col['D_mnpio'],
+                "estado":   col['d_estado'],
+                "ciudad":   col['D_mnpio'],   # se usaba d_ciudad; ahora usamos municipio
+                "cp":       col['d_codigo'],
+                # tipo_asentamiento ya no existe, el JS no lo requiere
+            }
+        return {
+            "id":       col.id,
+            "nombre":   col.d_asenta,
+            "municipio": col.D_mnpio,
+            "estado":   col.d_estado,
+            "ciudad":   col.D_mnpio,
+            "cp":       col.d_codigo,
+        }
+
+    # ── Búsqueda por CP ──
     if cp:
         if not cp.isdigit() or len(cp) != 5:
             return JsonResponse({"success": False, "error": "Código postal inválido"})
 
         try:
             colonias = Colonia.objects.filter(d_codigo=cp).order_by('d_asenta')
-
             if not colonias.exists():
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No se encontraron colonias para el CP {cp}"
-                })
-
-            resultado = []
-            for col in colonias:
-                resultado.append({
-                    "id":                col.id,
-                    "nombre":            col.d_asenta,
-                    "tipo_asentamiento": col.d_tipo_asenta,
-                    "municipio":         col.D_mnpio,
-                    "estado":            col.d_estado,
-                    "ciudad":            col.d_ciudad if col.d_ciudad else col.D_mnpio,
-                    "cp":                col.d_codigo,   # ← NUEVO (lo necesita el JS)
-                })
+                return JsonResponse({"success": False,
+                                     "error": f"No se encontraron colonias para el CP {cp}"})
 
             return JsonResponse({
                 "success": True,
                 "fuente":  "base_de_datos",
-                "colonias": resultado,
-                "total":    len(resultado)
+                "colonias": [serializar(c) for c in colonias],
+                "total":    colonias.count()
             })
 
         except Exception as e:
             import traceback
-            return JsonResponse({
-                "success": False,
-                "error":     f"Error al consultar: {str(e)}",
-                "traceback": traceback.format_exc()
-            })
+            return JsonResponse({"success": False, "error": str(e),
+                                 "traceback": traceback.format_exc()})
 
-    # ── NUEVO: Búsqueda por texto libre ──
+    # ── Búsqueda por texto libre ──
     elif q and len(q) >= 3:
         try:
             from django.db.models import Q
             colonias = (
                 Colonia.objects
                 .filter(Q(d_asenta__icontains=q) | Q(D_mnpio__icontains=q))
-                .values('id', 'd_asenta', 'd_tipo_asenta', 'D_mnpio',
-                        'd_estado', 'd_ciudad', 'd_codigo')
+                .values('id', 'd_asenta', 'D_mnpio', 'd_estado', 'd_codigo')
                 .order_by('d_asenta')[:40]
             )
-
-            resultado = [
-                {
-                    "id":                col['id'],
-                    "nombre":            col['d_asenta'],
-                    "tipo_asentamiento": col['d_tipo_asenta'],
-                    "municipio":         col['D_mnpio'],
-                    "estado":            col['d_estado'],
-                    "ciudad":            col['d_ciudad'] if col['d_ciudad'] else col['D_mnpio'],
-                    "cp":                col['d_codigo'],
-                }
-                for col in colonias
-            ]
-
             return JsonResponse({
                 "success": True,
                 "fuente":  "base_de_datos",
-                "colonias": resultado,
-                "total":    len(resultado)
+                "colonias": [serializar(c) for c in colonias],
+                "total":    len(list(colonias))
             })
 
         except Exception as e:
             import traceback
-            return JsonResponse({
-                "success": False,
-                "error":     f"Error al consultar: {str(e)}",
-                "traceback": traceback.format_exc()
-            })
+            return JsonResponse({"success": False, "error": str(e),
+                                 "traceback": traceback.format_exc()})
 
-    return JsonResponse({"success": False, "error": "Proporciona cp o q (mínimo 3 caracteres)"})
+    return JsonResponse({"success": False,
+                         "error": "Proporciona cp o q (mínimo 3 caracteres)"})
 
 # ============================================
 # VISTAS DE DEPENDENCIAS Y DEPARTAMENTOS
@@ -2411,3 +2397,82 @@ def configuracion_guarderia(request):
         'ultimos_registros': ultimos_registros,
         "lista_minutos": lista_minutos
     })
+    
+@login_required
+def lista_colonias(request):
+    colonias = Colonia.objects.all().order_by('d_codigo', 'd_asenta')
+    return render(request, 'guarderia/colonias/lista.html', {
+        'colonias': colonias,
+    })
+
+
+@login_required
+def crear_colonia(request):
+    """Crear una colonia personalizada"""
+    if request.method == 'POST':
+        form = ColoniaForm(request.POST)
+        if form.is_valid():
+            colonia = form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Colonia "{colonia.d_asenta}" creada correctamente.',
+                    'redirect_url': '/guarderia/colonias/'
+                })
+            messages.success(request, f'Colonia "{colonia.d_asenta}" creada correctamente.')
+            return redirect('guarderia:lista_colonias')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = ColoniaForm()
+
+    return render(request, 'guarderia/colonias/form.html', {
+        'form': form,
+        'titulo': 'Nueva Colonia',
+        'accion': 'Registrar',
+    })
+
+
+@login_required
+def editar_colonia(request, pk):
+    """Editar una colonia existente"""
+    colonia = get_object_or_404(Colonia, pk=pk)
+    if request.method == 'POST':
+        form = ColoniaForm(request.POST, instance=colonia)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Colonia "{colonia.d_asenta}" actualizada correctamente.',
+                    'redirect_url': '/guarderia/colonias/'
+                })
+            messages.success(request, f'Colonia "{colonia.d_asenta}" actualizada.')
+            return redirect('guarderia:lista_colonias')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = ColoniaForm(instance=colonia)
+
+    return render(request, 'guarderia/colonias/form.html', {
+        'form': form,
+        'colonia': colonia,
+        'titulo': f'Editar — {colonia.d_asenta}',
+        'accion': 'Guardar Cambios',
+    })
+
+
+@login_required
+def eliminar_colonia(request, pk):
+    """Eliminar colonia (solo POST/AJAX)"""
+    colonia = get_object_or_404(Colonia, pk=pk)
+    if request.method == 'POST':
+        nombre = colonia.d_asenta
+        colonia.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': f'Colonia "{nombre}" eliminada.'})
+        messages.success(request, f'Colonia "{nombre}" eliminada.')
+        return redirect('guarderia:lista_colonias')
+    return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)

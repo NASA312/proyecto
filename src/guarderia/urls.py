@@ -146,4 +146,9 @@ urlpatterns = [
     path('reportes/tutores-dependencia/', views.reporte_tutores_dependencia, name='reporte_tutores_dependencia'),
     path('reportes/asistencia-genero/',   views.reporte_asistencia_genero,   name='reporte_asistencia_genero'),
     path('configuracion/tiempo-limite/', views.configuracion_guarderia, name='configuracion_guarderia'),
+    
+    path('colonias/',                   views.lista_colonias,   name='lista_colonias'),
+    path('colonias/nueva/',             views.crear_colonia,    name='crear_colonia'),
+    path('colonias/<int:pk>/editar/',   views.editar_colonia,   name='editar_colonia'),
+    path('colonias/<int:pk>/eliminar/', views.eliminar_colonia, name='eliminar_colonia'),
 ]
