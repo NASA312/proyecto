@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Respaldo de Base de Datos{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Respaldo de Base de Datos</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Respaldo</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+
+        <div class="card card-primary">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-database"></i> Respaldo de Base de Datos
+            </h3>
+          </div>
+          <div class="card-body">
+
+            <div class="alert alert-info">
+              <h5><i class="icon fas fa-info-circle"></i> ¿Qué incluye el respaldo?</h5>
+              El archivo descargado contiene <strong>toda la información</strong> registrada
+              en el sistema: tutores, niños, grupos, colonias, asistencias y configuraciones.
+              Guárdalo en un lugar seguro.
+            </div>
+
+            <div class="alert alert-warning">
+              <h5><i class="icon fas fa-exclamation-triangle"></i> Recomendaciones</h5>
+              <ul class="mb-0">
+                <li>Realiza respaldos <strong>periódicamente</strong> (semanal o mensual).</li>
+                <li>Guarda el archivo en una <strong>unidad externa o en la nube</strong>.</li>
+                <li>No compartas el archivo, contiene <strong>datos personales</strong>.</li>
+              </ul>
+            </div>
+
+            <div class="text-center py-4">
+              <i class="fas fa-database fa-5x text-primary mb-4 d-block"></i>
+              <p class="text-muted mb-4">
+                Al presionar el botón se generará y descargará automáticamente
+                el archivo de respaldo con la fecha y hora actual.
+              </p>
+              <button type="button" id="btnDescargar" class="btn btn-primary btn-lg">
+                <i class="fas fa-download"></i> Descargar Respaldo
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Historial de descargas en esta sesión -->
+        <div class="card card-secondary" id="cardHistorial" style="display:none;">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-history"></i> Descargas en esta sesión
+            </h3>
+          </div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush" id="listaHistorial"></ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+  $('#btnDescargar').on('click', function () {
+    Swal.fire({
+      title: '¿Generar respaldo?',
+      html: 'Se descargará un archivo con <strong>toda la información</strong> del sistema.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#007bff',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: '<i class="fas fa-download"></i> Sí, descargar',
+      cancelButtonText: 'Cancelar'
+    }).then(function (result) {
+      if (!result.isConfirmed) return;
+
+      const btn = $('#btnDescargar');
+      btn.prop('disabled', true)
+         .html('<i class="fas fa-spinner fa-spin"></i> Generando respaldo...');
+
+      // ✅ Descarga directa — evita el problema del iframe y X-Frame-Options
+      window.location.href = '{% url "guarderia:descargar_respaldo" %}';
+
+      // Restaurar botón y registrar en historial después de 4 segundos
+      setTimeout(function () {
+        btn.prop('disabled', false)
+           .html('<i class="fas fa-download"></i> Descargar Respaldo');
+
+        const ahora = new Date().toLocaleString('es-MX');
+        $('#cardHistorial').show();
+        $('#listaHistorial').prepend(
+          '<li class="list-group-item">' +
+            '<i class="fas fa-check-circle text-success mr-2"></i>' +
+            '<strong>Respaldo descargado</strong> — ' + ahora +
+          '</li>'
+        );
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Respaldo generado!',
+          text: 'El archivo se ha descargado correctamente.',
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+      }, 4000);
+    });
+  });
+
+});
+</script>
+{% endblock %}

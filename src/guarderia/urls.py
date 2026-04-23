@@ -151,4 +151,9 @@ urlpatterns = [
     path('colonias/nueva/',             views.crear_colonia,    name='crear_colonia'),
     path('colonias/<int:pk>/editar/',   views.editar_colonia,   name='editar_colonia'),
     path('colonias/<int:pk>/eliminar/', views.eliminar_colonia, name='eliminar_colonia'),
+    
+    
+    path('respaldo/',            views.pagina_respaldo,       name='pagina_respaldo'),
+    path('respaldo/descargar/',  views.descargar_respaldo_db, name='descargar_respaldo'),
+    
 ]

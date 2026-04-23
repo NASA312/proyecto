@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+import subprocess
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.base import ContentFile
 from django.utils import timezone
+import shutil
 from datetime import datetime, timedelta
 from .models import Tutor, Nino, RegistroAcceso
 from .forms import *
@@ -2476,3 +2478,111 @@ def eliminar_colonia(request, pk):
         messages.success(request, f'Colonia "{nombre}" eliminada.')
         return redirect('guarderia:lista_colonias')
     return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+
+@login_required
+def descargar_respaldo_db(request):
+    """Genera y descarga un respaldo PostgreSQL"""
+    if not (request.user.is_superuser or
+            (hasattr(request.user, 'perfil') and 
+             request.user.perfil.rol.nombre == 'ADMIN')):
+        return JsonResponse({'error': 'No tienes permisos.'}, status=403)
+
+    db    = settings.DATABASES['default']
+    fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    # ── Buscar pg_dump automáticamente ──────────────────────────────────────
+    pg_dump_path = shutil.which('pg_dump')
+
+    # Si no está en PATH, buscar en rutas comunes de Windows
+    if not pg_dump_path:
+        rutas_windows = [
+            r'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\16\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\15\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\14\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\13\bin\pg_dump.exe',
+        ]
+        for ruta in rutas_windows:
+            if os.path.exists(ruta):
+                pg_dump_path = ruta
+                break
+
+    if not pg_dump_path:
+        return HttpResponse(
+            '<h2>Error: pg_dump no encontrado</h2>'
+            '<p>Verifica que PostgreSQL esté instalado y pg_dump esté en el PATH.</p>'
+            '<p>O agrega la carpeta bin de PostgreSQL al PATH del sistema.</p>',
+            status=500,
+            content_type='text/html'
+        )
+
+    try:
+        env = os.environ.copy()
+        env['PGPASSWORD'] = db.get('PASSWORD', '')
+
+        # Extraer host y puerto — dj_database_url los guarda en HOST y PORT
+        host = db.get('HOST', 'localhost') or 'localhost'
+        port = str(db.get('PORT', 5432) or 5432)
+        user = db.get('USER', 'postgres')
+        name = db.get('NAME', 'proyecto')
+
+        cmd = [
+            pg_dump_path,
+            '-h', host,
+            '-p', port,
+            '-U', user,
+            '-d', name,
+            '--no-password',
+            '-F', 'p',
+            '-E', 'UTF8',
+        ]
+
+        resultado = subprocess.run(
+            cmd,
+            capture_output=True,
+            env=env,
+            timeout=120
+        )
+
+        if resultado.returncode != 0:
+            error_msg = resultado.stderr.decode('utf-8', errors='replace')
+            # Devolver error legible en HTML para poder verlo en el navegador
+            return HttpResponse(
+                f'<h2>Error de pg_dump (código {resultado.returncode})</h2>'
+                f'<pre>{error_msg}</pre>'
+                f'<hr>'
+                f'<p><strong>Comando ejecutado:</strong></p>'
+                f'<pre>{" ".join(cmd)}</pre>'
+                f'<p><strong>Host:</strong> {host} | <strong>Puerto:</strong> {port} | '
+                f'<strong>Usuario:</strong> {user} | <strong>BD:</strong> {name}</p>',
+                status=500,
+                content_type='text/html'
+            )
+
+        nombre_archivo = f'respaldo_guarderia_{fecha}.sql'
+        response = HttpResponse(resultado.stdout, content_type='application/sql')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
+
+    except subprocess.TimeoutExpired:
+        return HttpResponse(
+            '<h2>Error: Tiempo de espera agotado</h2>'
+            '<p>El respaldo tardó demasiado. Intenta de nuevo.</p>',
+            status=500, content_type='text/html'
+        )
+    except Exception as e:
+        import traceback
+        return HttpResponse(
+            f'<h2>Error inesperado</h2>'
+            f'<pre>{traceback.format_exc()}</pre>',
+            status=500, content_type='text/html'
+        )
+
+
+@login_required
+def pagina_respaldo(request):
+    if not (request.user.is_superuser or
+            (hasattr(request.user, 'perfil') and 
+             request.user.perfil.rol.nombre == 'ADMIN')):
+        return redirect('guarderia:dashboard')
+    return render(request, 'guarderia/respaldo.html')

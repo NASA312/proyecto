@@ -357,6 +357,14 @@
   </a>
 </li>
 {% endif %}
+{% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
+<li class="nav-item">
+  <a href="{% url 'guarderia:pagina_respaldo' %}" class="nav-link">
+    <i class="nav-icon fas fa-database"></i>
+    <p>Respaldo de BD</p>
+  </a>
+</li>
+{% endif %}
 
         <!-- ============================================ -->
         <!-- CONFIGURACIÓN (SOLO ADMIN y SUPERUSER) -->
