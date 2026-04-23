@@ -1444,17 +1444,86 @@ def registrar_grupo(request):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def detalle_grupo(request, grupo_id):
-    """Ver detalles de un grupo"""
-    grupo = get_object_or_404(Grupo, id=grupo_id)
-    ninos = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
-    
+    """Ver detalles de un grupo con lista de asistencia del día actual"""
+    from django.utils import timezone
+    from django.db.models import Subquery, OuterRef
+
+    grupo  = get_object_or_404(Grupo, id=grupo_id)
+    hoy    = timezone.localdate()
+    ninos  = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
+
+    # IDs de niños que tienen al menos una ENTRADA hoy
+    ninos_con_entrada_hoy = (
+        RegistroAcceso.objects
+        .filter(
+            nino__grupo=grupo,
+            tipo='ENTRADA',
+            fecha_hora__date=hoy,
+            verificacion_exitosa=True,
+        )
+        .values_list('nino_id', flat=True)
+        .distinct()
+    )
+
+    # Para cada niño con entrada, traer el último registro de hoy
+    # (puede ser ENTRADA o SALIDA — para saber si sigue dentro)
+    from django.db.models import Max
+
+    # Último registro de hoy por niño
+    ultimo_registro_id = (
+        RegistroAcceso.objects
+        .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
+        .order_by('-fecha_hora')
+        .values('id')[:1]
+    )
+
+    registros_hoy = (
+        RegistroAcceso.objects
+        .filter(
+            nino_id__in=ninos_con_entrada_hoy,
+            id__in=Subquery(
+                RegistroAcceso.objects
+                .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
+                .order_by('-fecha_hora')
+                .values('id')[:1]
+            )
+        )
+        .select_related('nino', 'tutor')
+        .order_by('nino__apellido_paterno', 'nino__nombre')
+    )
+
+    # Hora de primera entrada de cada niño hoy
+    primera_entrada = {}
+    for reg in RegistroAcceso.objects.filter(
+        nino_id__in=ninos_con_entrada_hoy,
+        tipo='ENTRADA',
+        fecha_hora__date=hoy,
+    ).order_by('fecha_hora'):
+        if reg.nino_id not in primera_entrada:
+            primera_entrada[reg.nino_id] = reg.fecha_hora
+
+    # Armar lista de asistencia
+    asistencia = []
+    for reg in registros_hoy:
+        asistencia.append({
+            'nino':           reg.nino,
+            'tutor':          reg.tutor,
+            'hora_entrada':   primera_entrada.get(reg.nino_id),
+            'ultimo_estado':  reg.tipo,       # ENTRADA o SALIDA
+            'sigue_dentro':   reg.tipo == 'ENTRADA',
+        })
+
     return render(request, 'guarderia/grupos/detalle.html', {
-        'grupo': grupo,
-        'ninos': ninos,
-        'ninos_asignados': grupo.ninos_asignados(),
+        'grupo':                grupo,
+        'ninos':                ninos,
+        'ninos_asignados':      grupo.ninos_asignados(),
         'capacidad_disponible': grupo.capacidad_disponible(),
         'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
-        'esta_lleno': grupo.esta_lleno()
+        'esta_lleno':           grupo.esta_lleno(),
+        'asistencia':           asistencia,
+        'hoy':                  hoy,
+        'total_presentes':      sum(1 for a in asistencia if a['sigue_dentro']),
+        'total_asistencia':     len(asistencia),
     })
 
 
