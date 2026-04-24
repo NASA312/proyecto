@@ -25,7 +25,6 @@
   <div class="container-fluid">
     <div class="row">
 
-      <!-- ── Sidebar info grupo ───────────────────────────────────────── -->
       <div class="col-md-3">
         <div class="card card-success">
           <div class="card-header">
@@ -72,10 +71,8 @@
         </div>
       </div>
 
-      <!-- ── Contenido principal ──────────────────────────────────────── -->
       <div class="col-md-9">
 
-        <!-- Indicadores rápidos -->
         <div class="row">
           <div class="col-md-3">
             <div class="small-box bg-info">
@@ -108,9 +105,6 @@
           </div>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             TABS: Asistencia del día | Lista completa del grupo
-        ═══════════════════════════════════════════════════════════════ -->
         <div class="card">
           <div class="card-header p-0">
             <ul class="nav nav-tabs" role="tablist">
@@ -133,7 +127,7 @@
 
           <div class="card-body tab-content pt-3">
 
-            <!-- ── TAB ASISTENCIA ─────────────────────────────────────── -->
+            <!-- TAB ASISTENCIA -->
             <div class="tab-pane fade show active" id="tabAsistencia" role="tabpanel">
 
               <div class="d-flex justify-content-between align-items-center mb-3">
@@ -154,19 +148,24 @@
                     <thead class="thead-light">
                       <tr>
                         <th style="width:40px;">#</th>
+                        <th style="width:120px;">Matrícula</th>
                         <th>Nombre del Niño</th>
                         <th style="width:160px;">Hora de Entrada</th>
-                        <th style="width:160px;">Quién lo Trajo</th>
-                        <th class="text-center" style="width:110px;">Estado Actual</th>
+                        <th style="width:180px;">Quién lo Trajo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {% for item in asistencia %}
-                      <tr class="{% if not item.sigue_dentro %}table-secondary{% endif %}">
+                      <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>
-                          <strong>{{ item.nino.nombre_completo }}</strong>
+                          {% if item.nino.numero_matricula %}
+                            <span class="badge badge-secondary">{{ item.nino.numero_matricula }}</span>
+                          {% else %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
                         </td>
+                        <td><strong>{{ item.nino.nombre_completo }}</strong></td>
                         <td>
                           {% if item.hora_entrada %}
                             <i class="fas fa-clock text-muted mr-1"></i>
@@ -181,27 +180,16 @@
                             </small>
                           {% else %}—{% endif %}
                         </td>
-                        <td class="text-center">
-                          {% if item.sigue_dentro %}
-                            <span class="badge badge-success">
-                              <i class="fas fa-check-circle mr-1"></i>Presente
-                            </span>
-                          {% else %}
-                            <span class="badge badge-secondary">
-                              <i class="fas fa-sign-out-alt mr-1"></i>Salió
-                            </span>
-                          {% endif %}
-                        </td>
                       </tr>
                       {% endfor %}
                     </tbody>
                     <tfoot>
                       <tr class="table-light">
                         <td colspan="4" class="text-right">
-                          <strong>Presentes ahora:</strong>
+                          <strong>Total presentes:</strong>
                         </td>
-                        <td class="text-center">
-                          <span class="badge badge-success badge-lg"
+                        <td>
+                          <span class="badge badge-success"
                                 style="font-size:1rem; padding:6px 12px;">
                             {{ total_presentes }}
                           </span>
@@ -220,7 +208,7 @@
 
             </div><!-- /tabAsistencia -->
 
-            <!-- ── TAB NIÑOS DEL GRUPO ────────────────────────────────── -->
+            <!-- TAB NIÑOS DEL GRUPO -->
             <div class="tab-pane fade" id="tabNinos" role="tabpanel">
               {% if ninos %}
                 <div class="table-responsive">
@@ -228,6 +216,7 @@
                     <thead class="thead-light">
                       <tr>
                         <th style="width:40px;">#</th>
+                        <th style="width:120px;">Matrícula</th>
                         <th>Nombre Completo</th>
                         <th style="width:150px;">Fecha de Nacimiento</th>
                         <th style="width:80px;">Edad</th>
@@ -239,15 +228,20 @@
                       {% for nino in ninos %}
                       <tr>
                         <td>{{ forloop.counter }}</td>
+                        <td>
+                          {% if nino.numero_matricula %}
+                            <span class="badge badge-secondary">{{ nino.numero_matricula }}</span>
+                          {% else %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
+                        </td>
                         <td><strong>{{ nino.nombre_completo }}</strong></td>
                         <td>{{ nino.fecha_nacimiento|date:"d/m/Y" }}</td>
                         <td>{{ nino.edad }} años</td>
                         <td>
                           {% with tutor=nino.tutores.first %}
-                            {% if tutor %}
-                              {{ tutor.nombre_completo }}
-                            {% else %}
-                              <span class="text-muted">—</span>
+                            {% if tutor %}{{ tutor.nombre_completo }}
+                            {% else %}<span class="text-muted">—</span>
                             {% endif %}
                           {% endwith %}
                         </td>
@@ -294,8 +288,8 @@ $(document).ready(function () {
     autoWidth: false,
     pageLength: 50,
     lengthMenu: [[25, 50, -1], [25, 50, 'Todos']],
-    columnDefs: [{ orderable: false, searchable: false, targets: [4] }],
-    order: [[1, 'asc']],
+    columnDefs: [{ orderable: false, searchable: false, targets: [] }],
+    order: [[2, 'asc']],
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
       emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> Sin asistencia hoy</span>'
@@ -307,15 +301,14 @@ $(document).ready(function () {
     autoWidth: false,
     pageLength: 25,
     lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
-    columnDefs: [{ orderable: false, searchable: false, targets: [5] }],
-    order: [[1, 'asc']],
+    columnDefs: [{ orderable: false, searchable: false, targets: [6] }],
+    order: [[2, 'asc']],
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
       emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> Sin niños asignados</span>'
     }
   });
 
-  // Redibujar tabla al cambiar de tab
   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
   });
@@ -323,11 +316,11 @@ $(document).ready(function () {
 });
 
 function imprimirAsistencia() {
-  const fecha   = '{{ hoy|date:"d/m/Y" }}';
-  const grupo   = '{{ grupo.nombre|escapejs }}';
-  const tipo    = '{{ grupo.get_tipo_display|escapejs }}';
-  const grado   = '{{ grupo.grado|escapejs }}';
-  const filas   = [];
+  const fecha = '{{ hoy|date:"d/m/Y" }}';
+  const grupo = '{{ grupo.nombre|escapejs }}';
+  const tipo  = '{{ grupo.get_tipo_display|escapejs }}';
+  const grado = '{{ grupo.grado|escapejs }}';
+  const filas = [];
 
   $('#tablaAsistencia tbody tr').each(function (i) {
     const celdas = $(this).find('td');
@@ -337,12 +330,12 @@ function imprimirAsistencia() {
         '<td>' + $(celdas[1]).text().trim() + '</td>' +
         '<td>' + $(celdas[2]).text().trim() + '</td>' +
         '<td>' + $(celdas[3]).text().trim() + '</td>' +
-        '<td style="text-align:center;">' + $(celdas[4]).text().trim() + '</td>' +
+        '<td>' + $(celdas[4]).text().trim() + '</td>' +
       '</tr>'
     );
   });
 
-  const ventana = window.open('', '_blank', 'width=900,height=650');
+  const ventana = window.open('', '_blank', 'width=960,height=680');
   ventana.document.write(`
     <!DOCTYPE html>
     <html>
@@ -350,9 +343,9 @@ function imprimirAsistencia() {
       <meta charset="UTF-8">
       <title>Lista de Asistencia — ${grupo}</title>
       <style>
-        body { font-family: Arial, sans-serif; font-size: 13px; margin: 20px; }
-        h2   { margin-bottom: 4px; }
-        p    { margin: 2px 0 12px; color: #555; }
+        body  { font-family: Arial, sans-serif; font-size: 13px; margin: 20px; }
+        h2    { margin-bottom: 4px; }
+        p     { margin: 2px 0 12px; color: #555; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #aaa; padding: 6px 10px; }
         thead  { background: #e9ecef; }
@@ -367,17 +360,17 @@ function imprimirAsistencia() {
         <thead>
           <tr>
             <th>#</th>
+            <th>Matrícula</th>
             <th>Nombre del Niño</th>
             <th>Hora de Entrada</th>
             <th>Quién lo Trajo</th>
-            <th>Estado</th>
           </tr>
         </thead>
         <tbody>${filas.join('')}</tbody>
         <tfoot>
           <tr>
-            <td colspan="4" style="text-align:right;">Presentes ahora:</td>
-            <td style="text-align:center;">{{ total_presentes }}</td>
+            <td colspan="4" style="text-align:right;">Total presentes:</td>
+            <td style="text-align:center;"><strong>{{ total_presentes }}</strong></td>
           </tr>
         </tfoot>
       </table>
