@@ -64,13 +64,13 @@
     <div class="row">
       <div class="col-12">
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <h3 class="card-title mb-0">
               <i class="fas fa-history"></i> Registros de Entrada y Salida
             </h3>
           </div>
           <div class="card-body">
-            
+
             <!-- 7 columnas: Fecha/Hora | Tipo | Niño | Grupo | Tutor | Método | Observaciones -->
             <table id="tablaRegistros" class="table table-striped table-bordered table-hover w-100">
               <thead class="thead-light">
@@ -79,9 +79,10 @@
                   <th class="text-center" style="width:100px;">Tipo</th>
                   <th>Niño</th>
                   <th style="width:150px;">Grupo</th>
-                  <th>Tutor</th>
+                  <th>Tutor / Empleado</th>
                   <th class="text-center" style="width:100px;">Método</th>
                   <th>Observaciones</th>
+                  <th class="text-center" style="width:110px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -93,13 +94,13 @@
                   </td>
                   <td class="text-center">
                     {% if registro.tipo == 'ENTRADA' %}
-                      <span class="badge badge-success">
-                        <i class="fas fa-sign-in-alt"></i> Entrada
-                      </span>
+                    <span class="badge badge-success">
+                      <i class="fas fa-sign-in-alt"></i> Entrada
+                    </span>
                     {% else %}
-                      <span class="badge badge-warning">
-                        <i class="fas fa-sign-out-alt"></i> Salida
-                      </span>
+                    <span class="badge badge-warning">
+                      <i class="fas fa-sign-out-alt"></i> Salida
+                    </span>
                     {% endif %}
                   </td>
                   <td>
@@ -109,30 +110,72 @@
                   </td>
                   <td>
                     {% if registro.nino.grupo %}
-                      <span class="badge badge-info">{{ registro.nino.grupo }}</span>
+                    <span class="badge badge-info">{{ registro.nino.grupo }}</span>
                     {% else %}
-                      <span class="text-muted">Sin grupo</span>
+                    <span class="text-muted">Sin grupo</span>
                     {% endif %}
                   </td>
                   <td>
+                    {% if registro.tutor %}
                     <a href="{% url 'guarderia:detalle_tutor' registro.tutor.id %}">
                       {{ registro.tutor.nombre_completo }}
                     </a>
                     <br>
                     <small class="text-muted">{{ registro.tutor.get_parentesco_display }}</small>
+                    {% elif registro.metodo_verificacion == 'EMERGENCIA' %}
+                    <span class="text-muted">
+                      <i class="fas fa-user-shield mr-1"></i>
+                      {% if registro.registrado_por %}
+                        {% if registro.registrado_por.get_full_name %}
+                          {{ registro.registrado_por.get_full_name }}
+                        {% else %}
+                          {{ registro.registrado_por.username }}
+                        {% endif %}
+                      {% else %}
+                        Sin registro
+                      {% endif %}
+                    </span>
+                    <br>
+                    <small class="text-danger">
+                      <i class="fas fa-exclamation-triangle"></i> Salida de emergencia
+                    </small>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
                   </td>
                   <td class="text-center">
                     {% if registro.metodo_verificacion == 'HUELLA' %}
-                      <span class="badge badge-primary">
-                        <i class="fas fa-fingerprint"></i> Huella
-                      </span>
+                    <span class="badge badge-primary">
+                      <i class="fas fa-fingerprint"></i> Huella
+                    </span>
+                    {% elif registro.metodo_verificacion == 'EMERGENCIA' %}
+                    <span class="badge badge-danger">
+                      <i class="fas fa-exclamation-triangle"></i> Emergencia
+                    </span>
                     {% else %}
-                      <span class="badge badge-secondary">{{ registro.metodo_verificacion }}</span>
+                    <span class="badge badge-secondary">{{ registro.metodo_verificacion }}</span>
                     {% endif %}
                   </td>
                   <td>
-                    {% if registro.observaciones %}
+                    {% if registro.metodo_verificacion == 'EMERGENCIA' %}
+                      {% if registro.observaciones %}
+                      <small class="text-muted">{{ registro.observaciones|truncatewords:8 }}</small>
+                      {% else %}
+                      <span class="text-muted">—</span>
+                      {% endif %}
+                    {% elif registro.observaciones %}
                       <small>{{ registro.observaciones|truncatewords:10 }}</small>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if registro.id in entradas_activas_ids %}
+                      {% if request.user.perfil.puede_usar_codigo_escalamiento or request.user.is_superuser or request.user.perfil.es_administrador %}
+                      <button class="btn btn-sm btn-outline-danger" onclick="abrirModalEmergenciaUnico('{{ registro.nino.id }}', '{{ registro.nino.nombre_completo|escapejs }}')" title="Registrar salida de emergencia">
+                        <i class="fas fa-exclamation-triangle"></i> Sacar
+                      </button>
+                      {% endif %}
                     {% else %}
                       <span class="text-muted">—</span>
                     {% endif %}
@@ -149,57 +192,212 @@
 
   </div>
 </section>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL EMERGENCIA ÚNICO (desde historial por niño)
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEmergenciaUnico" tabindex="-1" role="dialog" aria-labelledby="modalEmergenciaUnicoLabel" aria-hidden="true" data-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content" style="background:#1a202c; color:#fff; border:1px solid rgba(252,129,129,.3); border-radius:16px;">
+      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,.08);">
+        <h5 class="modal-title text-danger" id="modalEmergenciaUnicoLabel">
+          <i class="fas fa-exclamation-triangle mr-2"></i>Salida de Emergencia
+        </h5>
+        <button type="button" class="close text-white" onclick="cerrarModalEmergenciaUnico()" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center" style="padding:32px 28px;">
+        <p style="color:rgba(255,255,255,.8); font-size:1.1rem; margin-bottom:8px;">
+          Registrar salida para <strong id="emg-unico-nombre" style="color:#fc8181;"></strong>
+        </p>
+        <p style="color:rgba(255,255,255,.55); font-size:.9rem; margin-bottom:24px;">
+          Ingresa tu código de escalamiento de 4 dígitos para autorizar
+        </p>
+
+        <input type="password"
+               id="emg-unico-pin"
+               placeholder="• • • •"
+               maxlength="4"
+               inputmode="numeric"
+               autocomplete="off"
+               style="background:rgba(255,255,255,.07); border:1px solid rgba(252,129,129,.4); border-radius:12px;
+                      color:#fff; font-size:2rem; font-weight:700; text-align:center; letter-spacing:10px;
+                      padding:14px 20px; width:100%; outline:none; caret-color:#fc8181;"
+               onkeydown="if(event.key==='Enter') validarYConfirmarUnico()">
+
+        <div id="emg-unico-error" style="color:#fc8181; font-size:.84rem; margin-top:10px; min-height:22px;"></div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08); justify-content:space-between;">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalEmergenciaUnico()">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="emg-unico-btn-validar" onclick="validarYConfirmarUnico()" disabled>
+          <i class="fas fa-shield-alt mr-1"></i>Validar Código y Sacar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-$(document).ready(function () {
+  $(document).ready(function () {
 
-  // Select2 para filtros
-  if ($.fn.select2) {
-    $('.select2').select2({
-      placeholder: 'Seleccione una opción',
-      allowClear: true,
-      width: '100%'
+    // Select2 para filtros
+    if ($.fn.select2) {
+      $('.select2').select2({
+        placeholder: 'Seleccione una opción',
+        allowClear: true,
+        width: '100%'
+      });
+    }
+
+    // DataTable — 8 columnas, sin ordenar Tipo (1), Método (5), Acciones (7)
+    $('#tablaRegistros').DataTable({
+      responsive: true,
+      autoWidth: false,
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+      order: [[0, 'desc']],  // Ordenar por fecha descendente
+      columnDefs: [
+        { orderable: false, searchable: false, targets: [1, 5, 7] }
+      ],
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay registros con los filtros seleccionados</span>'
+      }
+    });
+
+    // Habilitar botón validar al escribir 4 dígitos
+    document.getElementById('emg-unico-pin').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 4);
+      var btn = document.getElementById('emg-unico-btn-validar');
+      btn.disabled = (this.value.length !== 4);
+      document.getElementById('emg-unico-error').textContent = '';
+    });
+
+  });
+
+  function exportarExcel() {
+    var formData = new FormData(document.getElementById('formFiltros'));
+    var params = new URLSearchParams(formData).toString();
+
+    Swal.fire({
+      title: 'Exportar a Excel',
+      text: '¿Desea exportar los registros filtrados a Excel?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fas fa-file-excel"></i> Sí, exportar',
+      cancelButtonText: 'Cancelar'
+    }).then(function (result) {
+      if (result.isConfirmed) {
+        window.location.href = '/guarderia/registros/exportar-excel/?' + params;
+      }
     });
   }
 
-  // DataTable — 7 columnas, sin ordenar Tipo (1), Método (5)
-  $('#tablaRegistros').DataTable({
-    responsive: true,
-    autoWidth: false,
-    pageLength: 25,
-    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-    order: [[0, 'desc']],  // Ordenar por fecha descendente
-    columnDefs: [
-      { orderable: false, searchable: false, targets: [1, 5] }
-    ],
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay registros con los filtros seleccionados</span>'
-    }
-  });
+  // ══════════════════════════════════════
+  //  MODAL EMERGENCIA ÚNICO
+  // ══════════════════════════════════════
+  let emgNinoId = null;
 
-});
+  function abrirModalEmergenciaUnico(ninoId, ninoNombre) {
+    emgNinoId = ninoId;
+    document.getElementById('emg-unico-nombre').textContent = ninoNombre;
+    document.getElementById('emg-unico-pin').value = '';
+    document.getElementById('emg-unico-error').textContent = '';
+    document.getElementById('emg-unico-btn-validar').disabled = true;
+    
+    $('#modalEmergenciaUnico').modal('show');
+    setTimeout(function() { document.getElementById('emg-unico-pin').focus(); }, 400);
+  }
 
-function exportarExcel() {
-  // Obtener parámetros actuales del formulario como query string
-  var formData = new FormData(document.getElementById('formFiltros'));
-  var params = new URLSearchParams(formData).toString();
-  
-  Swal.fire({
-    title: 'Exportar a Excel',
-    text: '¿Desea exportar los registros filtrados a Excel?',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-file-excel"></i> Sí, exportar',
-    cancelButtonText: 'Cancelar'
-  }).then(function (result) {
-    if (result.isConfirmed) {
-      // Redirigir a endpoint de exportación con parámetros GET
-      window.location.href = '/guarderia/registros/exportar-excel/?' + params;
+  function cerrarModalEmergenciaUnico() {
+    $('#modalEmergenciaUnico').modal('hide');
+    emgNinoId = null;
+  }
+
+  function validarYConfirmarUnico() {
+    var codigo = document.getElementById('emg-unico-pin').value.trim();
+    if (codigo.length !== 4 || !/^\d{4}$/.test(codigo)) {
+      document.getElementById('emg-unico-error').textContent = 'Ingresa exactamente 4 dígitos.';
+      return;
     }
-  });
-}
+
+    var btn = document.getElementById('emg-unico-btn-validar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Verificando...';
+
+    // Primero validamos el código
+    fetch("{% url 'guarderia:validar_codigo_escalamiento' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ codigo: codigo })
+    })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.success) {
+        // Guardamos el ID antes de cerrar el modal
+        var idParaSacar = emgNinoId;
+        
+        // Código válido, cerramos modal de PIN y abrimos SweetAlert para observación
+        cerrarModalEmergenciaUnico();
+        
+        Swal.fire({
+          title: '⚠ Salida de Emergencia',
+          html: '<p style="color:#fff;margin-bottom:8px;">Observación para la salida (obligatorio):</p>'
+            + '<textarea id="modal-unico-obs" class="swal2-input" placeholder="Motivo de la emergencia" style="height:70px;"></textarea>',
+          icon: 'warning',
+          background: '#1a202c', color: '#fff',
+          showCancelButton: true,
+          confirmButtonColor: '#c53030',
+          confirmButtonText: '<i class="fas fa-sign-out-alt mr-1"></i>Confirmar Salida',
+          cancelButtonText: 'Cancelar',
+          preConfirm: function() {
+            var obs = document.getElementById('modal-unico-obs').value.trim();
+            if (!obs) { Swal.showValidationMessage('El motivo es obligatorio.'); return false; }
+            return obs;
+          }
+        }).then(function(result) {
+          if (result.isConfirmed) {
+            // Mandar a registrar la salida usando el ID guardado
+            fetch("{% url 'guarderia:salida_emergencia' %}", {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+              body: JSON.stringify({ nino_id: idParaSacar, observacion: result.value })
+            })
+            .then(r => r.json())
+            .then(function(resData) {
+              if (resData.success) {
+                Swal.fire({
+                  icon: 'success', title: 'Salida registrada',
+                  text: resData.mensaje, timer: 3000, showConfirmButton: false,
+                  background: '#1a202c', color: '#fff'
+                }).then(() => location.reload());
+              } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: resData.mensaje, background: '#1a202c', color: '#fff' });
+              }
+            }).catch(function() {
+              Swal.fire({ icon: 'error', title: 'Error de red', background: '#1a202c', color: '#fff' });
+            });
+          }
+        });
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-shield-alt mr-1"></i>Validar Código y Sacar';
+        document.getElementById('emg-unico-error').textContent = data.mensaje || 'Código incorrecto.';
+        document.getElementById('emg-unico-pin').value = '';
+        document.getElementById('emg-unico-pin').focus();
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-shield-alt mr-1"></i>Validar Código y Sacar';
+      document.getElementById('emg-unico-error').textContent = 'Error de conexión.';
+    });
+  }
 </script>
 {% endblock scripts %}
+
+

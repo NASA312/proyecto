@@ -29,5 +29,11 @@ urlpatterns = [
     # ========== OTRAS ACCIONES USUARIOS ==========
     path('usuarios/<int:user_id>/editar/', editar_usuario, name="editar_usuario"),
     path('usuarios/<int:user_id>/desactivar/', desactivar_usuario, name="desactivar_usuario"),
+    path('usuarios/<int:user_id>/toggle-escalamiento/', toggle_escalamiento, name='toggle_escalamiento'),
     path('usuarios/<int:user_id>/', detalle_usuario, name="detalle_usuario"),  # ← ESTA AL FINAL
-]
+
+    # ============================================
+    # MI PERFIL (empleados / observadores)
+    # ============================================
+    path('mi-perfil/', perfil_propio, name='perfil_propio'),
+]

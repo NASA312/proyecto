@@ -17,7 +17,7 @@
         {% endif %}
       </div>
       <div class="info">
-        <a href="#" class="d-block">
+        <a href="{% url 'auth:perfil_propio' %}" class="d-block" title="Ver mi perfil">
           <strong class="font-bold">{{ user.first_name }} {{ user.last_name }}</strong>
         </a>
         {% if user.perfil.rol %}
@@ -124,9 +124,9 @@
         </li>
 
         <!-- ============================================ -->
-        <!-- CONTROL DE ACCESO (ADMIN y EMPLEADO) -->
+        <!-- CONTROL DE ACCESO (ADMIN, EMPLEADO, OBSERVADOR) -->
         <!-- ============================================ -->
-        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' %}
+        {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' or user.perfil.rol.nombre == 'EMPLEADO' or user.perfil.rol.nombre == 'OBSERVADOR' %}
         <li class="nav-item menu-close">
           <a href="#" class="nav-link">
             <i class="nav-icon fas fa-fingerprint"></i>

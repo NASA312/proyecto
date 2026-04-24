@@ -129,6 +129,18 @@ class Perfil(models.Model):
         help_text="Observaciones sobre el usuario"
     )
     
+    # Código de escalamiento para salidas de emergencia
+    puede_usar_codigo_escalamiento = models.BooleanField(
+        default=False,
+        help_text="Habilitado por el administrador para usar salidas de emergencia"
+    )
+    codigo_escalamiento = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="Código de 4 dígitos hasheado para autorizar salidas de emergencia"
+    )
+    
     class Meta:
         verbose_name = "Perfil de Trabajador"
         verbose_name_plural = "Perfiles de Trabajadores"

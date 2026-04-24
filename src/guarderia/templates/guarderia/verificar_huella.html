@@ -5,239 +5,850 @@
 
 {% block css %}
 <style>
-  body { background: #0d1117; }
-  .kiosk-content { padding: 0; background: #0d1117; }
-  .kiosk-topbar  { background: #0d1117; border-bottom: 1px solid rgba(255,255,255,.07); }
-  .kiosk-footer  { background: #0d1117; border-top: 1px solid rgba(255,255,255,.07); }
-  .kiosk-topbar .hora { display: none; }
-  .content-wrapper { background: #0d1117 !important; }
+  body {
+    background: #0d1117;
+  }
+
+  .kiosk-content {
+    padding: 0;
+    background: #0d1117;
+  }
+
+  .kiosk-topbar {
+    background: #0d1117;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+
+  .kiosk-footer {
+    background: #0d1117;
+    border-top: 1px solid rgba(255, 255, 255, .07);
+  }
+
+  .kiosk-topbar .hora {
+    display: none;
+  }
+
+  .content-wrapper {
+    background: #0d1117 !important;
+  }
 
   .kiosk-main {
     min-height: calc(100vh - 80px);
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 24px 16px;
   }
 
-  .panel-inicial { text-align: center; max-width: 520px; width: 100%; }
+  .panel-inicial {
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+  }
 
   .reloj-grande {
-    font-size: 5.5rem; font-weight: 800; color: #ffffff;
-    letter-spacing: -2px; line-height: 1;
+    font-size: 5.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -2px;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 40px rgba(99,179,237,.35);
+    text-shadow: 0 0 40px rgba(99, 179, 237, .35);
   }
+
   .fecha-texto {
-    font-size: .95rem; color: rgba(255,255,255,.4);
-    margin-top: 6px; margin-bottom: 44px;
-    letter-spacing: 1.5px; text-transform: uppercase;
+    font-size: .95rem;
+    color: rgba(255, 255, 255, .4);
+    margin-top: 6px;
+    margin-bottom: 44px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
   }
 
   .huella-ring {
-    width: 140px; height: 140px; border-radius: 50%;
-    border: 2px solid rgba(99,179,237,.25);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 28px; position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 2px solid rgba(99, 179, 237, .25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    position: relative;
     animation: pulsar 2.5s ease-in-out infinite;
   }
+
   .huella-ring::before {
-    content: ''; position: absolute; inset: -12px;
-    border-radius: 50%; border: 1px solid rgba(99,179,237,.12);
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(99, 179, 237, .12);
     animation: pulsar 2.5s ease-in-out infinite .35s;
   }
+
   .huella-ring::after {
-    content: ''; position: absolute; inset: -24px;
-    border-radius: 50%; border: 1px solid rgba(99,179,237,.06);
+    content: '';
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    border: 1px solid rgba(99, 179, 237, .06);
     animation: pulsar 2.5s ease-in-out infinite .7s;
   }
+
   @keyframes pulsar {
-    0%,100% { transform: scale(1); opacity: 1; }
-    50%      { transform: scale(1.05); opacity: .6; }
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    50% {
+      transform: scale(1.05);
+      opacity: .6;
+    }
   }
-  .huella-icono { font-size: 3.5rem; color: #63b3ed; animation: latido 2.5s ease-in-out infinite; }
+
+  .huella-icono {
+    font-size: 3.5rem;
+    color: #63b3ed;
+    animation: latido 2.5s ease-in-out infinite;
+  }
+
   @keyframes latido {
-    0%,100% { transform: scale(1); color: #63b3ed; }
-    50%      { transform: scale(1.08); color: #90cdf4; }
+
+    0%,
+    100% {
+      transform: scale(1);
+      color: #63b3ed;
+    }
+
+    50% {
+      transform: scale(1.08);
+      color: #90cdf4;
+    }
   }
 
-  .estado-titulo    { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
-  .estado-subtitulo { font-size: .88rem; color: rgba(255,255,255,.4); margin-bottom: 28px; }
+  .estado-titulo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
 
-  .scan-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; max-width: 280px; margin: 0 auto; }
-  .scan-bar-inner { height: 100%; background: linear-gradient(90deg, transparent, #63b3ed, transparent); animation: scan 1.8s ease-in-out infinite; }
-  @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .estado-subtitulo {
+    font-size: .88rem;
+    color: rgba(255, 255, 255, .4);
+    margin-bottom: 28px;
+  }
+
+  .scan-bar {
+    height: 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .07);
+    overflow: hidden;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .scan-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #63b3ed, transparent);
+    animation: scan 1.8s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
 
   .panel-verificado {
-    width: 100%; max-width: 760px; background: #161b22;
-    border: 1px solid rgba(255,255,255,.08); border-radius: 20px; overflow: hidden;
-    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    width: 100%;
+    max-width: 760px;
+    background: #161b22;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
   }
+
   .verificado-header {
     background: linear-gradient(135deg, #1a472a, #22543d);
-    padding: 18px 28px; display: flex; align-items: center; gap: 12px;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
-  .verificado-header i  { font-size: 1.4rem; color: #68d391; }
-  .verificado-header h4 { color: #fff; margin: 0; font-size: 1.05rem; font-weight: 700; }
-  .verificado-body { padding: 24px 28px; }
+
+  .verificado-header i {
+    font-size: 1.4rem;
+    color: #68d391;
+  }
+
+  .verificado-header h4 {
+    color: #fff;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .verificado-body {
+    padding: 24px 28px;
+  }
 
   .tutor-info {
-    display: flex; align-items: center; gap: 18px; padding: 18px;
-    background: rgba(255,255,255,.04); border-radius: 12px; margin-bottom: 22px;
-    border: 1px solid rgba(255,255,255,.06);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px;
+    background: rgba(255, 255, 255, .04);
+    border-radius: 12px;
+    margin-bottom: 22px;
+    border: 1px solid rgba(255, 255, 255, .06);
   }
-  .tutor-avatar {
-    width: 58px; height: 58px; border-radius: 50%; background: #2d3748;
-    flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
-  }
-  .tutor-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .tutor-avatar i   { font-size: 1.6rem; color: #68d391; }
-  .tutor-datos h5   { color: #fff; margin: 0 0 3px; font-size: 1.05rem; font-weight: 700; }
-  .tutor-datos p    { color: rgba(255,255,255,.45); margin: 0; font-size: .82rem; }
 
-  .ninos-label { color: rgba(255,255,255,.5); font-size: .75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .tutor-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: #2d3748;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tutor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tutor-avatar i {
+    font-size: 1.6rem;
+    color: #68d391;
+  }
+
+  .tutor-datos h5 {
+    color: #fff;
+    margin: 0 0 3px;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .tutor-datos p {
+    color: rgba(255, 255, 255, .45);
+    margin: 0;
+    font-size: .82rem;
+  }
+
+  .ninos-label {
+    color: rgba(255, 255, 255, .5);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
 
   .nino-card {
-    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
-    border-radius: 12px; padding: 14px 18px; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
   }
+
   .nino-foto {
-    width: 44px; height: 44px; border-radius: 50%; background: #2d3748;
-    flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #2d3748;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .nino-foto img { width: 100%; height: 100%; object-fit: cover; }
-  .nino-foto i   { font-size: 1.2rem; color: #90cdf4; }
-  .nino-datos    { flex: 1; }
-  .nino-datos h6 { color: #fff; margin: 0 0 3px; font-size: .92rem; font-weight: 600; }
-  .nino-datos small { color: rgba(255,255,255,.4); font-size: .78rem; }
 
-  .badge-dentro { background: rgba(72,187,120,.15); color: #68d391; border: 1px solid rgba(72,187,120,.3); border-radius: 20px; padding: 2px 10px; font-size: .72rem; font-weight: 700; margin-left: 6px; }
-  .badge-fuera  { background: rgba(160,174,192,.1);  color: #a0aec0; border: 1px solid rgba(160,174,192,.2); border-radius: 20px; padding: 2px 10px; font-size: .72rem; font-weight: 700; margin-left: 6px; }
+  .nino-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 
-  .btn-entrada { background: #276749; color: #fff; border: none; border-radius: 9px; padding: 8px 16px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
-  .btn-entrada:hover { background: #2f855a; }
-  .btn-salida  { background: #2b4c7e; color: #fff; border: none; border-radius: 9px; padding: 8px 16px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
-  .btn-salida:hover  { background: #2c5282; }
+  .nino-foto i {
+    font-size: 1.2rem;
+    color: #90cdf4;
+  }
+
+  .nino-datos {
+    flex: 1;
+  }
+
+  .nino-datos h6 {
+    color: #fff;
+    margin: 0 0 3px;
+    font-size: .92rem;
+    font-weight: 600;
+  }
+
+  .nino-datos small {
+    color: rgba(255, 255, 255, .4);
+    font-size: .78rem;
+  }
+
+  .badge-dentro {
+    background: rgba(72, 187, 120, .15);
+    color: #68d391;
+    border: 1px solid rgba(72, 187, 120, .3);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: .72rem;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  .badge-fuera {
+    background: rgba(160, 174, 192, .1);
+    color: #a0aec0;
+    border: 1px solid rgba(160, 174, 192, .2);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: .72rem;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  .btn-entrada {
+    background: #276749;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 16px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+
+  .btn-entrada:hover {
+    background: #2f855a;
+  }
+
+  .btn-salida {
+    background: #2b4c7e;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 16px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+
+  .btn-salida:hover {
+    background: #2c5282;
+  }
 
   .btn-nueva {
-    margin-top: 18px; width: 100%; background: rgba(255,255,255,.06); color: rgba(255,255,255,.6);
-    border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
-    padding: 10px; font-size: .86rem; cursor: pointer; transition: background .15s;
+    margin-top: 18px;
+    width: 100%;
+    background: rgba(255, 255, 255, .06);
+    color: rgba(255, 255, 255, .6);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: .86rem;
+    cursor: pointer;
+    transition: background .15s;
   }
-  .btn-nueva:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+  .btn-nueva:hover {
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+  }
 
   .panel-error {
-    width: 100%; max-width: 460px; background: #161b22;
-    border: 1px solid rgba(252,129,129,.2); border-radius: 20px; padding: 44px 32px;
-    text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    width: 100%;
+    max-width: 460px;
+    background: #161b22;
+    border: 1px solid rgba(252, 129, 129, .2);
+    border-radius: 20px;
+    padding: 44px 32px;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
   }
-  .panel-error .err-icon { font-size: 3rem; color: #fc8181; display: block; margin-bottom: 16px; }
-  .panel-error h4 { color: #fff; margin-bottom: 8px; font-size: 1.1rem; }
-  .panel-error p  { color: rgba(255,255,255,.4); font-size: .86rem; margin-bottom: 24px; }
-  .btn-reintentar { background: #63b3ed; color: #1a202c; border: none; border-radius: 10px; padding: 11px 28px; font-size: .88rem; font-weight: 700; cursor: pointer; }
-  .btn-reintentar:hover { background: #90cdf4; }
+
+  .panel-error .err-icon {
+    font-size: 3rem;
+    color: #fc8181;
+    display: block;
+    margin-bottom: 16px;
+  }
+
+  .panel-error h4 {
+    color: #fff;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+  }
+
+  .panel-error p {
+    color: rgba(255, 255, 255, .4);
+    font-size: .86rem;
+    margin-bottom: 24px;
+  }
+
+  .btn-reintentar {
+    background: #63b3ed;
+    color: #1a202c;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 28px;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn-reintentar:hover {
+    background: #90cdf4;
+  }
+
+  /* Botón de emergencia — esquina inferior derecha */
+  .btn-emergencia-fijo {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 100;
+    background: rgba(197, 48, 48, .15);
+    border: 2px solid rgba(252, 129, 129, .5);
+    color: #fc8181;
+    border-radius: 14px;
+    padding: 12px 22px;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, color .2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(6px);
+  }
+
+  .btn-emergencia-fijo:hover {
+    background: rgba(197, 48, 48, .35);
+    border-color: #fc8181;
+    color: #fff;
+  }
+
+  /* Panel de emergencia — igual estilo que panel-inicial */
+  .panel-emergencia {
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+    animation: fadeIn .25s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Alerta pulsante del icóno */
+  .emg-icon-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid rgba(252, 129, 129, .35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: pulsar-rojo 2s ease-in-out infinite;
+  }
+
+  @keyframes pulsar-rojo {
+
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(252, 129, 129, .2);
+    }
+
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 14px rgba(252, 129, 129, 0);
+    }
+  }
+
+  .emg-icon {
+    font-size: 2.2rem;
+    color: #fc8181;
+  }
+
+  .emg-titulo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .emg-subtitulo {
+    font-size: .88rem;
+    color: rgba(255, 255, 255, .4);
+    margin-bottom: 28px;
+  }
+
+  /* Input de código PIN — mismo estilo que matricula-input pero con borde rojo */
+  .emg-pin-input {
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid rgba(252, 129, 129, .4);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 10px;
+    padding: 14px 20px;
+    width: 100%;
+    outline: none;
+    transition: border .2s;
+    caret-color: #fc8181;
+  }
+
+  .emg-pin-input:focus {
+    border-color: #fc8181;
+    box-shadow: 0 0 0 3px rgba(252, 129, 129, .15);
+  }
+
+  .emg-pin-input::placeholder {
+    color: rgba(255, 255, 255, .2);
+    letter-spacing: 3px;
+    font-size: 1rem;
+  }
+
+  /* Botón validar — mismo estilo que btn-buscar pero rojo */
+  .btn-emg-validar {
+    margin-top: 14px;
+    width: 100%;
+    background: #9b2c2c;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+  }
+
+  .btn-emg-validar:hover {
+    background: #c53030;
+  }
+
+  .btn-emg-validar:disabled {
+    background: rgba(155, 44, 44, .4);
+    cursor: not-allowed;
+  }
+
+  .emg-error {
+    color: #fc8181;
+    font-size: .84rem;
+    margin-top: 10px;
+    min-height: 22px;
+  }
+
+  /* Teclado numérico (opcional / pantallas táctiles) */
+  .emg-teclado-toggle {
+    margin-top: 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 10px;
+    padding: 8px 16px;
+    color: rgba(255, 255, 255, .4);
+    font-size: .78rem;
+    cursor: pointer;
+    display: inline-block;
+    transition: background .15s;
+  }
+
+  .emg-teclado-toggle:hover {
+    background: rgba(255, 255, 255, .09);
+    color: #fff;
+  }
+
+  .emg-teclado {
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 16px;
+    padding: 14px;
+    max-width: 320px;
+    margin: 12px auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .emg-key {
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: background .1s;
+    user-select: none;
+  }
+
+  .emg-key:hover {
+    background: rgba(255, 255, 255, .14);
+  }
+
+  .emg-key:active {
+    background: rgba(197, 48, 48, .35);
+    border-color: #fc8181;
+  }
+
+  .emg-key.del {
+    color: #fc8181;
+  }
+
+  /* Lista de niños dentro (emergencia) */
+  .emg-nino-card {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(252, 129, 129, .2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    transition: background .15s;
+  }
+
+  .emg-nino-card:hover {
+    background: rgba(197, 48, 48, .15);
+    border-color: #fc8181;
+  }
+
+  .emg-nino-foto {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #2d3748;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emg-nino-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .emg-nino-foto i {
+    font-size: 1.2rem;
+    color: #fc8181;
+  }
+
+  .emg-nino-info h6 {
+    color: #fff;
+    margin: 0 0 2px;
+    font-size: .92rem;
+    font-weight: 600;
+  }
+
+  .emg-nino-info small {
+    color: rgba(255, 255, 255, .4);
+    font-size: .78rem;
+  }
+
+  .emg-btn-salida {
+    margin-left: auto;
+    background: rgba(197, 48, 48, .2);
+    border: 1px solid #fc8181;
+    color: #fc8181;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+
+  .emg-btn-salida:hover {
+    background: rgba(197, 48, 48, .45);
+    color: #fff;
+  }
 
   /* Panel de búsqueda por matrícula */
-.matricula-input {
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(99,179,237,.3);
-  border-radius: 12px;
-  color: #fff;
-  font-size: 1.4rem;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 4px;
-  padding: 14px 20px;
-  width: 100%;
-  outline: none;
-  transition: border .2s;
-}
-.matricula-input:focus { border-color: #63b3ed; box-shadow: 0 0 0 3px rgba(99,179,237,.15); }
-.matricula-input::placeholder { color: rgba(255,255,255,.2); letter-spacing: 2px; font-size: 1rem; }
+  .matricula-input {
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid rgba(99, 179, 237, .3);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 4px;
+    padding: 14px 20px;
+    width: 100%;
+    outline: none;
+    transition: border .2s;
+  }
 
-.btn-buscar {
-  margin-top: 14px; width: 100%;
-  background: #2b6cb0; color: #fff;
-  border: none; border-radius: 12px;
-  padding: 13px; font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: background .15s;
-}
-.btn-buscar:hover { background: #2c5282; }
+  .matricula-input:focus {
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 3px rgba(99, 179, 237, .15);
+  }
 
-/* Panel de huella (paso 2) */
-.panel-huella { text-align: center; max-width: 520px; width: 100%; }
-.nino-encontrado-card {
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(99,179,237,.2);
-  border-radius: 16px; padding: 18px 22px;
-  display: flex; align-items: center; gap: 16px;
-  margin-bottom: 32px; text-align: left;
-}
-.nino-foto-kiosk {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: #2d3748; flex-shrink: 0; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-}
-.nino-foto-kiosk img { width: 100%; height: 100%; object-fit: cover; }
-.nino-foto-kiosk i  { font-size: 1.8rem; color: #90cdf4; }
+  .matricula-input::placeholder {
+    color: rgba(255, 255, 255, .2);
+    letter-spacing: 2px;
+    font-size: 1rem;
+  }
+
+  .btn-buscar {
+    margin-top: 14px;
+    width: 100%;
+    background: #2b6cb0;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+  }
+
+  .btn-buscar:hover {
+    background: #2c5282;
+  }
+
+  /* Panel de huella (paso 2) */
+  .panel-huella {
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+  }
+
+  .nino-encontrado-card {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(99, 179, 237, .2);
+    border-radius: 16px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    text-align: left;
+  }
+
+  .nino-foto-kiosk {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #2d3748;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nino-foto-kiosk img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .nino-foto-kiosk i {
+    font-size: 1.8rem;
+    color: #90cdf4;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="kiosk-main">
 
-<!-- PASO 1: Ingresar matrícula -->
-<div class="panel-inicial" id="card-matricula">
-  <div class="reloj-grande" id="reloj-kiosk-grande">--:--:--</div>
-  <div class="fecha-texto"  id="fecha-kiosk-grande">cargando...</div>
+  <!-- PASO 1: Ingresar matrícula -->
+  <div class="panel-inicial" id="card-matricula">
+    <div class="reloj-grande" id="reloj-kiosk-grande">--:--:--</div>
+    <div class="fecha-texto" id="fecha-kiosk-grande">cargando...</div>
 
-  <div style="margin-bottom: 28px;">
-    <i class="fas fa-id-card" style="font-size:3rem; color:#63b3ed; display:block; margin-bottom:16px;"></i>
-    <div class="estado-titulo">Ingrese la matrícula del niño</div>
-    <div class="estado-subtitulo">Escriba el número de matrícula y presione Buscar</div>
-  </div>
-
-  <input  type="text"
-          id="input-matricula"
-          class="matricula-input"
-          placeholder="Ej: 2024-001"
-          maxlength="20"
-          autocomplete="off"
-          onkeydown="if(event.key==='Enter') buscarNino()">
-
-  <div id="error-matricula"
-       style="display:none; color:#fc8181; font-size:.85rem; margin-top:10px;">
-    <i class="fas fa-exclamation-circle"></i> <span id="msg-error-matricula"></span>
-  </div>
-
-  <button class="btn-buscar" id="btn-buscar" onclick="buscarNino()">
-    <i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño
-  </button>
-</div>
-
-<!-- PASO 2: Niño encontrado → poner huella -->
-<div class="panel-huella" id="card-huella" style="display:none;">
-  <div class="nino-encontrado-card" id="nino-card-info">
-    <div class="nino-foto-kiosk" id="nino-foto-wrap">
-      <i class="fas fa-child"></i>
+    <div style="margin-bottom: 28px;">
+      <i class="fas fa-id-card" style="font-size:3rem; color:#63b3ed; display:block; margin-bottom:16px;"></i>
+      <div class="estado-titulo">Ingrese la matrícula del niño</div>
+      <div class="estado-subtitulo">Escriba el número de matrícula y presione Buscar</div>
     </div>
-    <div>
-      <h5 style="color:#fff; margin:0 0 4px;" id="nino-nombre-encontrado">—</h5>
-      <small style="color:rgba(255,255,255,.45);" id="nino-grupo-encontrado">—</small><br>
-      <small id="nino-estado-badge"></small>
+
+    <input type="text" id="input-matricula" class="matricula-input" placeholder="Ej: 2024-001" maxlength="20"
+      autocomplete="off" onkeydown="if(event.key==='Enter') buscarNino()">
+
+    <div id="error-matricula" style="display:none; color:#fc8181; font-size:.85rem; margin-top:10px;">
+      <i class="fas fa-exclamation-circle"></i> <span id="msg-error-matricula"></span>
     </div>
+
+    <button class="btn-buscar" id="btn-buscar" onclick="buscarNino()">
+      <i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño
+    </button>
   </div>
 
-  <div class="huella-ring" id="huella-ring-paso2">
-    <i class="fas fa-fingerprint huella-icono" id="icono-huella-paso2"></i>
-  </div>
-  <div class="estado-titulo"  id="msg-huella-paso2">Coloque su dedo en el lector</div>
-  <div class="estado-subtitulo">El tutor debe poner su huella para confirmar</div>
-  <div class="scan-bar"><div class="scan-bar-inner"></div></div>
+  <!-- PASO 2: Niño encontrado → poner huella -->
+  <div class="panel-huella" id="card-huella" style="display:none;">
+    <div class="nino-encontrado-card" id="nino-card-info">
+      <div class="nino-foto-kiosk" id="nino-foto-wrap">
+        <i class="fas fa-child"></i>
+      </div>
+      <div>
+        <h5 style="color:#fff; margin:0 0 4px;" id="nino-nombre-encontrado">—</h5>
+        <small style="color:rgba(255,255,255,.45);" id="nino-grupo-encontrado">—</small><br>
+        <small id="nino-estado-badge"></small>
+      </div>
+    </div>
 
-  <button class="btn-nueva" style="margin-top:24px;" onclick="volverAMatricula()">
-    <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Buscar otro niño
-  </button>
-</div>
+    <div class="huella-ring" id="huella-ring-paso2">
+      <i class="fas fa-fingerprint huella-icono" id="icono-huella-paso2"></i>
+    </div>
+    <div class="estado-titulo" id="msg-huella-paso2">Coloque su dedo en el lector</div>
+    <div class="estado-subtitulo">El tutor debe poner su huella para confirmar</div>
+    <div class="scan-bar">
+      <div class="scan-bar-inner"></div>
+    </div>
+
+    <button class="btn-nueva" style="margin-top:24px;" onclick="volverAMatricula()">
+      <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Buscar otro niño
+    </button>
+  </div>
 
   <!-- PANEL ERROR -->
   <div class="panel-error" id="card-error" style="display:none;">
@@ -249,280 +860,546 @@
     </button>
   </div>
 
+  <!-- PANEL EMERGENCIA (oculto por defecto, swap in-place) -->
+  <div class="panel-emergencia" id="panel-emergencia" style="display:none;">
+
+    <!-- Sub-estado: ingresar código PIN -->
+    <div id="emg-paso-pin">
+      <div class="emg-icon-ring">
+        <i class="fas fa-exclamation-triangle emg-icon"></i>
+      </div>
+      <div class="emg-titulo">Salida de Emergencia</div>
+      <div class="emg-subtitulo">Ingresa tu código de 4 dígitos y presiona Validar</div>
+
+      <!-- Input visible tipo matricula — acepta teclado físico y pantalla -->
+      <input type="password" id="emg-pin-input" class="emg-pin-input" placeholder="• • • •" maxlength="4"
+        inputmode="numeric" pattern="[0-9]{4}" autocomplete="off"
+        onkeydown="if(event.key==='Enter') validarCodigoEmergencia()">
+
+      <div class="emg-error" id="emg-error-msg"></div>
+
+      <button class="btn-emg-validar" id="btn-emg-validar" onclick="validarCodigoEmergencia()" disabled>
+        <i class="fas fa-shield-alt" style="margin-right:8px;"></i>Validar Código
+      </button>
+
+      <button class="btn-nueva" style="margin-top:18px;" onclick="cancelarEmergencia()">
+        <i class="fas fa-arrow-left" style="margin-right:8px;"></i>Cancelar y volver
+      </button>
+    </div>
+
+
+    <!-- Sub-estado: lista de niños dentro -->
+    <div id="emg-paso-lista" style="display:none; width:100%; max-width:600px; margin: 0 auto;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <i class="fas fa-child" style="font-size:2rem; color:#fc8181; margin-bottom:8px; display:block;"></i>
+        <div class="emg-titulo" style="font-size:1.2rem;">Niños dentro de la guardería</div>
+        <div class="emg-subtitulo" style="margin-bottom:0;">Selecciona al niño que necesita salir de emergencia</div>
+      </div>
+      <div id="emg-lista-ninos"></div>
+      <button class="btn-nueva" style="margin-top:16px;" onclick="cancelarEmergencia()">
+        <i class="fas fa-times" style="margin-right:8px;"></i>Cancelar
+      </button>
+    </div>
+
+  </div>
+
 </div>
+<!-- fin kiosk-main -->
+
+{% if True %}
+<!-- Botón flotante de emergencia -->
+<button class="btn-emergencia-fijo" id="btn-emergencia" onclick="activarEmergencia()" title="Salida de emergencia">
+  <i class="fas fa-exclamation-triangle"></i> Salida de Emergencia
+</button>
+{% endif %}
 {% endblock %}
+
 
 {% block scripts %}
 <script>
-var DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-function tickReloj() {
-  var a = new Date();
-  var h24 = a.getHours();
-  var h    = String(h24 % 12 || 12).padStart(2,'0');
-  var ampm = h24 >= 12 ? 'PM' : 'AM';
-  var m    = String(a.getMinutes()).padStart(2,'0');
-  var s    = String(a.getSeconds()).padStart(2,'0');
-  var eg = document.getElementById('reloj-kiosk-grande');
-  var ef = document.getElementById('fecha-kiosk-grande');
-  var et = document.getElementById('reloj-kiosk');
-  if (eg) eg.textContent = h + ':' + m + ':' + s + ' ' + ampm;
-  if (ef) ef.textContent = DIAS[a.getDay()] + ', ' + a.getDate() + ' de ' + MESES[a.getMonth()] + ' ' + a.getFullYear();
-  if (et) et.textContent = h + ':' + m + ':' + s;
-}
-tickReloj();
-setInterval(tickReloj, 1000);
+  function tickReloj() {
+    var a = new Date();
+    var h24 = a.getHours();
+    var h = String(h24 % 12 || 12).padStart(2, '0');
+    var ampm = h24 >= 12 ? 'PM' : 'AM';
+    var m = String(a.getMinutes()).padStart(2, '0');
+    var s = String(a.getSeconds()).padStart(2, '0');
+    var eg = document.getElementById('reloj-kiosk-grande');
+    var ef = document.getElementById('fecha-kiosk-grande');
+    var et = document.getElementById('reloj-kiosk');
+    if (eg) eg.textContent = h + ':' + m + ':' + s + ' ' + ampm;
+    if (ef) ef.textContent = DIAS[a.getDay()] + ', ' + a.getDate() + ' de ' + MESES[a.getMonth()] + ' ' + a.getFullYear();
+    if (et) et.textContent = h + ':' + m + ':' + s;
+  }
+  tickReloj();
+  setInterval(tickReloj, 1000);
 
-// ── Estado global ──────────────────────────────────────────────
-let intervalPolling = null;
-let ninoActual      = null;   // objeto con id, nombre, grupo, estado
-let tutorActualId   = null;
+  // ── Estado global ──────────────────────────────────────────────
+  let intervalPolling = null;
+  let ninoActual = null;   // objeto con id, nombre, grupo, estado
+  let tutorActualId = null;
 
-// ── Al cargar ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  mostrarPanelMatricula();
-  document.getElementById('input-matricula').focus();
-});
+  // ── Al cargar ──────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    mostrarPanelMatricula();
+    document.getElementById('input-matricula').focus();
+  });
 
-// ══════════════════════════════════════════════════════════════
-//  PASO 1 — BUSCAR NIÑO POR MATRÍCULA
-// ══════════════════════════════════════════════════════════════
-function mostrarPanelMatricula() {
-  document.getElementById('card-matricula').style.display  = 'block';
-  document.getElementById('card-huella').style.display     = 'none';
-  // card-verificado y card-error pueden no existir, verificar antes
-  var cv = document.getElementById('card-verificado');
-  var ce = document.getElementById('card-error');
-  if (cv) cv.style.display = 'none';
-  if (ce) ce.style.display = 'none';
-  document.getElementById('input-matricula').value = '';
-  ocultarErrorMatricula();
-  setTimeout(() => document.getElementById('input-matricula').focus(), 100);
-}
-
-function volverAMatricula() {
-  detenerPolling();
-  ninoActual    = null;
-  tutorActualId = null;
-  // Cancelar captura en el servidor .NET si estaba activa
-  fetch('/guarderia/api/cancelar-huella/', { method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'} }).catch(()=>{});
-  mostrarPanelMatricula();
-}
-
-function mostrarErrorMatricula(msg) {
-  document.getElementById('error-matricula').style.display = 'block';
-  document.getElementById('msg-error-matricula').textContent = msg;
-  document.getElementById('btn-buscar').disabled = false;
-  document.getElementById('btn-buscar').innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
-}
-
-function ocultarErrorMatricula() {
-  document.getElementById('error-matricula').style.display = 'none';
-}
-
-function buscarNino() {
-  var matricula = document.getElementById('input-matricula').value.trim();
-  if (!matricula) {
-    mostrarErrorMatricula('Ingrese una matrícula.');
-    return;
+  // ══════════════════════════════════════════════════════════════
+  //  PASO 1 — BUSCAR NIÑO POR MATRÍCULA
+  // ══════════════════════════════════════════════════════════════
+  function mostrarPanelMatricula() {
+    document.getElementById('card-matricula').style.display = 'block';
+    document.getElementById('card-huella').style.display = 'none';
+    // card-verificado y card-error pueden no existir, verificar antes
+    var cv = document.getElementById('card-verificado');
+    var ce = document.getElementById('card-error');
+    if (cv) cv.style.display = 'none';
+    if (ce) ce.style.display = 'none';
+    document.getElementById('input-matricula').value = '';
+    ocultarErrorMatricula();
+    setTimeout(() => document.getElementById('input-matricula').focus(), 100);
   }
 
-  ocultarErrorMatricula();
-  var btn = document.getElementById('btn-buscar');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Buscando...';
-
-  fetch('/guarderia/api/buscar-nino/?matricula=' + encodeURIComponent(matricula))
-    .then(r => r.json())
-    .then(function(data) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
-
-      if (!data.success) {
-        mostrarErrorMatricula(data.mensaje || 'Niño no encontrado.');
-        return;
-      }
-
-      ninoActual = data.nino;  // { id, nombre, grupo, edad, foto_url, estado }
-      mostrarPanelHuella();
-    })
-    .catch(function() {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
-      mostrarErrorMatricula('Error de conexión. Intente de nuevo.');
-    });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PASO 2 — MOSTRAR PANEL DE HUELLA
-// ══════════════════════════════════════════════════════════════
-function mostrarPanelHuella() {
-  // Llenar datos del niño
-  document.getElementById('nino-nombre-encontrado').textContent = ninoActual.nombre;
-  document.getElementById('nino-grupo-encontrado').textContent  = 'Grupo: ' + ninoActual.grupo + ' · ' + ninoActual.edad + ' años';
-
-  // Badge de estado
-  var badge = '';
-  if (ninoActual.estado === 'DENTRO') {
-    badge = '<span style="background:rgba(72,187,120,.15);color:#68d391;border:1px solid rgba(72,187,120,.3);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">● DENTRO — se registrará SALIDA</span>';
-  } else {
-    badge = '<span style="background:rgba(160,174,192,.1);color:#a0aec0;border:1px solid rgba(160,174,192,.2);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">○ FUERA — se registrará ENTRADA</span>';
-  }
-  document.getElementById('nino-estado-badge').innerHTML = badge;
-
-  // Foto
-  var wrap = document.getElementById('nino-foto-wrap');
-  if (ninoActual.foto_url) {
-    wrap.innerHTML = '<img src="' + ninoActual.foto_url + '" alt="">';
-  } else {
-    wrap.innerHTML = '<i class="fas fa-child"></i>';
+  function volverAMatricula() {
+    detenerPolling();
+    ninoActual = null;
+    tutorActualId = null;
+    // Cancelar captura en el servidor .NET si estaba activa
+    fetch('/guarderia/api/cancelar-huella/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } }).catch(() => { });
+    mostrarPanelMatricula();
   }
 
-  document.getElementById('card-matricula').style.display  = 'none';
-  document.getElementById('card-huella').style.display     = 'block';
-  var cv = document.getElementById('card-verificado');
-  if (cv) cv.style.display = 'none';
-  var ce = document.getElementById('card-error');
-  if (ce) ce.style.display = 'none';
-  document.getElementById('msg-huella-paso2').textContent  = 'Coloque su dedo en el lector';
-  document.getElementById('icono-huella-paso2').className  = 'fas fa-fingerprint huella-icono';
+  function mostrarErrorMatricula(msg) {
+    document.getElementById('error-matricula').style.display = 'block';
+    document.getElementById('msg-error-matricula').textContent = msg;
+    document.getElementById('btn-buscar').disabled = false;
+    document.getElementById('btn-buscar').innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+  }
 
-  // Iniciar captura en el servidor .NET
-  iniciarCapturaHuella();
-}
+  function ocultarErrorMatricula() {
+    document.getElementById('error-matricula').style.display = 'none';
+  }
 
-// ══════════════════════════════════════════════════════════════
-//  CAPTURA DE HUELLA (llama al backend Django que habla con .NET)
-// ══════════════════════════════════════════════════════════════
-function iniciarCapturaHuella() {
-  fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
-  })
-  .then(r => r.json())
-  .then(function(d) {
-    if (d.success) {
-      iniciarPolling();
-    } else {
-      mostrarError(d.mensaje || 'Error al iniciar el lector.');
+  function buscarNino() {
+    var matricula = document.getElementById('input-matricula').value.trim();
+    if (!matricula) {
+      mostrarErrorMatricula('Ingrese una matrícula.');
+      return;
     }
-  })
-  .catch(() => mostrarError('No se puede conectar con el lector. Verifique que esté conectado.'));
-}
 
-function iniciarPolling() {
-  detenerPolling();
-  intervalPolling = setInterval(function() {
-    fetch("{% url 'guarderia:verificar_huella_estado' %}")
+    ocultarErrorMatricula();
+    var btn = document.getElementById('btn-buscar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Buscando...';
+
+    fetch('/guarderia/api/buscar-nino/?matricula=' + encodeURIComponent(matricula))
       .then(r => r.json())
-      .then(function(d) {
-        if (!d.completado) return;
-        detenerPolling();
+      .then(function (data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+
+        if (!data.success) {
+          mostrarErrorMatricula(data.mensaje || 'Niño no encontrado.');
+          return;
+        }
+
+        ninoActual = data.nino;  // { id, nombre, grupo, edad, foto_url, estado }
+        mostrarPanelHuella();
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+        mostrarErrorMatricula('Error de conexión. Intente de nuevo.');
+      });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  PASO 2 — MOSTRAR PANEL DE HUELLA
+  // ══════════════════════════════════════════════════════════════
+  function mostrarPanelHuella() {
+    // Llenar datos del niño
+    document.getElementById('nino-nombre-encontrado').textContent = ninoActual.nombre;
+    document.getElementById('nino-grupo-encontrado').textContent = 'Grupo: ' + ninoActual.grupo + ' · ' + ninoActual.edad + ' años';
+
+    // Badge de estado
+    var badge = '';
+    if (ninoActual.estado === 'DENTRO') {
+      badge = '<span style="background:rgba(72,187,120,.15);color:#68d391;border:1px solid rgba(72,187,120,.3);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">● DENTRO — se registrará SALIDA</span>';
+    } else {
+      badge = '<span style="background:rgba(160,174,192,.1);color:#a0aec0;border:1px solid rgba(160,174,192,.2);border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">○ FUERA — se registrará ENTRADA</span>';
+    }
+    document.getElementById('nino-estado-badge').innerHTML = badge;
+
+    // Foto
+    var wrap = document.getElementById('nino-foto-wrap');
+    if (ninoActual.foto_url) {
+      wrap.innerHTML = '<img src="' + ninoActual.foto_url + '" alt="">';
+    } else {
+      wrap.innerHTML = '<i class="fas fa-child"></i>';
+    }
+
+    document.getElementById('card-matricula').style.display = 'none';
+    document.getElementById('card-huella').style.display = 'block';
+    var cv = document.getElementById('card-verificado');
+    if (cv) cv.style.display = 'none';
+    var ce = document.getElementById('card-error');
+    if (ce) ce.style.display = 'none';
+    document.getElementById('msg-huella-paso2').textContent = 'Coloque su dedo en el lector';
+    document.getElementById('icono-huella-paso2').className = 'fas fa-fingerprint huella-icono';
+
+    // Iniciar captura en el servidor .NET
+    iniciarCapturaHuella();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  CAPTURA DE HUELLA (llama al backend Django que habla con .NET)
+  // ══════════════════════════════════════════════════════════════
+  function iniciarCapturaHuella() {
+    fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+      .then(r => r.json())
+      .then(function (d) {
         if (d.success) {
-          tutorActualId = d.tutor.id;
-          confirmarYRegistrar(d.tutor);
+          iniciarPolling();
         } else {
-          mostrarError(d.mensaje || 'Huella no reconocida.');
+          mostrarError(d.mensaje || 'Error al iniciar el lector.');
         }
       })
-      .catch(e => console.error(e));
-  }, 1000);
-}
+      .catch(() => mostrarError('No se puede conectar con el lector. Verifique que esté conectado.'));
+  }
 
-function detenerPolling() {
-  if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
-}
+  function iniciarPolling() {
+    detenerPolling();
+    intervalPolling = setInterval(function () {
+      fetch("{% url 'guarderia:verificar_huella_estado' %}")
+        .then(r => r.json())
+        .then(function (d) {
+          if (!d.completado) return;
+          detenerPolling();
+          if (d.success) {
+            tutorActualId = d.tutor.id;
+            confirmarYRegistrar(d.tutor);
+          } else {
+            mostrarError(d.mensaje || 'Huella no reconocida.');
+          }
+        })
+        .catch(e => console.error(e));
+    }, 1000);
+  }
 
-// ══════════════════════════════════════════════════════════════
-//  PASO 3 — CONFIRMAR Y REGISTRAR
-// ══════════════════════════════════════════════════════════════
-function confirmarYRegistrar(tutor) {
-  var accion = (ninoActual.estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
-  var colorBtn = accion === 'ENTRADA' ? '#276749' : '#2b4c7e';
-  var iconoBtn = accion === 'ENTRADA' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
+  function detenerPolling() {
+    if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
+  }
 
-  Swal.fire({
-    title: 'Tutor verificado',
-    html:
-      '<p style="color:#fff;margin-bottom:4px;"><strong>' + tutor.nombre + '</strong></p>'
-    + '<p style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:16px;">' + tutor.parentesco + '</p>'
-    + '<p style="color:#ccc;margin-bottom:8px;">Se registrará: <strong>' + accion + '</strong> de <strong>' + ninoActual.nombre + '</strong></p>'
-    + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
-    icon: 'question',
-    background: '#161b22', color: '#fff',
-    showCancelButton: true,
-    confirmButtonColor: colorBtn,
-    confirmButtonText: '<i class="fas ' + iconoBtn + '" style="margin-right:6px;"></i>Registrar ' + accion,
-    cancelButtonText: 'Cancelar',
-    preConfirm: () => document.getElementById('swal-obs').value
-  }).then(function(result) {
-    if (!result.isConfirmed) { volverAMatricula(); return; }
+  // ══════════════════════════════════════════════════════════════
+  //  PASO 3 — CONFIRMAR Y REGISTRAR
+  // ══════════════════════════════════════════════════════════════
+  function confirmarYRegistrar(tutor) {
+    var accion = (ninoActual.estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
+    var colorBtn = accion === 'ENTRADA' ? '#276749' : '#2b4c7e';
+    var iconoBtn = accion === 'ENTRADA' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
-    var url = accion === 'ENTRADA'
-      ? "{% url 'guarderia:registrar_entrada' %}"
-      : "{% url 'guarderia:registrar_salida' %}";
+    Swal.fire({
+      title: 'Tutor verificado',
+      html:
+        '<p style="color:#fff;margin-bottom:4px;"><strong>' + tutor.nombre + '</strong></p>'
+        + '<p style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:16px;">' + tutor.parentesco + '</p>'
+        + '<p style="color:#ccc;margin-bottom:8px;">Se registrará: <strong>' + accion + '</strong> de <strong>' + ninoActual.nombre + '</strong></p>'
+        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+      icon: 'question',
+      background: '#161b22', color: '#fff',
+      showCancelButton: true,
+      confirmButtonColor: colorBtn,
+      confirmButtonText: '<i class="fas ' + iconoBtn + '" style="margin-right:6px;"></i>Registrar ' + accion,
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => document.getElementById('swal-obs').value
+    }).then(function (result) {
+      if (!result.isConfirmed) { volverAMatricula(); return; }
 
-    fetch(url, {
+      var url = accion === 'ENTRADA'
+        ? "{% url 'guarderia:registrar_entrada' %}"
+        : "{% url 'guarderia:registrar_salida' %}";
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+          nino_id: ninoActual.id,
+          tutor_id: tutorActualId,
+          observaciones: result.value || ''
+        })
+      })
+        .then(r => r.json())
+        .then(function (data) {
+          if (data.success) {
+            Swal.fire({
+              icon: 'success', title: accion + ' registrada',
+              text: data.mensaje, timer: 3000, showConfirmButton: false,
+              background: '#161b22', color: '#fff'
+            }).then(volverAMatricula);
+          } else {
+            Swal.fire({
+              icon: 'error', title: 'Error',
+              text: data.mensaje, background: '#161b22', color: '#fff'
+            }).then(volverAMatricula);
+          }
+        })
+        .catch(() => {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo registrar.', background: '#161b22', color: '#fff' })
+            .then(volverAMatricula);
+        });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  PANEL ERROR
+  // ══════════════════════════════════════════════════════════════
+  function mostrarError(mensaje) {
+    detenerPolling();
+    document.getElementById('card-matricula').style.display = 'none';
+    document.getElementById('card-huella').style.display = 'none';
+    var cv = document.getElementById('card-verificado');
+    if (cv) cv.style.display = 'none';
+    document.getElementById('card-error').style.display = 'block';
+    document.getElementById('mensaje-error').textContent = mensaje;
+    setTimeout(volverAMatricula, 5000);
+  }
+
+  // El botón reintentar del panel error vuelve al inicio
+  function reiniciar() { volverAMatricula(); }
+
+  function reiniciar() {
+    if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
+    verificando = false; tutorActualId = null; ninosEstados = {};
+    document.getElementById('card-inicial').style.display = 'block';
+    document.getElementById('card-verificado').style.display = 'none';
+    document.getElementById('card-error').style.display = 'none';
+
+    // CAMBIO 4: Siempre mostrar el mensaje original
+    document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector';
+    document.getElementById('icono-mano').className = 'fas fa-fingerprint huella-icono';
+
+    setTimeout(iniciarVerificacion, 2000);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  MODO EMERGENCIA — Código de Escalamiento
+  // ══════════════════════════════════════════════════════════════
+
+  var emgPanelActivo = false;
+
+  function mostrarPaneles(activos) {
+    var paneles = ['card-matricula', 'card-huella', 'card-error', 'panel-emergencia'];
+    paneles.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = activos.indexOf(id) >= 0 ? '' : 'none';
+    });
+  }
+
+  function activarEmergencia() {
+    detenerPolling();
+    emgPanelActivo = true;
+    // Limpiar estado
+    var inp = document.getElementById('emg-pin-input');
+    if (inp) { inp.value = ''; }
+    document.getElementById('emg-error-msg').textContent = '';
+    document.getElementById('btn-emg-validar').disabled = true;
+    document.getElementById('emg-paso-pin').style.display = 'block';
+    document.getElementById('emg-paso-lista').style.display = 'none';
+    mostrarPaneles(['panel-emergencia']);
+    var btnEmg = document.getElementById('btn-emergencia');
+    if (btnEmg) btnEmg.style.display = 'none';
+    // Foco al input
+    setTimeout(function () { if (inp) inp.focus(); }, 150);
+  }
+
+  function cancelarEmergencia() {
+    emgPanelActivo = false;
+    mostrarPaneles(['card-matricula']);
+    var btnEmg = document.getElementById('btn-emergencia');
+    if (btnEmg) btnEmg.style.display = '';
+    document.getElementById('input-matricula').value = '';
+    setTimeout(function () { document.getElementById('input-matricula').focus(); }, 100);
+  }
+
+  // Teclado numérico en pantalla — escribe en el input visible
+  function emgTecla(digito) {
+    var inp = document.getElementById('emg-pin-input');
+    if (!inp || inp.value.length >= 4) return;
+    inp.value += digito;
+    emgSincronizarBoton(inp.value);
+  }
+
+  function emgBorrar() {
+    var inp = document.getElementById('emg-pin-input');
+    if (!inp) return;
+    inp.value = inp.value.slice(0, -1);
+    emgSincronizarBoton(inp.value);
+    document.getElementById('emg-error-msg').textContent = '';
+  }
+
+  function emgSincronizarBoton(val) {
+    var btn = document.getElementById('btn-emg-validar');
+    if (btn) btn.disabled = (val.length !== 4 || !/^\d{4}$/.test(val));
+  }
+
+  // Listener para el input visible (teclado físico)
+  document.addEventListener('DOMContentLoaded', function () {
+    var inp = document.getElementById('emg-pin-input');
+    if (inp) {
+      inp.addEventListener('input', function () {
+        // Solo dígitos
+        this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        emgSincronizarBoton(this.value);
+        document.getElementById('emg-error-msg').textContent = '';
+      });
+    }
+  });
+
+  function toggleTeclado() {
+    var teclado = document.getElementById('emg-teclado');
+    var lbl = document.getElementById('toggle-teclado-lbl');
+    if (teclado.style.display === 'none') {
+      teclado.style.display = 'grid';
+      lbl.innerHTML = '<i class="fas fa-keyboard mr-1"></i> Ocultar teclado numérico';
+    } else {
+      teclado.style.display = 'none';
+      lbl.innerHTML = '<i class="fas fa-th mr-1"></i> Mostrar teclado numérico';
+    }
+  }
+
+  function validarCodigoEmergencia() {
+    var inp = document.getElementById('emg-pin-input');
+    var codigo = inp ? inp.value.trim() : '';
+
+    if (codigo.length !== 4 || !/^\d{4}$/.test(codigo)) {
+      document.getElementById('emg-error-msg').textContent = 'Ingresa exactamente 4 dígitos.';
+      return;
+    }
+
+    var btn = document.getElementById('btn-emg-validar');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Verificando...'; }
+
+    fetch("{% url 'guarderia:validar_codigo_escalamiento' %}", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-      body: JSON.stringify({
-        nino_id:      ninoActual.id,
-        tutor_id:     tutorActualId,
-        observaciones: result.value || ''
+      body: JSON.stringify({ codigo: codigo })
+    })
+      .then(r => r.json())
+      .then(function (data) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="margin-right:8px;"></i>Validar Código'; }
+
+        if (data.success) {
+          // Código correcto → mostrar lista de niños dentro
+          document.getElementById('emg-paso-pin').style.display = 'none';
+          document.getElementById('emg-paso-lista').style.display = 'block';
+          renderizarNinosDentro(data.ninos_dentro);
+        } else {
+          // Código incorrecto
+          document.getElementById('emg-error-msg').textContent = data.mensaje || 'Código incorrecto.';
+          if (inp) { inp.value = ''; inp.focus(); }
+          emgSincronizarBoton('');
+
+          if (data.sin_codigo) {
+            setTimeout(function () {
+              Swal.fire({
+                icon: 'warning',
+                title: 'Sin código configurado',
+                text: data.mensaje,
+                background: '#161b22', color: '#fff',
+                confirmButtonText: 'Ir a Mi Perfil',
+                showCancelButton: true, cancelButtonText: 'Cancelar'
+              }).then(function (r) {
+                if (r.isConfirmed) window.location.href = "{% url 'auth:perfil_propio' %}";
+                else cancelarEmergencia();
+              });
+            }, 200);
+          }
+        }
       })
-    })
-    .then(r => r.json())
-    .then(function(data) {
-      if (data.success) {
-        Swal.fire({
-          icon: 'success', title: accion + ' registrada',
-          text: data.mensaje, timer: 3000, showConfirmButton: false,
-          background: '#161b22', color: '#fff'
-        }).then(volverAMatricula);
-      } else {
-        Swal.fire({
-          icon: 'error', title: 'Error',
-          text: data.mensaje, background: '#161b22', color: '#fff'
-        }).then(volverAMatricula);
-      }
-    })
-    .catch(() => {
-      Swal.fire({ icon:'error', title:'Error', text:'No se pudo registrar.', background:'#161b22', color:'#fff' })
-        .then(volverAMatricula);
+      .catch(function () {
+        document.getElementById('emg-error-msg').textContent = 'Error de conexión. Intente de nuevo.';
+        if (inp) { inp.value = ''; inp.focus(); }
+        emgSincronizarBoton('');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="margin-right:8px;"></i>Validar Código'; }
+      });
+  }
+
+  function renderizarNinosDentro(ninos) {
+    var contenedor = document.getElementById('emg-lista-ninos');
+    if (!ninos || ninos.length === 0) {
+      contenedor.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:20px 0;">No hay niños dentro de la guardería en este momento.</p>';
+      return;
+    }
+    var html = '';
+    ninos.forEach(function (n) {
+      var foto = n.foto_url
+        ? '<img src="' + n.foto_url + '" alt="">'
+        : '<i class="fas fa-child"></i>';
+      html += '<div class="emg-nino-card">'
+        + '<div class="emg-nino-foto">' + foto + '</div>'
+        + '<div class="emg-nino-info flex-grow-1">'
+        + '<h6>' + n.nombre + '</h6>'
+        + '<small>Matrícula: ' + n.matricula + ' &nbsp;·&nbsp; ' + n.grupo + ' &nbsp;·&nbsp; Desde: ' + n.desde + '</small>'
+        + '</div>'
+        + '<button class="emg-btn-salida" onclick="confirmarSalidaEmergencia(' + n.id + ', \'' + n.nombre.replace(/'/g, "\\'") + '\')">'
+        + '<i class="fas fa-sign-out-alt mr-1"></i>Sacar</button>'
+        + '</div>';
     });
-  });
-}
+    contenedor.innerHTML = html;
+  }
 
-// ══════════════════════════════════════════════════════════════
-//  PANEL ERROR
-// ══════════════════════════════════════════════════════════════
-function mostrarError(mensaje) {
-  detenerPolling();
-  document.getElementById('card-matricula').style.display = 'none';
-  document.getElementById('card-huella').style.display    = 'none';
-  var cv = document.getElementById('card-verificado');
-  if (cv) cv.style.display = 'none';
-  document.getElementById('card-error').style.display     = 'block';
-  document.getElementById('mensaje-error').textContent    = mensaje;
-  setTimeout(volverAMatricula, 5000);
-}
+  function confirmarSalidaEmergencia(ninoId, ninoNombre) {
+    Swal.fire({
+      title: '⚠ Salida de Emergencia',
+      html: '<p style="color:#fff;margin-bottom:8px;">¿Confirmar salida de emergencia de <strong>' + ninoNombre + '</strong>?</p>'
+        + '<textarea id="emg-swal-obs" class="swal2-input" placeholder="Motivo / observación de la emergencia (requerido)" style="height:70px;"></textarea>',
+      icon: 'warning',
+      background: '#161b22', color: '#fff',
+      showCancelButton: true,
+      confirmButtonColor: '#c53030',
+      confirmButtonText: '<i class="fas fa-sign-out-alt mr-1"></i>Confirmar Salida',
+      cancelButtonText: 'Cancelar',
+      preConfirm: function () {
+        var obs = document.getElementById('emg-swal-obs').value.trim();
+        if (!obs) {
+          Swal.showValidationMessage('El motivo de emergencia es obligatorio.');
+          return false;
+        }
+        return obs;
+      }
+    }).then(function (result) {
+      if (!result.isConfirmed) return;
 
-// El botón reintentar del panel error vuelve al inicio
-function reiniciar() { volverAMatricula(); }
-
-function reiniciar() {
-  if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
-  verificando = false; tutorActualId = null; ninosEstados = {};
-  document.getElementById('card-inicial').style.display    = 'block';
-  document.getElementById('card-verificado').style.display = 'none';
-  document.getElementById('card-error').style.display      = 'none';
-  
-  // CAMBIO 4: Siempre mostrar el mensaje original
-  document.getElementById('mensaje-estado').textContent    = 'Coloque su dedo en el lector';
-  document.getElementById('icono-mano').className          = 'fas fa-fingerprint huella-icono';
-  
-  setTimeout(iniciarVerificacion, 2000);
-}
+      fetch("{% url 'guarderia:salida_emergencia' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ nino_id: ninoId, observacion: result.value })
+      })
+        .then(r => r.json())
+        .then(function (data) {
+          if (data.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Salida registrada',
+              text: data.mensaje,
+              timer: 3500, showConfirmButton: false,
+              background: '#161b22', color: '#fff'
+            }).then(cancelarEmergencia);
+          } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje, background: '#161b22', color: '#fff' });
+          }
+        })
+        .catch(function () {
+          Swal.fire({ icon: 'error', title: 'Error de conexión', background: '#161b22', color: '#fff' });
+        });
+    });
+  }
 </script>
 {% endblock %}

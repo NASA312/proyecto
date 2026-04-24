@@ -27,7 +27,7 @@ urlpatterns = [
     path('ninos/<int:nino_id>/', views.detalle_nino, name='detalle_nino'),
     path('ninos/<int:nino_id>/editar/', views.editar_nino, name='editar_nino'),
     path('ninos/<int:nino_id>/asignar-tutores/', views.asignar_tutores, name='asignar_tutores'),
-    path('ninos/<int:nino_id>/observaciones/', views.observaciones_nino, name='observaciones_nino'),  # ⭐ CORREGIDO
+    path('ninos/<int:nino_id>/observaciones/', views.observaciones_nino, name='observaciones_nino'),
 
     # =====================================
     # VERIFICACIÓN PÚBLICA
@@ -42,7 +42,6 @@ urlpatterns = [
     path('registros/historial/', views.historial_accesos, name='historial_accesos'),
     path('registros/salida/', views.registrar_salida, name='registrar_salida'),
     path('registrar-entrada/', views.registrar_entrada, name='registrar_entrada'),
-
 
     # =====================================
     # APIs HUELLAS
@@ -64,14 +63,14 @@ urlpatterns = [
     # =====================================
     path('dependencias/', views.lista_dependencias, name='lista_dependencias'),
     path('dependencias/registrar/', views.registrar_dependencia, name='registrar_dependencia'),
-    path('dependencias/<int:dependencia_id>/editar/', views.editar_dependencia, name='editar_dependencia'),  # ⭐ NUEVO
+    path('dependencias/<int:dependencia_id>/editar/', views.editar_dependencia, name='editar_dependencia'),
     
     # =====================================
     # DEPARTAMENTOS
     # =====================================
-    path('departamentos/', views.lista_departamentos, name='lista_departamentos'),  # ⭐ NUEVO
+    path('departamentos/', views.lista_departamentos, name='lista_departamentos'),
     path('departamentos/registrar/', views.registrar_departamento, name='registrar_departamento'),
-    path('departamentos/<int:departamento_id>/editar/', views.editar_departamento, name='editar_departamento'),  # ⭐ NUEVO
+    path('departamentos/<int:departamento_id>/editar/', views.editar_departamento, name='editar_departamento'),
     path('api/departamentos/', views.obtener_departamentos_ajax, name='obtener_departamentos_ajax'),
     
     # =====================================
@@ -97,63 +96,54 @@ urlpatterns = [
     path('observaciones/registrar/', views.registrar_observacion, name='registrar_observacion'),
     path('observaciones/<int:observacion_id>/editar/', views.editar_observacion, name='editar_observacion'),
     path('observaciones/<int:observacion_id>/notificar/', views.marcar_observacion_notificada, name='marcar_observacion_notificada'),
-        # ========== PAPELERA DEPARTAMENTOS ==========
-    path('departamentos/<int:departamento_id>/enviar-papelera/', 
-         views.enviar_departamento_papelera, 
-         name='enviar_departamento_papelera'),
     
-    path('departamentos/<int:departamento_id>/restaurar/', 
-         views.restaurar_departamento, 
-         name='restaurar_departamento'),
+    # ========== PAPELERA DEPARTAMENTOS ==========
+    path('departamentos/<int:departamento_id>/enviar-papelera/', views.enviar_departamento_papelera, name='enviar_departamento_papelera'),
+    path('departamentos/<int:departamento_id>/restaurar/', views.restaurar_departamento, name='restaurar_departamento'),
     
     # ========== PAPELERA DEPENDENCIAS ==========
-    path('dependencias/<int:dependencia_id>/enviar-papelera/', 
-         views.enviar_dependencia_papelera, 
-         name='enviar_dependencia_papelera'),
-    
-    path('dependencias/<int:dependencia_id>/restaurar/', 
-         views.restaurar_dependencia, 
-         name='restaurar_dependencia'),
+    path('dependencias/<int:dependencia_id>/enviar-papelera/', views.enviar_dependencia_papelera, name='enviar_dependencia_papelera'),
+    path('dependencias/<int:dependencia_id>/restaurar/', views.restaurar_dependencia, name='restaurar_dependencia'),
     
     # Servicios Médicos
-     path('servicios-medicos/<int:servicio_id>/enviar-papelera/',
-          views.enviar_servicio_papelera, name='enviar_servicio_papelera'),
-     path('servicios-medicos/<int:servicio_id>/restaurar/',
-          views.restaurar_servicio, name='restaurar_servicio'),
+    path('servicios-medicos/<int:servicio_id>/enviar-papelera/', views.enviar_servicio_papelera, name='enviar_servicio_papelera'),
+    path('servicios-medicos/<int:servicio_id>/restaurar/', views.restaurar_servicio, name='restaurar_servicio'),
 
-     # Grupos
-     path('grupos/<int:grupo_id>/enviar-papelera/',
-          views.enviar_grupo_papelera, name='enviar_grupo_papelera'),
-     path('grupos/<int:grupo_id>/restaurar/',
-          views.restaurar_grupo, name='restaurar_grupo'),
+    # Grupos
+    path('grupos/<int:grupo_id>/enviar-papelera/', views.enviar_grupo_papelera, name='enviar_grupo_papelera'),
+    path('grupos/<int:grupo_id>/restaurar/', views.restaurar_grupo, name='restaurar_grupo'),
 
-     # Tutores
-     path('tutores/<int:tutor_id>/enviar-papelera/',
-          views.enviar_tutor_papelera, name='enviar_tutor_papelera'),
-     path('tutores/<int:tutor_id>/restaurar/',
-          views.restaurar_tutor, name='restaurar_tutor'),
+    # Tutores
+    path('tutores/<int:tutor_id>/enviar-papelera/', views.enviar_tutor_papelera, name='enviar_tutor_papelera'),
+    path('tutores/<int:tutor_id>/restaurar/', views.restaurar_tutor, name='restaurar_tutor'),
 
-     # Niños
-     path('ninos/<int:nino_id>/enviar-papelera/',
-          views.enviar_nino_papelera, name='enviar_nino_papelera'),
-     path('ninos/<int:nino_id>/restaurar/',
-          views.restaurar_nino, name='restaurar_nino'),
+    # Niños
+    path('ninos/<int:nino_id>/enviar-papelera/', views.enviar_nino_papelera, name='enviar_nino_papelera'),
+    path('ninos/<int:nino_id>/restaurar/', views.restaurar_nino, name='restaurar_nino'),
 
-     path('grupos/finalizar-ciclo/', 
-     views.finalizar_ciclo_escolar, 
-     name='finalizar_ciclo_escolar'),
+    path('grupos/finalizar-ciclo/', views.finalizar_ciclo_escolar, name='finalizar_ciclo_escolar'),
     
     path('reportes/tutores-dependencia/', views.reporte_tutores_dependencia, name='reporte_tutores_dependencia'),
     path('reportes/asistencia-genero/',   views.reporte_asistencia_genero,   name='reporte_asistencia_genero'),
     path('configuracion/tiempo-limite/', views.configuracion_guarderia, name='configuracion_guarderia'),
     
+    # =====================================
+    # COLONIAS (Desde Main)
+    # =====================================
     path('colonias/',                   views.lista_colonias,   name='lista_colonias'),
     path('colonias/nueva/',             views.crear_colonia,    name='crear_colonia'),
     path('colonias/<int:pk>/editar/',   views.editar_colonia,   name='editar_colonia'),
     path('colonias/<int:pk>/eliminar/', views.eliminar_colonia, name='eliminar_colonia'),
     
-    
+    # =====================================
+    # RESPALDO (Desde Main)
+    # =====================================
     path('respaldo/',            views.pagina_respaldo,       name='pagina_respaldo'),
     path('respaldo/descargar/',  views.descargar_respaldo_db, name='descargar_respaldo'),
     
+    # =====================================
+    # EMERGENCIA — Código de Escalamiento
+    # =====================================
+    path('api/emergencia/validar-codigo/', views.validar_codigo_escalamiento, name='validar_codigo_escalamiento'),
+    path('api/emergencia/salida/', views.salida_emergencia, name='salida_emergencia'),
 ]
