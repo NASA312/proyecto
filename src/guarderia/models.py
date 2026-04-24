@@ -403,7 +403,14 @@ class RegistroAcceso(models.Model):
     ]
     
     nino = models.ForeignKey(Nino, on_delete=models.CASCADE, related_name='registros')
-    tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE, related_name='registros')
+    tutor = models.ForeignKey(
+        Tutor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='registros',
+        help_text="Tutor que acompañó. Puede ser nulo en salidas de emergencia."
+    )
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
     fecha_hora = models.DateTimeField(auto_now_add=True)
     

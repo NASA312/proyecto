@@ -22,23 +22,29 @@
             box-sizing: border-box;
         }
 
-        html,
-        body {
+        html {
             height: 100%;
             width: 100%;
         }
 
         body {
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            padding: 20px;
+            padding: 40px 20px;
         }
 
         .login-container {
             width: 100%;
             max-width: 450px;
+            margin: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -188,13 +194,13 @@
             /* Hacemos la imagen más grande */
             height: 180px;
             /* Misma altura para que sea un cuadrado perfecto inicialmente */
-            object-fit: contain;
-            /* Asegura que el logo no se deforme dentro del círculo */
+            object-fit: cover;
+            /* Asegura que el logo cubra todo el espacio sin deformarse ni dejar bordes blancos */
             border-radius: 50%;
             /* ESTO es lo que lo hace circular */
-            border: 6px solid white;
-            /* Añade el borde blanco grueso */
-            background-color: white;
+            border: 4px solid white;
+            /* Añade el borde blanco más fino */
+            background-color: transparent;
             /* Rellena el fondo del círculo de blanco (por si tu imagen es transparente) */
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
             /* Añade la sombra para dar profundidad */
@@ -254,7 +260,7 @@
                 <!-- Header -->
                 <div class="card-header text-center text-white">
                     <!-- Logo de la Guardería -->
-                    <img src="/media/fotos_login/guarderia.jpg" alt="Logo Guardería" class="logo-img">
+                    <img src="/media/fotos_login/logo.jpeg" alt="Logo Guardería" class="logo-img">
                     <h1 class="mb-1">SISTEMA DE CONTROL DE ACCESO CENDI 2</h1>
                     <p class="mb-0" style="opacity: 0.9; font-size: 0.95rem;">Control y Gestión Integral</p>
                 </div>
@@ -305,19 +311,16 @@
                             </div>
                         </div>
 
-                        <div class="row align-items-center mb-3">
-                            <div class="col-7">
-                                <div class="icheck-primary">
-                                    <input type="checkbox" id="remember">
-                                    <label for="remember">
-                                        Recordarme
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-5">
-                                <button type="submit" class="btn btn-primary btn-block">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>Entrar
-                                </button>
+                        <button type="submit" class="btn btn-primary btn-block mb-3" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Entrar
+                        </button>
+
+                        <div class="text-center mb-3">
+                            <div class="icheck-primary d-inline">
+                                <input type="checkbox" id="remember">
+                                <label for="remember">
+                                    Recordarme
+                                </label>
                             </div>
                         </div>
                     </form>

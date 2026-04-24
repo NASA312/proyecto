@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Mi Perfil</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Mi Perfil</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+
+      <!-- Columna Foto + Datos Básicos -->
+      <div class="col-md-4">
+        <div class="card card-primary card-outline">
+          <div class="card-body box-profile">
+            <div class="text-center">
+              {% if perfil.foto_perfil %}
+                <img class="profile-user-img img-fluid img-circle"
+                     src="{{ perfil.foto_perfil.url }}"
+                     alt="{{ request.user.get_full_name }}"
+                     style="width: 128px; height: 128px; object-fit: cover;">
+              {% else %}
+                <div class="profile-user-img img-fluid img-circle bg-secondary d-flex align-items-center justify-content-center mx-auto"
+                     style="width: 128px; height: 128px;">
+                  <i class="fas fa-user fa-4x text-white"></i>
+                </div>
+              {% endif %}
+            </div>
+
+            <h3 class="profile-username text-center">{{ request.user.get_full_name }}</h3>
+
+            <p class="text-muted text-center">
+              {% if perfil.rol %}
+                <span class="badge badge-{% if perfil.rol.nombre == 'ADMIN' %}primary{% elif perfil.rol.nombre == 'OBSERVADOR' %}info{% else %}success{% endif %} badge-lg">
+                  {{ perfil.rol }}
+                </span>
+              {% else %}
+                <span class="badge badge-secondary">Sin rol</span>
+              {% endif %}
+            </p>
+
+            <ul class="list-group list-group-unbordered mb-3">
+              <li class="list-group-item">
+                <b>Usuario</b> <a class="float-right">{{ request.user.username }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Email</b> <a class="float-right">{{ request.user.email|default:"—" }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>Teléfono</b> <a class="float-right">{{ perfil.telefono|default:"—" }}</a>
+              </li>
+              <li class="list-group-item">
+                <b>N° Empleado</b> <a class="float-right">{{ perfil.numero_empleado|default:"—" }}</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna Código de Escalamiento -->
+      <div class="col-md-8">
+
+        <!-- Información Laboral -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-briefcase mr-1"></i> Información Laboral</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <strong><i class="fas fa-calendar-check mr-1"></i> Fecha de Ingreso</strong>
+                <p class="text-muted">
+                  {% if perfil.fecha_ingreso %}{{ perfil.fecha_ingreso|date:"d/m/Y" }}{% else %}No especificada{% endif %}
+                </p>
+              </div>
+              <div class="col-md-6">
+                <strong><i class="fas fa-map-marker-alt mr-1"></i> Dirección</strong>
+                <p class="text-muted">{{ perfil.direccion|default:"No especificada" }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Código de Escalamiento -->
+        {% if perfil.puede_usar_codigo_escalamiento or request.user.is_superuser or perfil.es_administrador or perfil.rol.nombre == 'ADMIN' %}
+        <div class="card card-danger card-outline">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-exclamation-triangle mr-1 text-danger"></i>
+              Código de Escalamiento — Salidas de Emergencia
+            </h3>
+          </div>
+          <div class="card-body">
+
+            <div class="alert alert-warning">
+              <i class="fas fa-info-circle mr-1"></i>
+              <strong>¿Qué es esto?</strong> Tu código personal de 4 dígitos te permite registrar
+              la salida de emergencia de niños desde el kiosco de control de acceso.
+              Solo úsalo en situaciones de emergencia real.
+            </div>
+
+            {% if tiene_codigo %}
+            <div class="alert alert-success">
+              <i class="fas fa-check-circle mr-1"></i>
+              <strong>Tienes un código configurado.</strong> Puedes actualizarlo cuando quieras.
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+              <i class="fas fa-times-circle mr-1"></i>
+              <strong>Aún no tienes código configurado.</strong>
+              Establece uno para poder usar el modo de emergencia.
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'auth:perfil_propio' %}" id="form-codigo" class="no-auto-submit">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="cambiar_codigo">
+
+              <div class="form-group">
+                <label for="codigo_escalamiento">
+                  <i class="fas fa-key mr-1"></i>
+                  {% if tiene_codigo %}Nuevo código (4 dígitos){% else %}Establecer código (4 dígitos){% endif %}
+                </label>
+                <input type="password"
+                       id="codigo_escalamiento"
+                       name="codigo_escalamiento"
+                       class="form-control"
+                       maxlength="4"
+                       minlength="4"
+                       pattern="\d{4}"
+                       inputmode="numeric"
+                       placeholder="• • • •"
+                       autocomplete="off"
+                       style="font-size: 1.4rem; letter-spacing: 8px; text-align: center; max-width: 160px;">
+                <small class="form-text text-muted">Exactamente 4 dígitos numéricos. No uses tu fecha de nacimiento.</small>
+              </div>
+
+              <!-- Indicadores visuales PIN -->
+              <div class="mb-3" id="pin-dots" style="display:flex; gap:10px;">
+                <div class="pin-dot" style="width:18px;height:18px;border-radius:50%;background:#dee2e6;transition:background .15s;"></div>
+                <div class="pin-dot" style="width:18px;height:18px;border-radius:50%;background:#dee2e6;transition:background .15s;"></div>
+                <div class="pin-dot" style="width:18px;height:18px;border-radius:50%;background:#dee2e6;transition:background .15s;"></div>
+                <div class="pin-dot" style="width:18px;height:18px;border-radius:50%;background:#dee2e6;transition:background .15s;"></div>
+              </div>
+
+              <button type="submit" class="btn btn-danger" id="btn-guardar-codigo" disabled>
+                <i class="fas fa-save mr-1"></i>
+                {% if tiene_codigo %}Actualizar Código{% else %}Guardar Código{% endif %}
+              </button>
+            </form>
+
+          </div>
+        </div>
+
+        {% else %}
+        <!-- El admin no le ha habilitado el permiso aún -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-lock mr-1"></i> Código de Escalamiento</h3>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-secondary">
+              <i class="fas fa-info-circle mr-1"></i>
+              No tienes habilitado el uso del código de escalamiento. Si lo necesitas, solicítaselo al administrador del sistema.
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Volver -->
+        <div class="row">
+          <div class="col-12">
+            <a href="{% url 'guarderia:dashboard' %}" class="btn btn-default">
+              <i class="fas fa-arrow-left"></i> Volver al Dashboard
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var inputCodigo = document.getElementById('codigo_escalamiento');
+  var dots        = document.querySelectorAll('.pin-dot');
+  var btnGuardar  = document.getElementById('btn-guardar-codigo');
+
+  if (inputCodigo) {
+    inputCodigo.addEventListener('input', function () {
+      var len = this.value.length;
+      dots.forEach(function(dot, i) {
+        dot.style.background = i < len ? '#dc3545' : '#dee2e6';
+      });
+      btnGuardar.disabled = len !== 4 || !/^\d{4}$/.test(inputCodigo.value);
+    });
+
+    // Solo permitir dígitos
+    inputCodigo.addEventListener('keypress', function(e) {
+      if (!/\d/.test(e.key)) e.preventDefault();
+    });
+  }
+</script>
+{% endblock %}

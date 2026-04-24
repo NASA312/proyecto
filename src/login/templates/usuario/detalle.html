@@ -89,6 +89,26 @@
                 <b>{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %} Usuario</b>
               </a>
             {% endif %}
+
+            <!-- Toggle Código de Escalamiento (solo admin ve este botón) -->
+            {% if request.user.perfil.es_administrador or request.user.is_superuser %}
+              {% if not usuario.is_superuser and usuario.id != request.user.id %}
+              <hr>
+              <div class="text-center mb-1">
+                <small class="text-muted"><i class="fas fa-key mr-1"></i> Código de Escalamiento</small>
+              </div>
+              <button type="button"
+                      id="btn-toggle-escalamiento"
+                      data-userid="{{ usuario.id }}"
+                      class="btn btn-block btn-{% if perfil.puede_usar_codigo_escalamiento %}warning{% else %}secondary{% endif %}"
+                      onclick="toggleEscalamiento(this.dataset.userid)">
+                <i class="fas fa-{% if perfil.puede_usar_codigo_escalamiento %}unlock{% else %}lock{% endif %} mr-1"></i>
+                <b id="lbl-escalamiento">
+                  {% if perfil.puede_usar_codigo_escalamiento %}Revocar Acceso de Emergencia{% else %}Habilitar Acceso de Emergencia{% endif %}
+                </b>
+              </button>
+              {% endif %}
+            {% endif %}
           </div>
         </div>
       </div>
@@ -244,6 +264,31 @@
           </div>
         </div>
 
+        <!-- Estado Código de Escalamiento (visible para el admin) -->
+        {% if request.user.perfil.es_administrador or request.user.is_superuser %}
+          {% if not usuario.is_superuser and usuario.id != request.user.id %}
+          <div class="card" id="card-escalamiento">
+            <div class="card-header {% if perfil.puede_usar_codigo_escalamiento %}bg-warning{% else %}bg-secondary{% endif %}" id="header-escalamiento">
+              <h3 class="card-title text-white">
+                <i class="fas fa-key mr-1"></i> Estado de Acceso de Emergencia
+              </h3>
+            </div>
+            <div class="card-body">
+              <div id="estado-escalamiento-msg">
+                {% if perfil.puede_usar_codigo_escalamiento %}
+                  <span class="badge badge-warning"><i class="fas fa-unlock mr-1"></i> Habilitado</span>
+                  <p class="text-muted mt-2 mb-0">Este usuario puede usar el código de escalamiento para sacar niños en emergencias. Tiene
+                  {% if perfil.codigo_escalamiento %}<strong>código configurado</strong>{% else %}<strong class="text-danger">código SIN configurar</strong> (debe ir a Mi Perfil){% endif %}.</p>
+                {% else %}
+                  <span class="badge badge-secondary"><i class="fas fa-lock mr-1"></i> Deshabilitado</span>
+                  <p class="text-muted mt-2 mb-0">Este usuario no tiene acceso al modo de emergencia.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        {% endif %}
+
         <!-- Botones de Acción -->
         <div class="row">
           <div class="col-12">
@@ -256,4 +301,62 @@
     </div>
   </div>
 </section>
+
 {% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEscalamiento(userId) {
+  Swal.fire({
+    title: '¿Confirmar cambio?',
+    text: 'Esto cambiará el acceso al modo de emergencia para este usuario.',
+    icon: 'warning',
+    background: '#1a202c', color: '#fff',
+    showCancelButton: true,
+    confirmButtonColor: '#d69e2e',
+    cancelButtonText: 'Cancelar',
+    confirmButtonText: 'Sí, cambiar',
+  }).then(function(result) {
+    if (!result.isConfirmed) return;
+
+    fetch('/auth/usuarios/' + userId + '/toggle-escalamiento/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.success) {
+        var btn     = document.getElementById('btn-toggle-escalamiento');
+        var lbl     = document.getElementById('lbl-escalamiento');
+        var header  = document.getElementById('header-escalamiento');
+        var msgDiv  = document.getElementById('estado-escalamiento-msg');
+
+        if (data.habilitado) {
+          btn.className    = 'btn btn-block btn-warning';
+          btn.querySelector('i').className = 'fas fa-unlock mr-1';
+          lbl.textContent  = 'Revocar Acceso de Emergencia';
+          if (header)  { header.className = 'card-header bg-warning'; }
+          if (msgDiv)  { msgDiv.innerHTML = '<span class="badge badge-warning"><i class="fas fa-unlock mr-1"></i> Habilitado</span><p class="text-muted mt-2 mb-0">Habilitado. El usuario debe ir a <strong>Mi Perfil</strong> para configurar su código.</p>'; }
+        } else {
+          btn.className    = 'btn btn-block btn-secondary';
+          btn.querySelector('i').className = 'fas fa-lock mr-1';
+          lbl.textContent  = 'Habilitar Acceso de Emergencia';
+          if (header)  { header.className = 'card-header bg-secondary'; }
+          if (msgDiv)  { msgDiv.innerHTML = '<span class="badge badge-secondary"><i class="fas fa-lock mr-1"></i> Deshabilitado</span><p class="text-muted mt-2 mb-0">Este usuario no tiene acceso al modo de emergencia.</p>'; }
+        }
+
+        Swal.fire({ icon: 'success', title: '¡Listo!', text: data.message, timer: 2500, showConfirmButton: false, background: '#1a202c', color: '#fff' });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#1a202c', color: '#fff' });
+      }
+    })
+    .catch(function() {
+      Swal.fire({ icon: 'error', title: 'Error de conexión', background: '#1a202c', color: '#fff' });
+    });
+  });
+}
+</script>
+{% endblock %}

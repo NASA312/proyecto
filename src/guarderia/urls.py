@@ -146,4 +146,10 @@ urlpatterns = [
     path('reportes/tutores-dependencia/', views.reporte_tutores_dependencia, name='reporte_tutores_dependencia'),
     path('reportes/asistencia-genero/',   views.reporte_asistencia_genero,   name='reporte_asistencia_genero'),
     path('configuracion/tiempo-limite/', views.configuracion_guarderia, name='configuracion_guarderia'),
-]
+
+    # =====================================
+    # EMERGENCIA — Código de Escalamiento
+    # =====================================
+    path('api/emergencia/validar-codigo/', views.validar_codigo_escalamiento, name='validar_codigo_escalamiento'),
+    path('api/emergencia/salida/', views.salida_emergencia, name='salida_emergencia'),
+]

@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
 import base64
 import json
 import requests
@@ -370,3 +371,77 @@ def desactivar_usuario(request, user_id):
     messages.success(request, f'Usuario {usuario.username} {estado} correctamente.')
     
     return redirect('auth:lista_usuarios')
+
+
+# ============================================
+# MI PERFIL — para empleados y observadores
+# ============================================
+
+@login_required
+def perfil_propio(request):
+    """Vista de perfil propio: ver datos e (si tiene permiso) configurar código de escalamiento."""
+    from urllib.parse import urlencode
+    perfil = request.user.perfil
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'cambiar_codigo':
+            es_admin = request.user.is_superuser or perfil.es_administrador or (perfil.rol and perfil.rol.nombre == 'ADMIN')
+            if not (perfil.puede_usar_codigo_escalamiento or es_admin):
+                params = urlencode({'success': 'false', 'message': 'No tienes permiso para usar el código de escalamiento.'})
+                return redirect(f"{reverse('auth:perfil_propio')}?{params}")
+
+            codigo = request.POST.get('codigo_escalamiento', '').strip()
+
+            # Validar: exactamente 4 dígitos numéricos
+            if not codigo.isdigit() or len(codigo) != 4:
+                params = urlencode({'success': 'false', 'message': 'El código debe ser exactamente 4 dígitos numéricos.'})
+                return redirect(f"{reverse('auth:perfil_propio')}?{params}")
+
+            perfil.codigo_escalamiento = make_password(codigo)
+            perfil.save()
+            params = urlencode({'success': 'true', 'message': '¡Código de escalamiento actualizado correctamente!'})
+            return redirect(f"{reverse('auth:perfil_propio')}?{params}")
+
+    tiene_codigo = bool(perfil.codigo_escalamiento)
+    ctx = {
+        'perfil': perfil,
+        'tiene_codigo': tiene_codigo,
+    }
+    return render(request, 'usuario/perfil.html', ctx)
+
+
+
+# ============================================
+# TOGGLE ESCALAMIENTO — solo administradores
+# ============================================
+
+@login_required
+@require_http_methods(["POST"])
+def toggle_escalamiento(request, user_id):
+    """El administrador habilita o deshabilita el permiso de escalamiento de un usuario."""
+    if not es_admin(request.user):
+        return JsonResponse({'success': False, 'message': 'No tienes permisos para realizar esta acción.'}, status=403)
+
+    usuario = get_object_or_404(User, id=user_id)
+    perfil = usuario.perfil
+
+    # No permitir que el admin se lo dé a sí mismo (sería redundante; el admin no usa el kiosco)
+    if usuario.id == request.user.id and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'No puedes modificar tu propio permiso de escalamiento.'}, status=400)
+
+    perfil.puede_usar_codigo_escalamiento = not perfil.puede_usar_codigo_escalamiento
+
+    # Si se revoca el permiso, limpiar el código hasheado por seguridad
+    if not perfil.puede_usar_codigo_escalamiento:
+        perfil.codigo_escalamiento = None
+
+    perfil.save()
+
+    estado = 'habilitado' if perfil.puede_usar_codigo_escalamiento else 'deshabilitado'
+    return JsonResponse({
+        'success': True,
+        'habilitado': perfil.puede_usar_codigo_escalamiento,
+        'message': f'Código de escalamiento {estado} para {usuario.get_full_name() or usuario.username}.'
+    })

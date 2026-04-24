@@ -378,7 +378,7 @@ def verificar_huella_tutor(request):
 # ============================================
 
 @login_required
-@rol_requerido('ADMIN', 'EMPLEADO')
+@rol_requerido('ADMIN', 'EMPLEADO', 'OBSERVADOR')
 def historial_accesos(request):
     """Historial de entradas y salidas con filtros avanzados"""
     
@@ -437,12 +437,25 @@ def historial_accesos(request):
     tutores = Tutor.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
     grupos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
     
+    # Calcular cuáles de los registros son la ENTRADA actual (activa)
+    entradas_activas_ids = set()
+    ninos_verificados = set()
+    for reg in registros:
+        if reg.nino_id not in ninos_verificados:
+            if reg.tipo == 'ENTRADA':
+                # Verificar si realmente es el último registro absoluto del niño
+                ultimo = RegistroAcceso.objects.filter(nino_id=reg.nino_id).order_by('-fecha_hora').first()
+                if ultimo and ultimo.id == reg.id:
+                    entradas_activas_ids.add(reg.id)
+            ninos_verificados.add(reg.nino_id)
+    
     context = {
         'registros': registros,
         'ninos': ninos,
         'tutores': tutores,
         'grupos': grupos,
         'tipo_choices': RegistroAcceso.TIPO_CHOICES,
+        'entradas_activas_ids': entradas_activas_ids,
         
         # Estadísticas
         'total_registros': total_registros,
@@ -2411,3 +2424,136 @@ def configuracion_guarderia(request):
         'ultimos_registros': ultimos_registros,
         "lista_minutos": lista_minutos
     })
+
+
+# ============================================
+# EMERGENCIA — Validar código de escalamiento
+# ============================================
+
+# Quitar @login_required de esta vista
+@csrf_exempt
+@require_http_methods(["POST"])
+def validar_codigo_escalamiento(request):
+    from django.contrib.auth.hashers import check_password as django_check_password
+    from login.models import Perfil
+
+    try:
+        data = json.loads(request.body)
+        codigo_ingresado = str(data.get('codigo', '')).strip()
+
+        # Buscar entre perfiles habilitados explícitamente + administradores (permiso implícito)
+        from django.db.models import Q
+        
+        perfiles = Perfil.objects.filter(
+            Q(puede_usar_codigo_escalamiento=True) | 
+            Q(user__is_superuser=True) | 
+            Q(rol__nombre__iexact='ADMIN')
+        ).exclude(codigo_escalamiento__isnull=True).exclude(codigo_escalamiento='')
+
+        perfil_valido = None
+        for perfil in perfiles:
+            if django_check_password(codigo_ingresado, perfil.codigo_escalamiento):
+                perfil_valido = perfil
+                break
+
+        if not perfil_valido:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Código incorrecto. Inténtalo de nuevo.'
+            })
+
+
+        # Guardar en sesión quién validó
+        request.session['emergencia_perfil_id'] = perfil_valido.id
+        request.session['emergencia_usuario_nombre'] = perfil_valido.user.get_full_name()
+
+        # Niños dentro...
+        ninos_activos = Nino.objects.filter(activo=True)
+        ninos_dentro = []
+        for nino in ninos_activos:
+            ultimo = RegistroAcceso.objects.filter(nino=nino).order_by('-fecha_hora').first()
+            if ultimo and ultimo.tipo == 'ENTRADA':
+                ninos_dentro.append({
+                    'id': nino.id,
+                    'nombre': nino.nombre_completo(),
+                    'matricula': nino.numero_matricula or '—',
+                    'grupo': str(nino.grupo) if nino.grupo else 'Sin grupo',
+                    'foto_url': nino.foto.url if nino.foto else None,
+                    'desde': ultimo.fecha_hora.strftime('%H:%M'),
+                })
+
+        return JsonResponse({
+            'success': True,
+            'ninos_dentro': ninos_dentro,
+            'total': len(ninos_dentro),
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
+
+
+# ============================================
+# EMERGENCIA — Registrar salida de emergencia
+# ============================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def salida_emergencia(request):
+    from login.models import Perfil
+
+    try:
+        perfil_id = request.session.get('emergencia_perfil_id')
+        nombre_empleado = request.session.get('emergencia_usuario_nombre', 'Empleado')
+
+        if not perfil_id:
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Sesión de emergencia expirada. Vuelve a ingresar tu código.'
+            }, status=403)
+
+        data = json.loads(request.body)
+        nino_id = data.get('nino_id')
+        observacion = str(data.get('observacion', '')).strip()
+
+        if not nino_id:
+            return JsonResponse({'success': False, 'mensaje': 'Falta el ID del niño.'}, status=400)
+
+        nino = get_object_or_404(Nino, id=nino_id, activo=True)
+
+        ultimo = RegistroAcceso.objects.filter(nino=nino).order_by('-fecha_hora').first()
+        if not ultimo or ultimo.tipo != 'ENTRADA':
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'{nino.nombre_completo()} no está dentro actualmente.'
+            }, status=400)
+
+        # Obtener el usuario que validó el código (desde la sesión)
+        try:
+            perfil_obj = Perfil.objects.get(id=perfil_id)
+            empleado_user = perfil_obj.user
+        except Perfil.DoesNotExist:
+            empleado_user = request.user if request.user.is_authenticated else None
+
+        registro = RegistroAcceso.objects.create(
+            nino=nino,
+            tutor=None,
+            tipo='SALIDA',
+            verificacion_exitosa=True,
+            metodo_verificacion='EMERGENCIA',
+            registrado_por=empleado_user,
+            observaciones=observacion if observacion else None,
+        )
+
+
+        # Limpiar sesión de emergencia
+        request.session.pop('emergencia_perfil_id', None)
+        request.session.pop('emergencia_usuario_nombre', None)
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Salida de emergencia registrada para {nino.nombre_completo()}.',
+            'registro_id': registro.id,
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
