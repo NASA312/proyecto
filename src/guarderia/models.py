@@ -43,18 +43,9 @@ class Colonia(models.Model):
     """Colonias por código postal"""
     d_codigo = models.CharField(max_length=5, db_index=True, verbose_name="Código Postal", default='00000')
     d_asenta = models.CharField(max_length=200, verbose_name="Nombre del Asentamiento", default='Sin nombre')
-    d_tipo_asenta = models.CharField(max_length=50, verbose_name="Tipo de Asentamiento", default="Colonia")
     D_mnpio = models.CharField(max_length=200, verbose_name="Municipio", default="Sin municipio")
     d_estado = models.CharField(max_length=100, verbose_name="Estado", default="Sin estado")
-    d_ciudad = models.CharField(max_length=200, blank=True, null=True, verbose_name="Ciudad")
-    d_CP = models.CharField(max_length=5, blank=True, null=True, verbose_name="CP Oficina Postal")
-    c_estado = models.CharField(max_length=2, blank=True, null=True, verbose_name="Clave Estado")
-    c_oficina = models.CharField(max_length=5, blank=True, null=True, verbose_name="Clave Oficina")
-    c_tipo_asenta = models.CharField(max_length=2, blank=True, null=True, verbose_name="Clave Tipo Asentamiento")
-    c_mnpio = models.CharField(max_length=3, blank=True, null=True, verbose_name="Clave Municipio")
-    id_asenta_cpcons = models.CharField(max_length=20, verbose_name="ID Único", default='0', db_index=True)
-    fecha_carga = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    
+
     class Meta:
         verbose_name = "Colonia"
         verbose_name_plural = "Colonias"
@@ -63,7 +54,7 @@ class Colonia(models.Model):
             models.Index(fields=['d_codigo']),
             models.Index(fields=['d_codigo', 'd_asenta']),
         ]
-    
+
     def __str__(self):
         return f"{self.d_asenta} - CP {self.d_codigo}"
 

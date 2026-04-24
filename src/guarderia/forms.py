@@ -264,3 +264,62 @@ class ConfiguracionGuarderiaForm(forms.ModelForm):
         labels = {
             'tiempo_minimo_entre_registros': 'Tiempo mínimo entre registros (minutos)',
         }
+        
+class ColoniaForm(forms.ModelForm):
+    class Meta:
+        model = Colonia
+        fields = ['d_codigo', 'd_asenta', 'D_mnpio', 'd_estado']
+        labels = {
+            'd_codigo': 'Código Postal',
+            'd_asenta': 'Nombre del Asentamiento / Colonia',
+            'D_mnpio':  'Municipio',
+            'd_estado': 'Estado',
+        }
+        widgets = {
+            'd_codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. 63000',
+                'maxlength': 5,
+            }),
+            'd_asenta': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Centro',
+            }),
+            'D_mnpio': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Tepic',
+            }),
+            'd_estado': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej. Nayarit',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo al CREAR (sin instancia guardada): poner Nayarit como initial en estado
+        # y vaciar los demás campos que heredan el `default` del modelo
+        if not self.instance.pk:
+            self.fields['d_estado'].initial = 'Nayarit'
+            # Limpiar los defaults del modelo para que aparezcan como placeholder
+            self.fields['d_codigo'].initial = ''
+            self.fields['d_asenta'].initial = ''
+            self.fields['D_mnpio'].initial = ''
+        
+    def clean_d_codigo(self):
+        cp = self.cleaned_data.get('d_codigo', '').strip()
+        if not cp.isdigit() or len(cp) != 5:
+            raise forms.ValidationError("El código postal debe ser exactamente 5 dígitos.")
+        return cp
+
+    def clean_d_asenta(self):
+        nombre = self.cleaned_data.get('d_asenta', '').strip()
+        if len(nombre) < 2:
+            raise forms.ValidationError("El nombre del asentamiento es demasiado corto.")
+        return nombre.title()
+
+    def clean_D_mnpio(self):
+        return self.cleaned_data.get('D_mnpio', '').strip().title()
+
+    def clean_d_estado(self):
+        return self.cleaned_data.get('d_estado', '').strip().title()

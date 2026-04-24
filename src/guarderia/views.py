@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+import subprocess
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.base import ContentFile
 from django.utils import timezone
+import shutil
 from datetime import datetime, timedelta
 from .models import Tutor, Nino, RegistroAcceso
 from .forms import *
@@ -1092,90 +1094,76 @@ def verificar_huella_estado(request):
 def buscar_colonias_cp(request):
     """Busca colonias por código postal o por nombre desde la base de datos"""
     cp = request.GET.get('cp', '').strip()
-    q  = request.GET.get('q', '').strip()   # ← NUEVO
+    q  = request.GET.get('q', '').strip()
 
-    # ── Búsqueda por CP (lógica existente, sin tocar) ──
+    def serializar(col):
+        """Convierte un objeto o dict de Colonia al formato que espera el JS"""
+        if isinstance(col, dict):
+            return {
+                "id":       col['id'],
+                "nombre":   col['d_asenta'],
+                "municipio": col['D_mnpio'],
+                "estado":   col['d_estado'],
+                "ciudad":   col['D_mnpio'],   # se usaba d_ciudad; ahora usamos municipio
+                "cp":       col['d_codigo'],
+                # tipo_asentamiento ya no existe, el JS no lo requiere
+            }
+        return {
+            "id":       col.id,
+            "nombre":   col.d_asenta,
+            "municipio": col.D_mnpio,
+            "estado":   col.d_estado,
+            "ciudad":   col.D_mnpio,
+            "cp":       col.d_codigo,
+        }
+
+    # ── Búsqueda por CP ──
     if cp:
         if not cp.isdigit() or len(cp) != 5:
             return JsonResponse({"success": False, "error": "Código postal inválido"})
 
         try:
             colonias = Colonia.objects.filter(d_codigo=cp).order_by('d_asenta')
-
             if not colonias.exists():
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No se encontraron colonias para el CP {cp}"
-                })
-
-            resultado = []
-            for col in colonias:
-                resultado.append({
-                    "id":                col.id,
-                    "nombre":            col.d_asenta,
-                    "tipo_asentamiento": col.d_tipo_asenta,
-                    "municipio":         col.D_mnpio,
-                    "estado":            col.d_estado,
-                    "ciudad":            col.d_ciudad if col.d_ciudad else col.D_mnpio,
-                    "cp":                col.d_codigo,   # ← NUEVO (lo necesita el JS)
-                })
+                return JsonResponse({"success": False,
+                                     "error": f"No se encontraron colonias para el CP {cp}"})
 
             return JsonResponse({
                 "success": True,
                 "fuente":  "base_de_datos",
-                "colonias": resultado,
-                "total":    len(resultado)
+                "colonias": [serializar(c) for c in colonias],
+                "total":    colonias.count()
             })
 
         except Exception as e:
             import traceback
-            return JsonResponse({
-                "success": False,
-                "error":     f"Error al consultar: {str(e)}",
-                "traceback": traceback.format_exc()
-            })
+            return JsonResponse({"success": False, "error": str(e),
+                                 "traceback": traceback.format_exc()})
 
-    # ── NUEVO: Búsqueda por texto libre ──
+    # ── Búsqueda por texto libre ──
     elif q and len(q) >= 3:
         try:
             from django.db.models import Q
             colonias = (
                 Colonia.objects
                 .filter(Q(d_asenta__icontains=q) | Q(D_mnpio__icontains=q))
-                .values('id', 'd_asenta', 'd_tipo_asenta', 'D_mnpio',
-                        'd_estado', 'd_ciudad', 'd_codigo')
+                .values('id', 'd_asenta', 'D_mnpio', 'd_estado', 'd_codigo')
                 .order_by('d_asenta')[:40]
             )
-
-            resultado = [
-                {
-                    "id":                col['id'],
-                    "nombre":            col['d_asenta'],
-                    "tipo_asentamiento": col['d_tipo_asenta'],
-                    "municipio":         col['D_mnpio'],
-                    "estado":            col['d_estado'],
-                    "ciudad":            col['d_ciudad'] if col['d_ciudad'] else col['D_mnpio'],
-                    "cp":                col['d_codigo'],
-                }
-                for col in colonias
-            ]
-
             return JsonResponse({
                 "success": True,
                 "fuente":  "base_de_datos",
-                "colonias": resultado,
-                "total":    len(resultado)
+                "colonias": [serializar(c) for c in colonias],
+                "total":    len(list(colonias))
             })
 
         except Exception as e:
             import traceback
-            return JsonResponse({
-                "success": False,
-                "error":     f"Error al consultar: {str(e)}",
-                "traceback": traceback.format_exc()
-            })
+            return JsonResponse({"success": False, "error": str(e),
+                                 "traceback": traceback.format_exc()})
 
-    return JsonResponse({"success": False, "error": "Proporciona cp o q (mínimo 3 caracteres)"})
+    return JsonResponse({"success": False,
+                         "error": "Proporciona cp o q (mínimo 3 caracteres)"})
 
 # ============================================
 # VISTAS DE DEPENDENCIAS Y DEPARTAMENTOS
@@ -1469,17 +1457,86 @@ def registrar_grupo(request):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def detalle_grupo(request, grupo_id):
-    """Ver detalles de un grupo"""
-    grupo = get_object_or_404(Grupo, id=grupo_id)
-    ninos = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
-    
+    """Ver detalles de un grupo con lista de asistencia del día actual"""
+    from django.utils import timezone
+    from django.db.models import Subquery, OuterRef
+
+    grupo  = get_object_or_404(Grupo, id=grupo_id)
+    hoy    = timezone.localdate()
+    ninos  = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
+
+    # IDs de niños que tienen al menos una ENTRADA hoy
+    ninos_con_entrada_hoy = (
+        RegistroAcceso.objects
+        .filter(
+            nino__grupo=grupo,
+            tipo='ENTRADA',
+            fecha_hora__date=hoy,
+            verificacion_exitosa=True,
+        )
+        .values_list('nino_id', flat=True)
+        .distinct()
+    )
+
+    # Para cada niño con entrada, traer el último registro de hoy
+    # (puede ser ENTRADA o SALIDA — para saber si sigue dentro)
+    from django.db.models import Max
+
+    # Último registro de hoy por niño
+    ultimo_registro_id = (
+        RegistroAcceso.objects
+        .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
+        .order_by('-fecha_hora')
+        .values('id')[:1]
+    )
+
+    registros_hoy = (
+        RegistroAcceso.objects
+        .filter(
+            nino_id__in=ninos_con_entrada_hoy,
+            id__in=Subquery(
+                RegistroAcceso.objects
+                .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
+                .order_by('-fecha_hora')
+                .values('id')[:1]
+            )
+        )
+        .select_related('nino', 'tutor')
+        .order_by('nino__apellido_paterno', 'nino__nombre')
+    )
+
+    # Hora de primera entrada de cada niño hoy
+    primera_entrada = {}
+    for reg in RegistroAcceso.objects.filter(
+        nino_id__in=ninos_con_entrada_hoy,
+        tipo='ENTRADA',
+        fecha_hora__date=hoy,
+    ).order_by('fecha_hora'):
+        if reg.nino_id not in primera_entrada:
+            primera_entrada[reg.nino_id] = reg.fecha_hora
+
+    # Armar lista de asistencia
+    asistencia = []
+    for reg in registros_hoy:
+        asistencia.append({
+            'nino':           reg.nino,
+            'tutor':          reg.tutor,
+            'hora_entrada':   primera_entrada.get(reg.nino_id),
+            'ultimo_estado':  reg.tipo,       # ENTRADA o SALIDA
+            'sigue_dentro':   reg.tipo == 'ENTRADA',
+        })
+
     return render(request, 'guarderia/grupos/detalle.html', {
-        'grupo': grupo,
-        'ninos': ninos,
-        'ninos_asignados': grupo.ninos_asignados(),
+        'grupo':                grupo,
+        'ninos':                ninos,
+        'ninos_asignados':      grupo.ninos_asignados(),
         'capacidad_disponible': grupo.capacidad_disponible(),
         'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
-        'esta_lleno': grupo.esta_lleno()
+        'esta_lleno':           grupo.esta_lleno(),
+        'asistencia':           asistencia,
+        'hoy':                  hoy,
+        'total_presentes':      sum(1 for a in asistencia if a['sigue_dentro']),
+        'total_asistencia':     len(asistencia),
     })
 
 
@@ -2424,13 +2481,10 @@ def configuracion_guarderia(request):
         'ultimos_registros': ultimos_registros,
         "lista_minutos": lista_minutos
     })
-
-
 # ============================================
 # EMERGENCIA — Validar código de escalamiento
 # ============================================
 
-# Quitar @login_required de esta vista
 @csrf_exempt
 @require_http_methods(["POST"])
 def validar_codigo_escalamiento(request):
@@ -2461,7 +2515,6 @@ def validar_codigo_escalamiento(request):
                 'success': False,
                 'mensaje': 'Código incorrecto. Inténtalo de nuevo.'
             })
-
 
         # Guardar en sesión quién validó
         request.session['emergencia_perfil_id'] = perfil_valido.id
@@ -2544,7 +2597,6 @@ def salida_emergencia(request):
             observaciones=observacion if observacion else None,
         )
 
-
         # Limpiar sesión de emergencia
         request.session.pop('emergencia_perfil_id', None)
         request.session.pop('emergencia_usuario_nombre', None)
@@ -2557,3 +2609,159 @@ def salida_emergencia(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
+
+
+# ============================================
+# COLONIAS Y RESPALDO (Desde Main)
+# ============================================
+
+@login_required
+def lista_colonias(request):
+    colonias = Colonia.objects.all().order_by('d_codigo', 'd_asenta')
+    return render(request, 'guarderia/colonias/lista.html', {
+        'colonias': colonias,
+    })
+
+@login_required
+def crear_colonia(request):
+    """Crear una colonia personalizada"""
+    if request.method == 'POST':
+        form = ColoniaForm(request.POST)
+        if form.is_valid():
+            colonia = form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Colonia "{colonia.d_asenta}" creada correctamente.',
+                    'redirect_url': '/guarderia/colonias/'
+                })
+            messages.success(request, f'Colonia "{colonia.d_asenta}" creada correctamente.')
+            return redirect('guarderia:lista_colonias')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = ColoniaForm()
+
+    return render(request, 'guarderia/colonias/form.html', {
+        'form': form,
+        'titulo': 'Nueva Colonia',
+        'accion': 'Registrar',
+    })
+
+@login_required
+def editar_colonia(request, pk):
+    """Editar una colonia existente"""
+    colonia = get_object_or_404(Colonia, pk=pk)
+    if request.method == 'POST':
+        form = ColoniaForm(request.POST, instance=colonia)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Colonia "{colonia.d_asenta}" actualizada correctamente.',
+                    'redirect_url': '/guarderia/colonias/'
+                })
+            messages.success(request, f'Colonia "{colonia.d_asenta}" actualizada.')
+            return redirect('guarderia:lista_colonias')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = ColoniaForm(instance=colonia)
+
+    return render(request, 'guarderia/colonias/form.html', {
+        'form': form,
+        'colonia': colonia,
+        'titulo': f'Editar — {colonia.d_asenta}',
+        'accion': 'Guardar Cambios',
+    })
+
+@login_required
+def eliminar_colonia(request, pk):
+    """Eliminar colonia (solo POST/AJAX)"""
+    colonia = get_object_or_404(Colonia, pk=pk)
+    if request.method == 'POST':
+        nombre = colonia.d_asenta
+        colonia.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': f'Colonia "{nombre}" eliminada.'})
+        messages.success(request, f'Colonia "{nombre}" eliminada.')
+        return redirect('guarderia:lista_colonias')
+    return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+
+@login_required
+def descargar_respaldo_db(request):
+    """Genera y descarga un respaldo PostgreSQL"""
+    if not (request.user.is_superuser or
+            (hasattr(request.user, 'perfil') and 
+             request.user.perfil.rol.nombre == 'ADMIN')):
+        return JsonResponse({'error': 'No tienes permisos.'}, status=403)
+
+    db    = settings.DATABASES['default']
+    fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    pg_dump_path = shutil.which('pg_dump')
+
+    if not pg_dump_path:
+        rutas_windows = [
+            r'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\16\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\15\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\14\bin\pg_dump.exe',
+            r'C:\Program Files\PostgreSQL\13\bin\pg_dump.exe',
+        ]
+        for ruta in rutas_windows:
+            if os.path.exists(ruta):
+                pg_dump_path = ruta
+                break
+
+    if not pg_dump_path:
+        return HttpResponse(
+            '<h2>Error: pg_dump no encontrado</h2>'
+            '<p>Verifica que PostgreSQL esté instalado y pg_dump esté en el PATH.</p>',
+            status=500,
+            content_type='text/html'
+        )
+
+    try:
+        env = os.environ.copy()
+        env['PGPASSWORD'] = db.get('PASSWORD', '')
+
+        host = db.get('HOST', 'localhost') or 'localhost'
+        port = str(db.get('PORT', 5432) or 5432)
+        user = db.get('USER', 'postgres')
+        name = db.get('NAME', 'proyecto')
+
+        cmd = [
+            pg_dump_path, '-h', host, '-p', port, '-U', user, '-d', name,
+            '--no-password', '-F', 'p', '-E', 'UTF8',
+        ]
+
+        resultado = subprocess.run(cmd, capture_output=True, env=env, timeout=120)
+
+        if resultado.returncode != 0:
+            error_msg = resultado.stderr.decode('utf-8', errors='replace')
+            return HttpResponse(
+                f'<h2>Error de pg_dump</h2><pre>{error_msg}</pre>',
+                status=500,
+                content_type='text/html'
+            )
+
+        nombre_archivo = f'respaldo_guarderia_{fecha}.sql'
+        response = HttpResponse(resultado.stdout, content_type='application/sql')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
+
+    except Exception as e:
+        import traceback
+        return HttpResponse(f'<h2>Error</h2><pre>{traceback.format_exc()}</pre>', status=500)
+
+@login_required
+def pagina_respaldo(request):
+    if not (request.user.is_superuser or
+            (hasattr(request.user, 'perfil') and 
+             request.user.perfil.rol.nombre == 'ADMIN')):
+        return redirect('guarderia:dashboard')
+    return render(request, 'guarderia/respaldo.html')
