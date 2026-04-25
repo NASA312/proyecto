@@ -1457,46 +1457,43 @@ def registrar_grupo(request):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def detalle_grupo(request, grupo_id):
-    """Ver detalles de un grupo con lista de asistencia del día actual"""
     from django.utils import timezone
     from django.db.models import Subquery, OuterRef
 
-    grupo  = get_object_or_404(Grupo, id=grupo_id)
-    hoy    = timezone.localdate()
-    ninos  = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    hoy   = timezone.localdate()
 
-    # IDs de niños que tienen al menos una ENTRADA hoy
-    ninos_con_entrada_hoy = (
+    # ── Fecha seleccionada (por defecto hoy) ────────────────────────────
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        from datetime import date
+        fecha_consulta = date.fromisoformat(fecha_str) if fecha_str else hoy
+    except ValueError:
+        fecha_consulta = hoy
+
+    ninos = grupo.ninos.filter(activo=True).order_by('apellido_paterno', 'nombre')
+
+    # ── Niños con al menos una ENTRADA en la fecha consultada ───────────
+    ninos_con_entrada = (
         RegistroAcceso.objects
         .filter(
             nino__grupo=grupo,
             tipo='ENTRADA',
-            fecha_hora__date=hoy,
+            fecha_hora__date=fecha_consulta,
             verificacion_exitosa=True,
         )
         .values_list('nino_id', flat=True)
         .distinct()
     )
 
-    # Para cada niño con entrada, traer el último registro de hoy
-    # (puede ser ENTRADA o SALIDA — para saber si sigue dentro)
-    from django.db.models import Max
-
-    # Último registro de hoy por niño
-    ultimo_registro_id = (
-        RegistroAcceso.objects
-        .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
-        .order_by('-fecha_hora')
-        .values('id')[:1]
-    )
-
-    registros_hoy = (
+    # ── Último registro del día por niño ────────────────────────────────
+    registros_fecha = (
         RegistroAcceso.objects
         .filter(
-            nino_id__in=ninos_con_entrada_hoy,
+            nino_id__in=ninos_con_entrada,
             id__in=Subquery(
                 RegistroAcceso.objects
-                .filter(nino=OuterRef('nino'), fecha_hora__date=hoy)
+                .filter(nino=OuterRef('nino'), fecha_hora__date=fecha_consulta)
                 .order_by('-fecha_hora')
                 .values('id')[:1]
             )
@@ -1505,38 +1502,48 @@ def detalle_grupo(request, grupo_id):
         .order_by('nino__apellido_paterno', 'nino__nombre')
     )
 
-    # Hora de primera entrada de cada niño hoy
+    # ── Primera entrada de cada niño en la fecha consultada ─────────────
     primera_entrada = {}
     for reg in RegistroAcceso.objects.filter(
-        nino_id__in=ninos_con_entrada_hoy,
+        nino_id__in=ninos_con_entrada,
         tipo='ENTRADA',
-        fecha_hora__date=hoy,
+        fecha_hora__date=fecha_consulta,
     ).order_by('fecha_hora'):
         if reg.nino_id not in primera_entrada:
             primera_entrada[reg.nino_id] = reg.fecha_hora
 
-    # Armar lista de asistencia
+    # ── Armar lista de asistencia ────────────────────────────────────────
     asistencia = []
-    for reg in registros_hoy:
+    for reg in registros_fecha:
         asistencia.append({
-            'nino':           reg.nino,
-            'tutor':          reg.tutor,
-            'hora_entrada':   primera_entrada.get(reg.nino_id),
-            'ultimo_estado':  reg.tipo,       # ENTRADA o SALIDA
-            'sigue_dentro':   reg.tipo == 'ENTRADA',
+            'nino':         reg.nino,
+            'tutor':        reg.tutor,
+            'hora_entrada': primera_entrada.get(reg.nino_id),
         })
 
+    # ── Fechas con asistencia registrada (para el datepicker) ───────────
+    fechas_con_asistencia = (
+        RegistroAcceso.objects
+        .filter(nino__grupo=grupo, tipo='ENTRADA', verificacion_exitosa=True)
+        .dates('fecha_hora', 'day', order='DESC')
+    )
+
+    es_hoy = (fecha_consulta == hoy)
+
     return render(request, 'guarderia/grupos/detalle.html', {
-        'grupo':                grupo,
-        'ninos':                ninos,
-        'ninos_asignados':      grupo.ninos_asignados(),
-        'capacidad_disponible': grupo.capacidad_disponible(),
-        'porcentaje_ocupacion': grupo.porcentaje_ocupacion(),
-        'esta_lleno':           grupo.esta_lleno(),
-        'asistencia':           asistencia,
-        'hoy':                  hoy,
-        'total_presentes':      sum(1 for a in asistencia if a['sigue_dentro']),
-        'total_asistencia':     len(asistencia),
+        'grupo':                  grupo,
+        'ninos':                  ninos,
+        'ninos_asignados':        grupo.ninos_asignados(),
+        'capacidad_disponible':   grupo.capacidad_disponible(),
+        'porcentaje_ocupacion':   grupo.porcentaje_ocupacion(),
+        'esta_lleno':             grupo.esta_lleno(),
+        'asistencia':             asistencia,
+        'hoy':                    hoy,
+        'fecha_consulta':         fecha_consulta,
+        'es_hoy':                 es_hoy,
+        'total_presentes':        len(asistencia),
+        'total_asistencia':       len(asistencia),
+        'fechas_con_asistencia':  fechas_con_asistencia,
     })
 
 
@@ -2322,37 +2329,76 @@ def reporte_tutores_dependencia(request):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def reporte_asistencia_genero(request):
-    """
-    Reporte de asistencia filtrado por género (M / F / todos),
-    con resumen por grupo y tabla detallada de registros.
-    """
-    from datetime import date as date_type
+    from datetime import date as date_type, datetime, timedelta
 
-    filtro_genero     = request.GET.get('genero', '')
-    filtro_grupo      = request.GET.get('grupo', '')
+    filtro_genero      = request.GET.get('genero', '')
+    filtro_grupo       = request.GET.get('grupo', '')
     filtro_fecha_desde = request.GET.get('fecha_desde', '')
     filtro_fecha_hasta = request.GET.get('fecha_hasta', '')
-    filtro_tipo       = request.GET.get('tipo', '')
+    filtro_tipo        = request.GET.get('tipo', '')
+    filtro_periodo     = request.GET.get('periodo', 'hoy')
+    filtro_fecha_dia   = request.GET.get('fecha_dia', '')
 
-    # ── Niños inscritos (para tabla inferior) ────────────────────────
+    hoy              = date_type.today()
+    fecha_desde_calc = None
+    fecha_hasta_calc = None
+
+    # ── UN SOLO bloque if/elif para calcular el rango ───────────────────
+    if filtro_periodo == 'hoy':
+        fecha_desde_calc = hoy
+        fecha_hasta_calc = hoy
+
+    elif filtro_periodo == 'semana':
+        fecha_desde_calc = hoy - timedelta(days=hoy.weekday())
+        fecha_hasta_calc = hoy
+
+    elif filtro_periodo == 'mes':
+        fecha_desde_calc = hoy.replace(day=1)
+        fecha_hasta_calc = hoy
+
+    elif filtro_periodo == 'dia_especifico':
+        if filtro_fecha_dia:
+            try:
+                fecha_desde_calc = datetime.strptime(filtro_fecha_dia, '%Y-%m-%d').date()
+                fecha_hasta_calc = fecha_desde_calc
+            except ValueError:
+                fecha_desde_calc = hoy
+                fecha_hasta_calc = hoy
+        else:
+            fecha_desde_calc = hoy
+            fecha_hasta_calc = hoy
+
+    elif filtro_periodo == 'personalizado':
+        if filtro_fecha_desde:
+            try:
+                fecha_desde_calc = datetime.strptime(filtro_fecha_desde, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        if filtro_fecha_hasta:
+            try:
+                fecha_hasta_calc = datetime.strptime(filtro_fecha_hasta, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+    # 'general' → fecha_desde_calc y fecha_hasta_calc quedan en None → sin filtro
+
+    # ── Niños inscritos ──────────────────────────────────────────────────
     ninos_qs = Nino.objects.filter(activo=True).select_related('grupo').prefetch_related('tutores')
-
     if filtro_genero:
         ninos_qs = ninos_qs.filter(genero=filtro_genero)
     if filtro_grupo:
         ninos_qs = ninos_qs.filter(grupo_id=filtro_grupo)
-
     ninos_list = list(ninos_qs.order_by('grupo__tipo', 'grupo__grado', 'apellido_paterno', 'nombre'))
 
-    # ── Estadísticas generales (sin filtro de género) ────────────────
-    total_activos    = Nino.objects.filter(activo=True).count()
-    total_masculino  = Nino.objects.filter(activo=True, genero='M').count()
-    total_femenino   = Nino.objects.filter(activo=True, genero='F').count()
-    pct_masculino    = round(total_masculino / total_activos * 100, 1) if total_activos else 0
-    pct_femenino     = round(total_femenino  / total_activos * 100, 1) if total_activos else 0
+    # ── Estadísticas generales ───────────────────────────────────────────
+    total_activos   = Nino.objects.filter(activo=True).count()
+    total_masculino = Nino.objects.filter(activo=True, genero='M').count()
+    total_femenino  = Nino.objects.filter(activo=True, genero='F').count()
+    pct_masculino   = round(total_masculino / total_activos * 100, 1) if total_activos else 0
+    pct_femenino    = round(total_femenino  / total_activos * 100, 1) if total_activos else 0
 
-    # ── Resumen por grupo ─────────────────────────────────────────────
-    grupos_activos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+    # ── Resumen por grupo ────────────────────────────────────────────────
+    grupos_activos    = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
     resumen_por_grupo = []
 
     for grupo in grupos_activos:
@@ -2364,13 +2410,10 @@ def reporte_asistencia_genero(request):
         tot  = masc + fem
         if tot > 0 or not filtro_genero:
             resumen_por_grupo.append({
-                'grupo':     str(grupo),
-                'masculino': masc,
-                'femenino':  fem,
-                'total':     tot,
+                'grupo': str(grupo), 'masculino': masc,
+                'femenino': fem, 'total': tot,
             })
 
-    # Sin grupo
     base_sg = Nino.objects.filter(activo=True, grupo__isnull=True)
     if filtro_genero:
         base_sg = base_sg.filter(genero=filtro_genero)
@@ -2379,16 +2422,12 @@ def reporte_asistencia_genero(request):
     t_sg = m_sg + f_sg
     if t_sg > 0:
         resumen_por_grupo.append({
-            'grupo':     'Sin grupo asignado',
-            'masculino': m_sg,
-            'femenino':  f_sg,
-            'total':     t_sg,
+            'grupo': 'Sin grupo asignado', 'masculino': m_sg,
+            'femenino': f_sg, 'total': t_sg,
         })
 
-    # ── Registros de acceso (tabla superior derecha) ──────────────────
-    registros_qs = RegistroAcceso.objects.select_related(
-        'nino', 'tutor', 'nino__grupo'
-    )
+    # ── Registros de acceso ──────────────────────────────────────────────
+    registros_qs = RegistroAcceso.objects.select_related('nino', 'tutor', 'nino__grupo')
 
     if filtro_genero:
         registros_qs = registros_qs.filter(nino__genero=filtro_genero)
@@ -2396,48 +2435,65 @@ def reporte_asistencia_genero(request):
         registros_qs = registros_qs.filter(nino__grupo_id=filtro_grupo)
     if filtro_tipo:
         registros_qs = registros_qs.filter(tipo=filtro_tipo)
+    if fecha_desde_calc:
+        registros_qs = registros_qs.filter(fecha_hora__date__gte=fecha_desde_calc)
+    if fecha_hasta_calc:
+        registros_qs = registros_qs.filter(fecha_hora__date__lte=fecha_hasta_calc)
 
-    if filtro_fecha_desde:
-        try:
-            registros_qs = registros_qs.filter(
-                fecha_hora__date__gte=datetime.strptime(filtro_fecha_desde, '%Y-%m-%d').date()
-            )
-        except ValueError:
-            pass
-    if filtro_fecha_hasta:
-        try:
-            registros_qs = registros_qs.filter(
-                fecha_hora__date__lte=datetime.strptime(filtro_fecha_hasta, '%Y-%m-%d').date()
-            )
-        except ValueError:
-            pass
+    registros_qs = registros_qs.order_by('-fecha_hora')
 
-    # Si no hay filtro de fechas se muestran los últimos 200 registros
-    registros_list = list(registros_qs.order_by('-fecha_hora')[:200])
+    # Límite solo para 'general' sin filtros (puede ser enorme)
+    if filtro_periodo == 'general':
+        registros_list = list(registros_qs[:1000])
+    else:
+        registros_list = list(registros_qs)
+
+    # ── Etiqueta legible del período ─────────────────────────────────────
+    if filtro_periodo == 'hoy':
+        etiqueta_periodo = f'Hoy ({hoy.strftime("%d/%m/%Y")})'
+    elif filtro_periodo == 'semana':
+        etiqueta_periodo = 'Esta semana'
+    elif filtro_periodo == 'mes':
+        etiqueta_periodo = f'Este mes ({hoy.strftime("%B %Y")})'
+    elif filtro_periodo == 'general':
+        etiqueta_periodo = 'Todos los registros'
+    elif filtro_periodo == 'dia_especifico':
+        if filtro_fecha_dia:
+            try:
+                d = datetime.strptime(filtro_fecha_dia, '%Y-%m-%d').date()
+                etiqueta_periodo = f'Día: {d.strftime("%d/%m/%Y")}'
+            except ValueError:
+                etiqueta_periodo = 'Día específico'
+        else:
+            etiqueta_periodo = f'Hoy ({hoy.strftime("%d/%m/%Y")})'
+    elif filtro_periodo == 'personalizado':
+        desde = filtro_fecha_desde or '—'
+        hasta = filtro_fecha_hasta or '—'
+        etiqueta_periodo = f'Del {desde} al {hasta}'
+    else:
+        etiqueta_periodo = ''
 
     context = {
-        # Datos tablas
-        'ninos':              ninos_list,
-        'registros':          registros_list,
-        'resumen_por_grupo':  resumen_por_grupo,
-        'grupos':             grupos_activos,
-
-        # Filtros activos
-        'filtro_genero':      filtro_genero,
-        'filtro_grupo':       filtro_grupo,
-        'filtro_fecha_desde': filtro_fecha_desde,
-        'filtro_fecha_hasta': filtro_fecha_hasta,
-        'filtro_tipo':        filtro_tipo,
-
-        # Estadísticas
-        'total_ninos':           total_activos,
-        'total_masculino':       total_masculino,
-        'total_femenino':        total_femenino,
-        'pct_masculino':         pct_masculino,
-        'pct_femenino':          pct_femenino,
+        'ninos':                   ninos_list,
+        'registros':               registros_list,
+        'resumen_por_grupo':       resumen_por_grupo,
+        'grupos':                  grupos_activos,
+        'filtro_genero':           filtro_genero,
+        'filtro_grupo':            filtro_grupo,
+        'filtro_fecha_desde':      filtro_fecha_desde,
+        'filtro_fecha_hasta':      filtro_fecha_hasta,
+        'filtro_fecha_dia':        filtro_fecha_dia,
+        'filtro_tipo':             filtro_tipo,
+        'filtro_periodo':          filtro_periodo,
+        'etiqueta_periodo':        etiqueta_periodo,
+        'total_ninos':             total_activos,
+        'total_masculino':         total_masculino,
+        'total_femenino':          total_femenino,
+        'pct_masculino':           pct_masculino,
+        'pct_femenino':            pct_femenino,
         'total_registros_periodo': len(registros_list),
+        'hoy':                     hoy,
     }
-
     return render(request, 'guarderia/reportes/asistencia_genero.html', context)
 
 @login_required

@@ -23,8 +23,11 @@
 
 <section class="content">
   <div class="container-fluid">
+
+    <!-- ── Fila superior: info grupo + selector fecha ──────────────── -->
     <div class="row">
 
+      <!-- Info grupo -->
       <div class="col-md-3">
         <div class="card card-success">
           <div class="card-header">
@@ -56,9 +59,7 @@
                 {{ porcentaje_ocupacion }}%
               </div>
             </div>
-            <p class="text-muted">
-              <strong>Disponibles:</strong> {{ capacidad_disponible }} lugares
-            </p>
+            <p class="text-muted"><strong>Disponibles:</strong> {{ capacidad_disponible }} lugares</p>
           </div>
           <div class="card-footer">
             <a href="{% url 'guarderia:editar_grupo' grupo.id %}" class="btn btn-warning btn-block">
@@ -71,8 +72,102 @@
         </div>
       </div>
 
+      <!-- Contenido principal -->
       <div class="col-md-9">
 
+        <!-- ── Selector de fecha ARRIBA de los indicadores ──────────── -->
+        <div class="card card-secondary collapsed-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-calendar-alt mr-1"></i>
+              Consultando:
+              <strong class="ml-1">
+                {% if es_hoy %}
+                  Hoy — {{ hoy|date:"d/m/Y" }}
+                {% else %}
+                  {{ fecha_consulta|date:"d \d\e F \d\e Y" }}
+                {% endif %}
+              </strong>
+              {% if not es_hoy %}
+                <span class="badge badge-warning ml-2">Histórico</span>
+              {% else %}
+                <span class="badge badge-success ml-2">Hoy</span>
+              {% endif %}
+            </h3>
+            <div class="card-tools">
+              {% if not es_hoy %}
+              <a href="{% url 'guarderia:detalle_grupo' grupo.id %}"
+                 class="btn btn-success btn-sm mr-1">
+                <i class="fas fa-calendar-day"></i> Ir a Hoy
+              </a>
+              {% endif %}
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-end">
+
+              <!-- Input fecha -->
+              <div class="col-md-4">
+                <form method="get" id="formFecha">
+                  <div class="form-group mb-0">
+                    <label class="font-weight-bold">
+                      <i class="fas fa-calendar mr-1"></i> Selecciona una fecha:
+                    </label>
+                    <input type="date"
+                           id="inputFecha"
+                           name="fecha"
+                           class="form-control"
+                           value="{{ fecha_consulta|date:'Y-m-d' }}"
+                           max="{{ hoy|date:'Y-m-d' }}">
+                  </div>
+                </form>
+              </div>
+
+              <!-- Botones acción -->
+              <div class="col-md-3">
+                <button type="button"
+                        onclick="document.getElementById('formFecha').submit()"
+                        class="btn btn-primary btn-block">
+                  <i class="fas fa-search"></i> Ver Asistencia
+                </button>
+              </div>
+
+              <!-- Días con registros -->
+              <div class="col-md-5">
+                {% if fechas_con_asistencia %}
+                <label class="font-weight-bold d-block">
+                  <i class="fas fa-history mr-1"></i> Días con asistencia:
+                </label>
+                <div class="d-flex flex-wrap" style="gap:4px; max-height:80px; overflow-y:auto;">
+                  {% for fecha in fechas_con_asistencia %}
+                  <a href="?fecha={{ fecha|date:'Y-m-d' }}"
+                     class="btn btn-xs
+                       {% if fecha|date:'Y-m-d' == fecha_consulta|date:'Y-m-d' %}
+                         btn-success
+                       {% elif fecha|date:'Y-m-d' == hoy|date:'Y-m-d' %}
+                         btn-outline-success
+                       {% else %}
+                         btn-outline-secondary
+                       {% endif %}"
+                     title="{{ fecha|date:'d/m/Y' }}">
+                    {{ fecha|date:"d/m" }}
+                    {% if fecha|date:'Y-m-d' == hoy|date:'Y-m-d' %}
+                      <i class="fas fa-circle" style="font-size:6px; vertical-align:middle;"></i>
+                    {% endif %}
+                  </a>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Indicadores rápidos -->
         <div class="row">
           <div class="col-md-3">
             <div class="small-box bg-info">
@@ -82,13 +177,16 @@
           </div>
           <div class="col-md-3">
             <div class="small-box bg-success">
-              <div class="inner"><h3>{{ total_presentes }}</h3><p>Presentes Hoy</p></div>
+              <div class="inner">
+                <h3>{{ total_presentes }}</h3>
+                <p>{% if es_hoy %}Presentes Hoy{% else %}Asistieron{% endif %}</p>
+              </div>
               <div class="icon"><i class="fas fa-user-check"></i></div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="small-box bg-warning">
-              <div class="inner"><h3>{{ total_asistencia }}</h3><p>Entradas Hoy</p></div>
+              <div class="inner"><h3>{{ total_asistencia }}</h3><p>Entradas del Día</p></div>
               <div class="icon"><i class="fas fa-sign-in-alt"></i></div>
             </div>
           </div>
@@ -105,14 +203,19 @@
           </div>
         </div>
 
+        <!-- Tabs -->
         <div class="card">
           <div class="card-header p-0">
             <ul class="nav nav-tabs" role="tablist">
               <li class="nav-item">
                 <a class="nav-link active" data-toggle="tab" href="#tabAsistencia" role="tab">
                   <i class="fas fa-clipboard-check text-success"></i>
-                  Asistencia de Hoy
-                  <span class="badge badge-success ml-1">{{ total_presentes }}</span>
+                  Asistencia
+                  {% if not es_hoy %}
+                    <span class="badge badge-warning ml-1">{{ fecha_consulta|date:"d/m/Y" }}</span>
+                  {% else %}
+                    <span class="badge badge-success ml-1">Hoy</span>
+                  {% endif %}
                 </a>
               </li>
               <li class="nav-item">
@@ -132,13 +235,21 @@
 
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">
-                  <i class="fas fa-calendar-day text-success mr-1"></i>
+                  <i class="fas fa-calendar-day mr-1
+                    {% if es_hoy %}text-success{% else %}text-warning{% endif %}"></i>
                   Lista de Asistencia —
-                  <strong>{{ hoy|date:"d \d\e F \d\e Y" }}</strong>
+                  <strong>{{ fecha_consulta|date:"d \d\e F \d\e Y" }}</strong>
+                  {% if es_hoy %}
+                    <span class="badge badge-success ml-1">Hoy</span>
+                  {% else %}
+                    <span class="badge badge-warning ml-1">Histórico</span>
+                  {% endif %}
                 </h5>
+                {% if asistencia %}
                 <button class="btn btn-sm btn-outline-secondary" onclick="imprimirAsistencia()">
                   <i class="fas fa-print"></i> Imprimir
                 </button>
+                {% endif %}
               </div>
 
               {% if asistencia %}
@@ -185,12 +296,9 @@
                     </tbody>
                     <tfoot>
                       <tr class="table-light">
-                        <td colspan="4" class="text-right">
-                          <strong>Total presentes:</strong>
-                        </td>
+                        <td colspan="4" class="text-right"><strong>Total asistencia:</strong></td>
                         <td>
-                          <span class="badge badge-success"
-                                style="font-size:1rem; padding:6px 12px;">
+                          <span class="badge badge-success" style="font-size:1rem; padding:6px 12px;">
                             {{ total_presentes }}
                           </span>
                         </td>
@@ -201,14 +309,20 @@
               {% else %}
                 <div class="alert alert-info">
                   <i class="icon fas fa-info-circle"></i>
-                  <strong>Sin asistencia registrada.</strong>
-                  Aún no se han registrado entradas para este grupo el día de hoy.
+                  {% if es_hoy %}
+                    <strong>Sin asistencia registrada.</strong>
+                    Aún no se han registrado entradas para este grupo el día de hoy.
+                  {% else %}
+                    <strong>Sin registros.</strong>
+                    No se encontraron entradas para este grupo el
+                    <strong>{{ fecha_consulta|date:"d/m/Y" }}</strong>.
+                  {% endif %}
                 </div>
               {% endif %}
 
             </div><!-- /tabAsistencia -->
 
-            <!-- TAB NIÑOS DEL GRUPO -->
+            <!-- TAB NIÑOS -->
             <div class="tab-pane fade" id="tabNinos" role="tabpanel">
               {% if ninos %}
                 <div class="table-responsive">
@@ -271,10 +385,10 @@
             </div><!-- /tabNinos -->
 
           </div><!-- /tab-content -->
-        </div><!-- /card -->
+        </div><!-- /card tabs -->
 
       </div><!-- /col-md-9 -->
-    </div><!-- /row -->
+    </div><!-- /row principal -->
   </div>
 </section>
 {% endblock %}
@@ -282,6 +396,9 @@
 {% block scripts %}
 <script>
 $(document).ready(function () {
+
+  // ── Sin on('change') — solo el botón envía el formulario ────────────
+  // El input date NO dispara submit automáticamente
 
   $('#tablaAsistencia').DataTable({
     responsive: true,
@@ -292,7 +409,7 @@ $(document).ready(function () {
     order: [[2, 'asc']],
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> Sin asistencia hoy</span>'
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> Sin asistencia</span>'
     }
   });
 
@@ -316,10 +433,11 @@ $(document).ready(function () {
 });
 
 function imprimirAsistencia() {
-  const fecha = '{{ hoy|date:"d/m/Y" }}';
+  const fecha = '{{ fecha_consulta|date:"d/m/Y" }}';
   const grupo = '{{ grupo.nombre|escapejs }}';
   const tipo  = '{{ grupo.get_tipo_display|escapejs }}';
   const grado = '{{ grupo.grado|escapejs }}';
+  const esHoy = {{ es_hoy|yesno:"true,false" }};
   const filas = [];
 
   $('#tablaAsistencia tbody tr').each(function (i) {
@@ -337,8 +455,7 @@ function imprimirAsistencia() {
 
   const ventana = window.open('', '_blank', 'width=960,height=680');
   ventana.document.write(`
-    <!DOCTYPE html>
-    <html>
+    <!DOCTYPE html><html>
     <head>
       <meta charset="UTF-8">
       <title>Lista de Asistencia — ${grupo}</title>
@@ -346,6 +463,8 @@ function imprimirAsistencia() {
         body  { font-family: Arial, sans-serif; font-size: 13px; margin: 20px; }
         h2    { margin-bottom: 4px; }
         p     { margin: 2px 0 12px; color: #555; }
+        .badge { background:#6c757d; color:#fff; padding:2px 6px;
+                 border-radius:4px; font-size:11px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #aaa; padding: 6px 10px; }
         thead  { background: #e9ecef; }
@@ -355,29 +474,26 @@ function imprimirAsistencia() {
     </head>
     <body>
       <h2>Lista de Asistencia — ${grupo}</h2>
-      <p>${tipo} | ${grado} | Fecha: <strong>${fecha}</strong></p>
+      <p>${tipo} | ${grado} | Fecha: <strong>${fecha}</strong>
+         ${esHoy ? '<span class="badge">Hoy</span>'
+                 : '<span class="badge">Histórico</span>'}</p>
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Matrícula</th>
-            <th>Nombre del Niño</th>
-            <th>Hora de Entrada</th>
-            <th>Quién lo Trajo</th>
+            <th>#</th><th>Matrícula</th><th>Nombre del Niño</th>
+            <th>Hora de Entrada</th><th>Quién lo Trajo</th>
           </tr>
         </thead>
         <tbody>${filas.join('')}</tbody>
         <tfoot>
           <tr>
-            <td colspan="4" style="text-align:right;">Total presentes:</td>
+            <td colspan="4" style="text-align:right;">Total asistencia:</td>
             <td style="text-align:center;"><strong>{{ total_presentes }}</strong></td>
           </tr>
         </tfoot>
       </table>
-      <br>
-      <button onclick="window.print()">🖨️ Imprimir</button>
-    </body>
-    </html>
+      <br><button onclick="window.print()">🖨️ Imprimir</button>
+    </body></html>
   `);
   ventana.document.close();
   ventana.focus();
