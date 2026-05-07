@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import subprocess
 import dj_database_url
 from pathlib import Path
 from decouple import config, Csv
@@ -173,6 +174,41 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static"),]
 TIMEOUT = 1000
 
+def get_biometric_url():
+    """
+    - Si corre en WSL (Ubuntu/Apache): detecta la IP de Windows automáticamente
+    - Si corre en Windows directamente: usa localhost
+    """
+    _biometric_url_env = config('BIOMETRIC_SERVER_URL', default='http://localhost:5000')
+    _port = _biometric_url_env.split(':')[-1]  # extrae "5000"
 
+    # Detectar si estamos en WSL
+    es_wsl = False
+    try:
+        with open('/proc/version', 'r') as f:
+            if 'microsoft' in f.read().lower():
+                es_wsl = True
+    except Exception:
+        pass
+
+    if es_wsl:
+        # Estamos en WSL → necesitamos la IP de Windows
+        try:
+            result = subprocess.run(
+                ['ip', 'route', 'show', 'default'],
+                capture_output=True, text=True, timeout=3
+            )
+            if result.returncode == 0:
+                parts = result.stdout.strip().split()
+                if 'via' in parts:
+                    windows_ip = parts[parts.index('via') + 1]
+                    return f"http://{windows_ip}:{_port}"
+        except Exception:
+            pass
+
+    # Estamos en Windows o no se pudo detectar → usar localhost
+    return f"http://localhost:{_port}"
+
+BIOMETRIC_SERVER_URL = get_biometric_url()
 
 
