@@ -174,7 +174,7 @@ def registrar_huella_tutor(request, tutor_id):
     if request.method == 'GET' and not tutor.huella_registrada:
         try:
             response = requests.get(
-                f'http://localhost:5000/capturar?persona_id={tutor_id}&tipo=tutor',
+                f'{settings.BIOMETRIC_SERVER_URL}/capturar?persona_id={tutor_id}&tipo=tutor',
                 timeout=2
             )
             print(f"✓ Solicitud enviada al servidor biométrico para tutor {tutor_id}")
@@ -773,7 +773,7 @@ def verificar_huella_capturada_tutor(request, tutor_id):
     
     try:
         # Consultar estado al servidor .NET (puerto 5000)
-        response = requests.get(f'http://localhost:5000/estado', timeout=2)
+        response = requests.get(f'{settings.BIOMETRIC_SERVER_URL}/estado', timeout=2)
         data = response.json()
         
         print(f"📡 Respuesta del servidor .NET:")
@@ -917,7 +917,7 @@ def verificar_huella_inicio(request):
         try:
             # Iniciar captura en el servidor .NET
             response = requests.get(
-                'http://localhost:5000/capturar?persona_id=verificacion',
+                f'{settings.BIOMETRIC_SERVER_URL}/capturar?persona_id=verificacion',
                 timeout=2
             )
             
@@ -951,7 +951,7 @@ def verificar_huella_estado(request):
     if request.method == 'GET':
         try:
             # Consultar estado de captura
-            response = requests.get('http://localhost:5000/estado', timeout=2)
+            response = requests.get(f'{settings.BIOMETRIC_SERVER_URL}/estado', timeout=2)
             estado = response.json()
             
             # Si aún no se completa
@@ -1009,7 +1009,7 @@ def verificar_huella_estado(request):
             print(f"\n📤 Enviando a servidor .NET...")
             
             response_verificacion = requests.post(
-                'http://localhost:5000/verificar',
+                f'{settings.BIOMETRIC_SERVER_URL}/verificar',
                 json={
                     'feature_set_capturado': featureset_capturado,  # FeatureSet actual
                     'tutores': tutores_data  # Templates guardados

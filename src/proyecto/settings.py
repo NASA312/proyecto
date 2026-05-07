@@ -35,14 +35,17 @@ LOGIN_URL = '/auth/login/'
 #ALLOWED_HOSTS = []
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
+BIOMETRIC_SERVER_URL = config('BIOMETRIC_SERVER_URL', default='http://localhost:5000')
+
+
 # Configuración CORS para comunicación con aplicación .NET
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5000",
+    BIOMETRIC_SERVER_URL,
 ]
 
 # Permitir solicitudes desde la aplicación .NET
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5000",
+    BIOMETRIC_SERVER_URL,
 ]
 
 
