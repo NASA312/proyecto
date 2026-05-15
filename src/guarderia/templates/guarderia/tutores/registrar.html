@@ -40,7 +40,7 @@
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-user-plus"></i> Información del Tutor</h3>
           </div>
-          <form method="post" id="formTutor">
+          <form method="post" id="formTutor" data-custom-submit>
             {% csrf_token %}
             <div class="card-body">
               <!-- Información Personal -->
@@ -510,7 +510,7 @@ $(document).ready(function () {
 // ══════════════════════════════════════════
 // VALIDACIÓN AL ENVIAR
 // ══════════════════════════════════════════
-$('form').on('submit', function (e) {
+$('#formTutor').on('submit', function (e) {
   // Limpiar errores previos
   $('.text-danger[class^="error-"]').text('');
   $('.form-control').removeClass('is-invalid');

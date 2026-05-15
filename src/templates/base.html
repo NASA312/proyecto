@@ -156,6 +156,42 @@
 {% block scripts %} {% endblock scripts%}
 
 <script>
+  // ─── Idioma español para DataTables (inline, sin CDN, sin CORS) ───
+  window.dtEspanol = {
+    processing:     "Procesando...",
+    search:         "Buscar:",
+    lengthMenu:     "Mostrar _MENU_ registros",
+    info:           "Mostrando _START_ a _END_ de _TOTAL_ registros",
+    infoEmpty:      "Mostrando 0 a 0 de 0 registros",
+    infoFiltered:   "(filtrado de _MAX_ registros totales)",
+    infoPostFix:    "",
+    loadingRecords: "Cargando...",
+    zeroRecords:    "No se encontraron registros coincidentes",
+    emptyTable:     "No hay datos disponibles en la tabla",
+    paginate: {
+      first:    "Primero",
+      previous: "Anterior",
+      next:     "Siguiente",
+      last:     "\u00DAltimo"
+    },
+    aria: {
+      sortAscending:  ": activar para ordenar de forma ascendente",
+      sortDescending: ": activar para ordenar de forma descendente"
+    },
+    buttons: {
+      copy:        "Copiar",
+      colvis:      "Columnas",
+      csv:         "CSV",
+      excel:       "Excel",
+      pdf:         "PDF",
+      print:       "Imprimir",
+      copyTitle:   "Copiar al portapapeles",
+      copySuccess: {
+        1: "Copiada 1 fila al portapapeles",
+        _: "Copiadas %d filas al portapapeles"
+      }
+    }
+  };
   // Ocultar el loader cuando la página esté completamente cargada
   window.addEventListener('load', function() {
     // Agregamos un pequeño retraso para asegurarnos de que todo esté listo
@@ -208,10 +244,7 @@
           titleAttr: 'Mostrar/ocultar columnas'
         }
       ],
-      language: {
-        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
-        emptyTable: "No hay datos disponibles en la tabla"
-      }
+      language: window.dtEspanol
     };
 
     // Función para inicializar DataTable solo si hay datos

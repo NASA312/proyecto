@@ -104,10 +104,9 @@ $(document).ready(function () {
     pageLength: 25,
     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
     columnDefs: [{ orderable: false, searchable: false, targets: 4 }],
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+    language: Object.assign({}, window.dtEspanol, {
       emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay colonias registradas</span>'
-    }
+    })
   });
 });
 
