@@ -76,6 +76,17 @@
                     </div>
                   </div>
                 </div>
+                <div class="row mt-2">
+                  <div class="col-md-4">
+                    <div class="info-box {% if recurrentes_pendientes %}bg-warning{% else %}bg-secondary{% endif %}">
+                      <span class="info-box-icon"><i class="fas fa-redo"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Recurrentes Pendientes</span>
+                        <span class="info-box-number">{{ recurrentes_pendientes }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -111,21 +122,36 @@
                         <span class="badge badge-{% if obs.tipo == 'SALUD' %}danger{% elif obs.tipo == 'CONDUCTA' %}info{% elif obs.tipo == 'MATERIAL' %}warning{% else %}secondary{% endif %}">
                           {{ obs.get_tipo_display }}
                         </span>
+                        {% if obs.area %}
+                          <span class="badge badge-info ml-1">
+                            <i class="fas fa-tag"></i> {{ obs.area }}
+                          </span>
+                        {% endif %}
                         {% if obs.importante %}
-                          <span class="badge badge-warning ml-2">
+                          <span class="badge badge-warning ml-1">
                             <i class="fas fa-exclamation-triangle"></i> Importante
                           </span>
                         {% endif %}
                         {% if obs.notificar_tutor %}
                           {% if obs.notificado %}
-                            <span class="badge badge-success ml-2">
-                              <i class="fas fa-check"></i> Notificado
+                            <span class="badge badge-success ml-1">
+                              <i class="fas fa-bell"></i> Notif. enviada
                             </span>
                           {% else %}
-                            <span class="badge badge-danger ml-2">
-                              <i class="fas fa-clock"></i> Pendiente de notificar
+                            <span class="badge badge-danger ml-1">
+                              <i class="fas fa-bell"></i> Notif. pendiente
                             </span>
                           {% endif %}
+                        {% endif %}
+                        {% if obs.es_recurrente and not obs.atendida %}
+                          <span class="badge badge-warning ml-1">
+                            <i class="fas fa-redo"></i> Recurrente
+                          </span>
+                        {% endif %}
+                        {% if obs.atendida %}
+                          <span class="badge badge-success ml-1">
+                            <i class="fas fa-check-double"></i> Atendida
+                          </span>
                         {% endif %}
                       </h3>
 
@@ -146,6 +172,13 @@
                         {% if obs.notificar_tutor and not obs.notificado %}
                           <button class="btn btn-success btn-sm btnMarcarNotificado" data-id="{{ obs.id }}">
                             <i class="fas fa-check"></i> Marcar como Notificado
+                          </button>
+                        {% endif %}
+                        {% if obs.es_recurrente and not obs.atendida %}
+                          <button class="btn btn-primary btn-sm btnMarcarAtendida"
+                                  data-id="{{ obs.id }}"
+                                  data-url="{% url 'guarderia:marcar_observacion_atendida' obs.id %}">
+                            <i class="fas fa-check-double"></i> Marcar atendida
                           </button>
                         {% endif %}
                       </div>
@@ -189,7 +222,7 @@ $(document).ready(function() {
   $('.btnMarcarNotificado').on('click', function() {
     const observacionId = $(this).data('id');
     const btn = $(this);
-    
+
     Swal.fire({
       title: '¿Marcar como notificado?',
       text: 'Esta observación se marcará como notificada al tutor',
@@ -226,6 +259,43 @@ $(document).ready(function() {
               title: 'Error',
               text: 'No se pudo marcar la observación'
             });
+          }
+        });
+      }
+    });
+  });
+
+  // Marcar observación recurrente como atendida
+  $('.btnMarcarAtendida').on('click', function() {
+    var url = $(this).data('url');
+    Swal.fire({
+      title: '¿Marcar como atendida?',
+      text: 'Esta observación recurrente se cerrará y no volverá a aparecer.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, atender',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d'
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: url,
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+          success: function(response) {
+            if (response.success) {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Atendida!',
+                text: response.message,
+                timer: 1500,
+                showConfirmButton: false
+              }).then(function() { location.reload(); });
+            }
+          },
+          error: function() {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo actualizar la observación.' });
           }
         });
       }

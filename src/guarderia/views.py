@@ -1609,16 +1609,19 @@ def obtener_grupos_disponibles_ajax(request):
 def lista_observaciones(request):
     """Lista de todas las observaciones"""
     # Filtros
-    nino_id = request.GET.get('nino')
-    tipo = request.GET.get('tipo')
+    nino_id    = request.GET.get('nino')
+    tipo       = request.GET.get('tipo')
+    area_id    = request.GET.get('area')
     fecha_desde = request.GET.get('fecha_desde')
     fecha_hasta = request.GET.get('fecha_hasta')
     importantes = request.GET.get('importantes')
-    
-    observaciones = ObservacionNino.objects.select_related('nino', 'registrado_por')
-    
+
+    observaciones = ObservacionNino.objects.select_related('nino', 'area', 'registrado_por')
+
     if nino_id:
         observaciones = observaciones.filter(nino_id=nino_id)
+    if area_id:
+        observaciones = observaciones.filter(area_id=area_id)
     if tipo:
         observaciones = observaciones.filter(tipo=tipo)
     if fecha_desde:
@@ -1627,16 +1630,17 @@ def lista_observaciones(request):
         observaciones = observaciones.filter(fecha__lte=fecha_hasta)
     if importantes:
         observaciones = observaciones.filter(importante=True)
-    
+
     observaciones = observaciones.order_by('-fecha', '-hora')[:100]
-    
-    # Para el filtro
+
     ninos = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
-    
+    areas = AreaObservacion.objects.filter(activo=True).order_by('orden', 'nombre')
+
     return render(request, 'guarderia/observaciones/lista.html', {
-        'observaciones': observaciones,
-        'ninos': ninos,
-        'tipo_choices': ObservacionNino.TIPO_OBSERVACION_CHOICES
+        'observaciones':  observaciones,
+        'ninos':          ninos,
+        'areas':          areas,
+        'tipo_choices':   ObservacionNino.TIPO_OBSERVACION_CHOICES,
     })
 
 
@@ -1683,24 +1687,49 @@ def registrar_observacion(request):
 def observaciones_nino(request, nino_id):
     """Ver todas las observaciones de un niño específico"""
     nino = get_object_or_404(Nino, id=nino_id)
-    observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')
-    
+    observaciones = nino.observaciones.select_related('area', 'registrado_por').order_by('-fecha', '-hora')
+
     # Estadísticas
-    total = observaciones.count()
-    importantes = observaciones.filter(importante=True).count()
+    total                = observaciones.count()
+    importantes          = observaciones.filter(importante=True).count()
     pendientes_notificar = observaciones.filter(notificar_tutor=True, notificado=False).count()
-    
+    recurrentes_pendientes = observaciones.filter(es_recurrente=True, atendida=False).count()
+
     return render(request, 'guarderia/observaciones/por_nino.html', {
-        'nino': nino,
-        'observaciones': observaciones,
-        'total': total,
-        'importantes': importantes,
-        'pendientes_notificar': pendientes_notificar
+        'nino':                  nino,
+        'observaciones':         observaciones,
+        'total':                 total,
+        'importantes':           importantes,
+        'pendientes_notificar':  pendientes_notificar,
+        'recurrentes_pendientes': recurrentes_pendientes,
     })
 
 
 @login_required
-@rol_requerido('ADMIN', 'EMPLEADO')
+@require_http_methods(['POST'])
+def marcar_observacion_atendida(request, observacion_id):
+    """Marca una observación recurrente como atendida vía AJAX."""
+    observacion = get_object_or_404(ObservacionNino, id=observacion_id)
+
+    if not observacion.es_recurrente:
+        return JsonResponse(
+            {'success': False, 'message': 'Esta observación no es recurrente.'},
+            status=400
+        )
+
+    observacion.atendida       = True
+    observacion.fecha_atendida = timezone.now()
+    observacion.atendida_por   = request.user
+    observacion.save(update_fields=['atendida', 'fecha_atendida', 'atendida_por'])
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Marcada como atendida por {request.user.get_full_name() or request.user.username}.'
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO', 'OBSERVADOR')
 def editar_observacion(request, observacion_id):
     """Editar una observación"""
     observacion = get_object_or_404(ObservacionNino, id=observacion_id)
@@ -1722,7 +1751,7 @@ def editar_observacion(request, observacion_id):
 
 
 @login_required
-@rol_requerido('ADMIN', 'EMPLEADO')
+@rol_requerido('ADMIN', 'EMPLEADO', 'OBSERVADOR')
 @require_http_methods(["POST"])
 def marcar_observacion_notificada(request, observacion_id):
     """Marcar una observación como notificada"""

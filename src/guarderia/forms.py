@@ -212,9 +212,10 @@ class ObservacionNinoForm(forms.ModelForm):
     """Formulario para registrar observaciones de niños"""
     class Meta:
         model = ObservacionNino
-        fields = ['nino', 'tipo', 'descripcion', 'fecha', 'importante', 'notificar_tutor']
+        fields = ['nino', 'area', 'tipo', 'descripcion', 'fecha', 'es_recurrente', 'importante', 'notificar_tutor']
         widgets = {
             'nino': forms.Select(attrs={'class': 'form-control'}),
+            'area': forms.Select(attrs={'class': 'form-control'}),
             'tipo': forms.Select(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -225,8 +226,10 @@ class ObservacionNinoForm(forms.ModelForm):
                 'class': 'form-control',
                 'type': 'date'
             }, format='%Y-%m-%d'),
-            
-            # ⭐ CORREGIDO: Sin clases conflictivas
+            'es_recurrente': forms.CheckboxInput(attrs={
+                'class': 'custom-control-input',
+                'id': 'id_es_recurrente'
+            }),
             'importante': forms.CheckboxInput(attrs={
                 'class': 'custom-control-input',
                 'id': 'id_importante'
@@ -236,18 +239,14 @@ class ObservacionNinoForm(forms.ModelForm):
                 'id': 'id_notificar_tutor'
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Solo mostrar niños activos
         self.fields['nino'].queryset = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
-        # ⭐ Formato de fecha correcto
+        self.fields['area'].queryset = AreaObservacion.objects.filter(activo=True).order_by('orden', 'nombre')
+        self.fields['area'].empty_label = 'Sin área asignada'
         self.fields['fecha'].input_formats = ['%Y-%m-%d']
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Solo mostrar niños activos
-        self.fields['nino'].queryset = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+
         
 class ConfiguracionGuarderiaForm(forms.ModelForm):
     class Meta:

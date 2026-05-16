@@ -29,10 +29,20 @@
                 <label>Niño</label>
                 {{ form.nino }}
               </div>
-              
-              <div class="form-group">
-                <label>Tipo</label>
-                {{ form.tipo }}
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Área <small class="text-muted">(opcional)</small></label>
+                    {{ form.area }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Tipo</label>
+                    {{ form.tipo }}
+                  </div>
+                </div>
               </div>
               
               <div class="form-group">
@@ -61,13 +71,31 @@
               
               <div class="form-group">
                 <div class="custom-control custom-checkbox">
-                  <input type="checkbox" 
-                         class="custom-control-input no-ajax-checkbox" 
-                         id="id_notificar_tutor" 
+                  <input type="checkbox"
+                         class="custom-control-input no-ajax-checkbox"
+                         id="id_notificar_tutor"
                          name="notificar_tutor"
                          {% if form.notificar_tutor.value %}checked{% endif %}>
                   <label class="custom-control-label" for="id_notificar_tutor">
                     Notificar al tutor
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox"
+                         class="custom-control-input no-ajax-checkbox"
+                         id="id_es_recurrente"
+                         name="es_recurrente"
+                         {% if form.es_recurrente.value %}checked{% endif %}>
+                  <label class="custom-control-label" for="id_es_recurrente">
+                    <i class="fas fa-redo text-warning"></i>
+                    <strong>Observación recurrente</strong>
+                    <small class="text-muted d-block">
+                      Se muestra en cada entrada del niño hasta marcarla como atendida.
+                      Si no se activa, solo aplica para la fecha registrada.
+                    </small>
                   </label>
                 </div>
               </div>
