@@ -40,7 +40,7 @@
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-user-plus"></i> Información del Tutor</h3>
           </div>
-          <form method="post" id="formTutor">
+          <form method="post" id="formTutor" data-custom-submit>
             {% csrf_token %}
             <div class="card-body">
               <!-- Información Personal -->
@@ -510,7 +510,7 @@ $(document).ready(function () {
 // ══════════════════════════════════════════
 // VALIDACIÓN AL ENVIAR
 // ══════════════════════════════════════════
-$('form').on('submit', function (e) {
+$('#formTutor').on('submit', function (e) {
   // Limpiar errores previos
   $('.text-danger[class^="error-"]').text('');
   $('.form-control').removeClass('is-invalid');
@@ -570,8 +570,9 @@ $('form').on('submit', function (e) {
                 window.location.href = response.redirect_url;
               }
             } else {
-              // Usuario eligió DESPUÉS → ir a lista de tutores
-              window.location.href = '{% url "guarderia:lista_tutores" %}';
+              // Usuario eligió DESPUÉS → regresar a ?next= o lista de tutores
+              const nextUrl = new URLSearchParams(window.location.search).get('next');
+              window.location.href = nextUrl || '{% url "guarderia:lista_tutores" %}';
             }
           });
         });

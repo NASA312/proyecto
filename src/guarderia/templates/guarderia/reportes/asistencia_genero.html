@@ -410,10 +410,9 @@ $(document).ready(function () {
   actualizarFechas();
 
   // ── Idioma con protocolo relativo (//) para evitar CORS ─────────────
-  var lang = {
-    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+  var lang = Object.assign({}, window.dtEspanol, {
     emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay registros</span>'
-  };
+  });
 
   var domCompleto =
     '<"row align-items-center mb-2"' +
