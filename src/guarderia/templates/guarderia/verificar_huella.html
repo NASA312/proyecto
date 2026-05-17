@@ -1027,7 +1027,7 @@
         }
 
         ninoActual = data.nino;  // { id, nombre, grupo, edad, foto_url, estado }
-        mostrarPanelHuella();
+        verificarObservacionesYMostrarHuella();
       })
       .catch(function () {
         btn.disabled = false;
@@ -1035,6 +1035,110 @@
         mostrarErrorMatricula('Error de conexión. Intente de nuevo.');
       });
   }
+  // ══════════════════════════════════════════════════════════════
+//  PUNTO 8 — Verificar observaciones antes de mostrar huella
+// ══════════════════════════════════════════════════════════════
+function verificarObservacionesYMostrarHuella() {
+    fetch('/guarderia/ninos/' + ninoActual.id + '/observaciones-activas/')
+        .then(r => r.json())
+        .then(function(data) {
+            if (data.total > 0) {
+                mostrarModalObservaciones(data.observaciones);
+            } else {
+                mostrarPanelHuella();
+            }
+        })
+        .catch(function() {
+            // Si falla la consulta, continuar de todas formas
+            mostrarPanelHuella();
+        });
+}
+
+function mostrarModalObservaciones(observaciones) {
+    var filas = observaciones.map(function(obs) {
+        var colorBorde = obs.importante
+            ? 'border-left: 3px solid #fc8181;'
+            : 'border-left: 3px solid #63b3ed;';
+        var badgeArea = obs.area
+            ? '<span style="background:rgba(99,179,237,.15);color:#63b3ed;border:1px solid rgba(99,179,237,.3);border-radius:12px;padding:1px 8px;font-size:.7rem;margin-right:6px;">' + obs.area + '</span>'
+            : '';
+        var badgeTipo = '<span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);border-radius:12px;padding:1px 8px;font-size:.7rem;">' + obs.tipo + '</span>';
+        var badgeImportante = obs.importante
+            ? '<span style="background:rgba(252,129,129,.15);color:#fc8181;border:1px solid rgba(252,129,129,.3);border-radius:12px;padding:1px 8px;font-size:.7rem;margin-left:4px;">⚠ Importante</span>'
+            : '';
+        var badgeRecurrente = obs.es_recurrente
+            ? '<span style="background:rgba(251,211,141,.1);color:#f6ad55;border:1px solid rgba(251,211,141,.2);border-radius:12px;padding:1px 8px;font-size:.7rem;margin-left:4px;">↺ Recurrente</span>'
+            : '';
+
+        var btnAtender = obs.es_recurrente
+            ? '<button onclick="marcarAtendidaDesdeModal(' + obs.id + ', this)" style="background:rgba(72,187,120,.15);color:#68d391;border:1px solid rgba(72,187,120,.3);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">'
+              + '<i class="fas fa-check" style="margin-right:4px;"></i>Atendida</button>'
+            : '';
+
+        return '<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px 14px;margin-bottom:8px;' + colorBorde + 'display:flex;align-items:flex-start;gap:10px;">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="margin-bottom:5px;">' + badgeArea + badgeTipo + badgeImportante + badgeRecurrente + '</div>'
+            + '<div style="color:#e2e8f0;font-size:.88rem;line-height:1.4;">' + obs.descripcion + '</div>'
+            + '<div style="color:rgba(255,255,255,.3);font-size:.72rem;margin-top:4px;">' + obs.fecha + '</div>'
+            + '</div>'
+            + (btnAtender ? '<div>' + btnAtender + '</div>' : '')
+            + '</div>';
+    }).join('');
+
+    var titulo = observaciones.length === 1
+        ? '1 observación activa'
+        : observaciones.length + ' observaciones activas';
+
+    Swal.fire({
+        title: '<i class="fas fa-bell" style="color:#f6ad55;margin-right:8px;"></i>' + titulo,
+        html:
+            '<p style="color:rgba(255,255,255,.5);font-size:.85rem;margin-bottom:14px;">Para el niño: <strong style="color:#fff;">' + ninoActual.nombre + '</strong></p>'
+            + '<div style="max-height:340px;overflow-y:auto;text-align:left;">' + filas + '</div>'
+            + '<p style="color:rgba(255,255,255,.4);font-size:.78rem;margin-top:12px;margin-bottom:0;">Revise las observaciones antes de continuar</p>',
+        background: '#161b22',
+        color: '#fff',
+        width: 600,
+        showCancelButton: true,
+        confirmButtonColor: '#2b6cb0',
+        confirmButtonText: '<i class="fas fa-fingerprint" style="margin-right:6px;"></i>Entendido — Continuar',
+        cancelButtonText: 'Cancelar',
+        allowOutsideClick: false,
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            mostrarPanelHuella();
+        }
+        // Si cancela, queda en el panel de matrícula (ya visible)
+    });
+}
+
+function marcarAtendidaDesdeModal(obsId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('/guarderia/observaciones/' + obsId + '/atender/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.success) {
+            // Quitar la card de la observación atendida
+            var card = btn.closest('div[style*="border-left"]');
+            if (card) {
+                card.style.opacity = '0.4';
+                card.style.pointerEvents = 'none';
+                btn.innerHTML = '<i class="fas fa-check-double"></i> Hecha';
+            }
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Atendida';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Atendida';
+    });
+}
 
   // ══════════════════════════════════════════════════════════════
   //  PASO 2 — MOSTRAR PANEL DE HUELLA

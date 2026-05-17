@@ -243,6 +243,9 @@ class ObservacionNinoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['nino'].queryset = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+        self.fields['nino'].label_from_instance = (
+            lambda obj: f"{obj.nombre} {obj.apellido_paterno} {obj.apellido_materno or ''}".strip()
+        )
         self.fields['area'].queryset = AreaObservacion.objects.filter(activo=True).order_by('orden', 'nombre')
         self.fields['area'].empty_label = 'Sin área asignada'
         self.fields['fecha'].input_formats = ['%Y-%m-%d']

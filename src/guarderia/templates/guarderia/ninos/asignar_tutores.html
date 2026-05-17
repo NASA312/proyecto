@@ -58,6 +58,52 @@
 .card.tutor-card.selected {
   animation: tutorPulse 0.35s ease-out;
 }
+
+.paginacion-tutores {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.paginacion-tutores .btn-pag {
+    min-width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #495057;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+}
+
+.paginacion-tutores .btn-pag:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.paginacion-tutores .btn-pag.activo {
+    background: #007bff;
+    border-color: #007bff;
+    color: #fff;
+}
+
+.paginacion-tutores .btn-pag:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.info-pagina {
+    font-size: .82rem;
+    color: #6c757d;
+}
+
 </style>
 
 
@@ -148,6 +194,9 @@
                   </button>
                 </div>
               </div>
+              <!-- Controles de paginación (arriba) -->
+<div class="d-flex align-items-center mb-3 paginacion-tutores" id="controles-paginacion"></div>
+
 
               <!-- Lista de tutores -->
               <div class="row" id="listaTutores">
@@ -215,6 +264,8 @@
                 </div>
                 {% endfor %}
               </div>
+                <!-- Controles de paginación (abajo) -->
+<div class="d-flex align-items-center mt-3 paginacion-tutores" id="controles-paginacion-abajo"></div>
 
               <div class="alert alert-warning" id="sin-resultados" style="display:none;">
                 <i class="fas fa-search"></i> No se encontraron tutores.
@@ -248,64 +299,165 @@
 
 {% block scripts %}
 <script>
+// ══════════════════════════════════════════
+// PAGINACIÓN
+// ══════════════════════════════════════════
+const TUTORES_POR_PAGINA = 6;  // ← Ajusta este número a tu gusto
+let paginaActual = 1;
+let itemsVisibles = [];  // items del DOM actualmente que pasan el filtro
+
+function getPaginaItems() {
+    // Todos los items que están "visibles" según el buscador
+    return $('.tutor-item').filter(function() {
+        return $(this).data('filtro-visible') !== false;
+    }).toArray();
+}
+
+function renderPagina() {
+    itemsVisibles = getPaginaItems();
+    const total = itemsVisibles.length;
+    const totalPaginas = Math.max(1, Math.ceil(total / TUTORES_POR_PAGINA));
+
+    // Ajustar página actual si quedó fuera de rango
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+    const inicio = (paginaActual - 1) * TUTORES_POR_PAGINA;
+    const fin    = inicio + TUTORES_POR_PAGINA;
+
+    // Mostrar/ocultar cards según página
+    $('.tutor-item').hide();
+    itemsVisibles.slice(inicio, fin).forEach(el => $(el).show());
+
+    // Sin resultados
+    $('#sin-resultados').toggle(total === 0 && $('#buscarTutor').val() !== '');
+
+    // Render de controles de paginación
+    renderControlesPagina(totalPaginas, total, inicio, Math.min(fin, total));
+}
+
+function renderControlesPagina(totalPaginas, total, inicio, fin) {
+    const contenedor = $('#controles-paginacion');
+    contenedor.empty();
+
+    if (total === 0) return;
+
+    // Info
+    contenedor.append(
+        '<span class="info-pagina mr-3">Mostrando ' + (inicio + 1) + '–' + fin + ' de ' + total + ' tutores</span>'
+    );
+
+    if (totalPaginas <= 1) return;
+
+    // Botón anterior
+    const btnPrev = $('<button class="btn-pag" title="Anterior"><i class="fas fa-chevron-left"></i></button>');
+    btnPrev.prop('disabled', paginaActual === 1);
+    btnPrev.on('click', function() { if (paginaActual > 1) { paginaActual--; renderPagina(); } });
+    contenedor.append(btnPrev);
+
+    // Números de página (máximo 5 visibles)
+    const desde = Math.max(1, paginaActual - 2);
+    const hasta = Math.min(totalPaginas, desde + 4);
+
+    if (desde > 1) {
+        agregarBtnPagina(contenedor, 1);
+        if (desde > 2) contenedor.append('<span class="info-pagina px-1">…</span>');
+    }
+
+    for (let i = desde; i <= hasta; i++) {
+        agregarBtnPagina(contenedor, i);
+    }
+
+    if (hasta < totalPaginas) {
+        if (hasta < totalPaginas - 1) contenedor.append('<span class="info-pagina px-1">…</span>');
+        agregarBtnPagina(contenedor, totalPaginas);
+    }
+
+    // Botón siguiente
+    const btnNext = $('<button class="btn-pag" title="Siguiente"><i class="fas fa-chevron-right"></i></button>');
+    btnNext.prop('disabled', paginaActual === totalPaginas);
+    btnNext.on('click', function() { if (paginaActual < totalPaginas) { paginaActual++; renderPagina(); } });
+    contenedor.append(btnNext);
+
+    // Clonar controles arriba→abajo
+$('#controles-paginacion-abajo').html($('#controles-paginacion').html());
+// Re-bindear eventos del clon
+$('#controles-paginacion-abajo .btn-pag').each(function(i) {
+    const original = $('#controles-paginacion .btn-pag').eq(i);
+    $(this).on('click', function() { original.trigger('click'); });
+});
+}
+
+function agregarBtnPagina(contenedor, num) {
+    const btn = $('<button class="btn-pag' + (num === paginaActual ? ' activo' : '') + '">' + num + '</button>');
+    btn.on('click', function() { paginaActual = num; renderPagina(); });
+    contenedor.append(btn);
+}
+
+// ══════════════════════════════════════════
+// BUSCADOR (integrado con paginación)
+// ══════════════════════════════════════════
+function buscarTutores() {
+    const termino = $('#buscarTutor').val().toLowerCase();
+
+    $('.tutor-item').each(function() {
+        const item = $(this);
+        const nombre   = (item.data('tutor-nombre')   || '').toString();
+        const telefono = (item.data('tutor-telefono') || '').toString();
+        const id       = (item.data('tutor-id')       || '').toString();
+
+        const coincide = !termino ||
+            nombre.includes(termino) ||
+            telefono.includes(termino) ||
+            id.includes(termino);
+
+        // Marcar en data en vez de show/hide directo
+        item.data('filtro-visible', coincide);
+    });
+
+    paginaActual = 1;  // Siempre volver a página 1 al buscar
+    renderPagina();
+}
+
+// ══════════════════════════════════════════
+// SELECCIÓN (sin cambios)
+// ══════════════════════════════════════════
 function toggleTutor(cardElement) {
-  const card = $(cardElement);
-  const checkbox = card.find('input[type="checkbox"]');
-
-  const checked = checkbox.prop('checked');
-  checkbox.prop('checked', !checked);
-  card.toggleClass('selected', !checked);
-
-  actualizarContador();
+    const card = $(cardElement);
+    const checkbox = card.find('input[type="checkbox"]');
+    const checked = checkbox.prop('checked');
+    checkbox.prop('checked', !checked);
+    card.toggleClass('selected', !checked);
+    actualizarContador();
 }
 
 function actualizarContador() {
-  const total = $('input[name="tutores"]:checked').length;
-  $('#contador-seleccionados').text(total + ' seleccionados');
-  $('#total-seleccionados').text(total);
+    const total = $('input[name="tutores"]:checked').length;
+    $('#contador-seleccionados').text(total + ' seleccionados');
+    $('#total-seleccionados').text(total);
 }
 
 function seleccionarTodos() {
-  $('.tutor-item:visible .tutor-card').each(function () {
-    $(this)
-      .addClass('selected')
-      .find('input[type="checkbox"]').prop('checked', true);
-  });
-  actualizarContador();
+    // Seleccionar TODOS (no solo los de la página actual)
+    $('.tutor-card').addClass('selected').find('input[type="checkbox"]').prop('checked', true);
+    actualizarContador();
 }
 
 function deseleccionarTodos() {
-  $('.tutor-card')
-    .removeClass('selected')
-    .find('input[type="checkbox"]').prop('checked', false);
-  actualizarContador();
+    $('.tutor-card').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
+    actualizarContador();
 }
 
-function buscarTutores() {
-  const termino = $('#buscarTutor').val().toLowerCase();
-  let visibles = 0;
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+$(document).ready(function() {
+    // Marcar todos visibles al inicio
+    $('.tutor-item').data('filtro-visible', true);
 
-  $('.tutor-item').each(function () {
-    const item = $(this);
-    const nombre = (item.data('tutor-nombre') || '').toString();
-    const telefono = (item.data('tutor-telefono') || '').toString();
-    const id = (item.data('tutor-id') || '').toString();
+    actualizarContador();
+    renderPagina();
 
-    const coincide =
-      nombre.includes(termino) ||
-      telefono.includes(termino) ||
-      id.includes(termino);
-
-    item.toggle(coincide);
-    if (coincide) visibles++;
-  });
-
-  $('#sin-resultados').toggle(visibles === 0 && termino !== '');
-}
-
-$(document).ready(function () {
-  actualizarContador();
-  $('#buscarTutor').on('keyup', buscarTutores);
+    $('#buscarTutor').on('keyup', buscarTutores);
 });
 </script>
 {% endblock scripts %}

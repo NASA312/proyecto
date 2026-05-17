@@ -97,6 +97,7 @@ urlpatterns = [
     path('observaciones/<int:observacion_id>/editar/',   views.editar_observacion,            name='editar_observacion'),
     path('observaciones/<int:observacion_id>/notificar/', views.marcar_observacion_notificada, name='marcar_observacion_notificada'),
     path('observaciones/<int:observacion_id>/atender/',   views.marcar_observacion_atendida,   name='marcar_observacion_atendida'),
+    path('ninos/<int:nino_id>/observaciones-activas/',  views.observaciones_activas_nino,   name='observaciones_activas_nino'),
 
     # ========== PAPELERA DEPARTAMENTOS ==========
     path('departamentos/<int:departamento_id>/enviar-papelera/', views.enviar_departamento_papelera, name='enviar_departamento_papelera'),

@@ -328,9 +328,11 @@
               <a href="{% url 'guarderia:lista_ninos' %}" class="btn btn-info ml-2">
                 <i class="fas fa-child"></i> Ir a lista de niños
               </a>
-              <a href="{% url 'guarderia:lista_tutores' %}" class="btn btn-default ml-2">
+            <a href="{% url 'guarderia:lista_tutores' %}" 
+              class="btn btn-default ml-2"
+              id="btn-cancelar">
                 <i class="fas fa-times"></i> Cancelar
-              </a>
+            </a>
             </div>
           </form>
         </div>
@@ -342,6 +344,12 @@
 
 {% block scripts %}
 <script>
+
+  // Ajustar href de Cancelar según ?next
+const nextUrl = new URLSearchParams(window.location.search).get('next');
+if (nextUrl) {
+    $('#btn-cancelar').attr('href', nextUrl);
+}
 $(document).ready(function () {
 
   // ══════════════════════════════════════════
@@ -568,11 +576,15 @@ $('#formTutor').on('submit', function (e) {
             width: '500px'
           }).then((result) => {
             if (result.isConfirmed) {
-              // Usuario eligió registrar AHORA → ir a registrar huella
               if (response.redirect_url) {
-                window.location.href = response.redirect_url;
+                  const nextUrl = new URLSearchParams(window.location.search).get('next');
+                  // Encadenar el ?next al redirect de huella para que al terminar regrese
+                  const urlHuella = nextUrl
+                      ? response.redirect_url + '?next=' + encodeURIComponent(nextUrl)
+                      : response.redirect_url;
+                  window.location.href = urlHuella;
               }
-            } else {
+          } else {
               // Usuario eligió DESPUÉS → regresar a ?next= o lista de tutores
               const nextUrl = new URLSearchParams(window.location.search).get('next');
               window.location.href = nextUrl || '{% url "guarderia:lista_tutores" %}';

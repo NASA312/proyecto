@@ -1727,6 +1727,30 @@ def marcar_observacion_atendida(request, observacion_id):
         'message': f'Marcada como atendida por {request.user.get_full_name() or request.user.username}.'
     })
 
+@login_required
+def observaciones_activas_nino(request, nino_id):
+    """Retorna observaciones activas de un niño para mostrar en el checador."""
+    nino = get_object_or_404(Nino, id=nino_id)
+    hoy = timezone.localdate()
+
+    obs = ObservacionNino.objects.filter(
+        nino=nino,
+        atendida=False
+    ).filter(
+        Q(es_recurrente=True) | Q(es_recurrente=False, fecha=hoy)
+    ).select_related('area').order_by('-importante', '-fecha')
+
+    data = [{
+        'id':            o.id,
+        'area':          o.area.nombre if o.area else None,
+        'tipo':          o.get_tipo_display(),
+        'descripcion':   o.descripcion,
+        'importante':    o.importante,
+        'es_recurrente': o.es_recurrente,
+        'fecha':         o.fecha.isoformat(),
+    } for o in obs]
+
+    return JsonResponse({'observaciones': data, 'total': len(data)})
 
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO', 'OBSERVADOR')
