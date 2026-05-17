@@ -148,4 +148,10 @@ urlpatterns = [
     # =====================================
     path('api/emergencia/validar-codigo/', views.validar_codigo_escalamiento, name='validar_codigo_escalamiento'),
     path('api/emergencia/salida/', views.salida_emergencia, name='salida_emergencia'),
+    
+    path('areas-observacion/',                          views.lista_areas_observacion,    name='lista_areas_observacion'),
+    path('areas-observacion/registrar/',                views.registrar_area_observacion, name='registrar_area_observacion'),
+    path('areas-observacion/<int:area_id>/editar/',     views.editar_area_observacion,    name='editar_area_observacion'),
+    path('areas-observacion/<int:area_id>/detalle/',    views.detalle_area_observacion,   name='detalle_area_observacion'),
+    path('areas-observacion/<int:area_id>/toggle/',     views.toggle_area_observacion,    name='toggle_area_observacion'),
 ]

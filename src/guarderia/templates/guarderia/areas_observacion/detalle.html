@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Área: {{ area.nombre }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">{{ area.nombre }}</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'guarderia:lista_areas_observacion' %}">Áreas</a>
+          </li>
+          <li class="breadcrumb-item active">{{ area.nombre }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Info boxes -->
+    <div class="row">
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-info"><i class="fas fa-list"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Total observaciones</span>
+            <span class="info-box-number">{{ total }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-circle"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Importantes</span>
+            <span class="info-box-number">{{ importantes }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-warning"><i class="fas fa-redo"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Recurrentes pendientes</span>
+            <span class="info-box-number">{{ recurrentes }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon {% if area.activo %}bg-success{% else %}bg-secondary{% endif %}">
+            <i class="fas fa-tag"></i>
+          </span>
+          <div class="info-box-content">
+            <span class="info-box-text">Estado del área</span>
+            <span class="info-box-number">{% if area.activo %}Activa{% else %}Inactiva{% endif %}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Descripción + acciones -->
+    <div class="card card-primary card-outline">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h5>{{ area.nombre }}</h5>
+            <p class="text-muted">{{ area.descripcion|default:"Sin descripción." }}</p>
+            <small class="text-muted">Orden: {{ area.orden }}</small>
+          </div>
+          <div>
+            <a href="{% url 'guarderia:editar_area_observacion' area.id %}"
+               class="btn btn-warning btn-sm">
+              <i class="fas fa-edit mr-1"></i>Editar
+            </a>
+            <button type="button"
+                    class="btn btn-sm {% if area.activo %}btn-secondary{% else %}btn-success{% endif %}"
+                    onclick="toggleArea({{ area.id }}, this)">
+              <i class="fas {% if area.activo %}fa-toggle-off{% else %}fa-toggle-on{% endif %} mr-1"></i>
+              {% if area.activo %}Desactivar{% else %}Activar{% endif %}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de observaciones -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-clipboard-list mr-2"></i>Observaciones de esta área
+        </h3>
+      </div>
+      <div class="card-body">
+        <table id="tablaObsArea" class="table table-striped table-bordered table-hover w-100">
+          <thead class="thead-light">
+            <tr>
+              <th>Fecha</th>
+              <th>Niño</th>
+              <th>Tipo</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th class="text-center" style="width:80px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obs in observaciones %}
+            <tr>
+              <td>{{ obs.fecha }}</td>
+              <td>
+                <a href="{% url 'guarderia:observaciones_nino' obs.nino.id %}">
+                  {{ obs.nino.nombre_completo }}
+                </a>
+              </td>
+              <td><span class="badge badge-secondary">{{ obs.get_tipo_display }}</span></td>
+              <td><small>{{ obs.descripcion|truncatechars:80 }}</small></td>
+              <td>
+                {% if obs.importante %}
+                  <span class="badge badge-danger">Importante</span>
+                {% endif %}
+                {% if obs.es_recurrente and not obs.atendida %}
+                  <span class="badge badge-warning">Pendiente</span>
+                {% elif obs.atendida %}
+                  <span class="badge badge-success">Atendida</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <a href="{% url 'guarderia:editar_observacion' obs.id %}?next={{ request.path|urlencode }}"
+                   class="btn btn-xs btn-warning" title="Editar">
+                  <i class="fas fa-edit"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% csrf_token %}
+<script>
+$(document).ready(function () {
+  $('#tablaObsArea').DataTable({
+    responsive: true,
+    autoWidth: false,
+    pageLength: 25,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+    columnDefs: [{ orderable: false, searchable: false, targets: [4, 5] }],
+    language: Object.assign({}, window.dtEspanol, {
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay observaciones para esta área</span>'
+    })
+  });
+});
+
+function toggleArea(areaId, btn) {
+  var activo = $(btn).hasClass('btn-secondary');
+  Swal.fire({
+    title: activo ? '¿Desactivar área?' : '¿Activar área?',
+    text: activo ? 'El área no estará disponible para nuevas observaciones.' : 'El área volverá a estar disponible.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: activo ? '#6c757d' : '#28a745',
+    cancelButtonColor: '#adb5bd',
+    confirmButtonText: activo ? 'Sí, desactivar' : 'Sí, activar',
+    cancelButtonText: 'Cancelar'
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      $.ajax({
+        url: '/guarderia/areas-observacion/' + areaId + '/toggle/',
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(r) {
+          if (r.success) {
+            Swal.fire({
+              icon: 'success', title: 'Listo', text: r.message,
+              timer: 1800, showConfirmButton: false
+            });
+            setTimeout(function() { location.reload(); }, 1500);
+          }
+        },
+        error: function() {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cambiar el estado.' });
+        }
+      });
+    }
+  });
+}
+
+function getCookie(name) {
+  var cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    document.cookie.split(';').forEach(function(c) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.substring(name.length + 1));
+    });
+  }
+  return cookieValue;
+}
+</script>
+{% endblock scripts %}

@@ -325,3 +325,19 @@ class ColoniaForm(forms.ModelForm):
 
     def clean_d_estado(self):
         return self.cleaned_data.get('d_estado', '').strip().title()
+    
+class AreaObservacionForm(forms.ModelForm):
+    class Meta:
+        model  = AreaObservacion
+        fields = ['nombre', 'descripcion']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Médica, Psicología...'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción opcional del área'
+            }),
+        }

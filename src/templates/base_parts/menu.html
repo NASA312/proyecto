@@ -329,6 +329,35 @@
             </li>
           </ul>
         </li>
+
+        <!-- ============================================ -->
+<!-- ÁREAS -->
+<!-- ============================================ -->
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-th-large"></i>
+    <p>
+      Áreas
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+
+  <ul class="nav nav-treeview">
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_areas_observacion' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Lista de Áreas</p>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_area_observacion' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Registrar Área</p>
+      </a>
+    </li>
+  </ul>
+</li>
         <!-- COLONIAS (solo ADMIN) -->
 {% if user.is_superuser or user.perfil.rol.nombre == 'ADMIN' %}
 <li class="nav-item menu-close">

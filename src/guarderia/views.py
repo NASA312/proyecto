@@ -13,13 +13,14 @@ from .forms import *
 import base64
 import json
 import requests
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 import requests
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 import pandas as pd
 import os
 from django.db import transaction 
+from django.views.decorators.csrf import csrf_protect
 
 # ============================================
 # IMPORTAR DECORADORES DE PERMISOS
@@ -1705,7 +1706,6 @@ def observaciones_nino(request, nino_id):
     })
 
 
-@login_required
 @require_http_methods(['POST'])
 def marcar_observacion_atendida(request, observacion_id):
     """Marca una observación recurrente como atendida vía AJAX."""
@@ -1719,15 +1719,21 @@ def marcar_observacion_atendida(request, observacion_id):
 
     observacion.atendida       = True
     observacion.fecha_atendida = timezone.now()
-    observacion.atendida_por   = request.user
+    observacion.atendida_por   = request.user if request.user.is_authenticated else None
     observacion.save(update_fields=['atendida', 'fecha_atendida', 'atendida_por'])
+
+    nombre = (
+        request.user.get_full_name() or request.user.username
+        if request.user.is_authenticated
+        else 'checador'
+    )
 
     return JsonResponse({
         'success': True,
-        'message': f'Marcada como atendida por {request.user.get_full_name() or request.user.username}.'
+        'message': f'Marcada como atendida por {nombre}.'
     })
 
-@login_required
+@csrf_protect 
 def observaciones_activas_nino(request, nino_id):
     """Retorna observaciones activas de un niño para mostrar en el checador."""
     nino = get_object_or_404(Nino, id=nino_id)
@@ -2874,3 +2880,97 @@ def pagina_respaldo(request):
              request.user.perfil.rol.nombre == 'ADMIN')):
         return redirect('guarderia:dashboard')
     return render(request, 'guarderia/respaldo.html')
+
+
+# ── Áreas de Observación ──────────────────────────────────────
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def lista_areas_observacion(request):
+    areas = AreaObservacion.objects.all()
+    return render(request, 'guarderia/areas_observacion/lista.html', {
+        'areas': areas
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def registrar_area_observacion(request):
+    if request.method == 'POST':
+        form = AreaObservacionForm(request.POST)
+        if form.is_valid():
+            area = form.save(commit=False)
+            ultimo = AreaObservacion.objects.aggregate(Max('orden'))['orden__max'] or 0
+            area.orden = ultimo + 1
+            area.activo = True
+            area.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Área "{area.nombre}" registrada correctamente.'
+                })
+            messages.success(request, f'Área "{area.nombre}" registrada correctamente.')
+            return redirect('guarderia:lista_areas_observacion')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = AreaObservacionForm()
+    return render(request, 'guarderia/areas_observacion/registrar.html', {'form': form})
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def editar_area_observacion(request, area_id):
+    area = get_object_or_404(AreaObservacion, id=area_id)
+    if request.method == 'POST':
+        form = AreaObservacionForm(request.POST, instance=area)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Área "{area.nombre}" actualizada correctamente.'
+                })
+            messages.success(request, f'Área "{area.nombre}" actualizada correctamente.')
+            return redirect('guarderia:lista_areas_observacion')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = AreaObservacionForm(instance=area)
+    return render(request, 'guarderia/areas_observacion/editar.html', {
+        'form': form,
+        'area': area
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def detalle_area_observacion(request, area_id):
+    area = get_object_or_404(AreaObservacion, id=area_id)
+    observaciones = area.observaciones.select_related('nino', 'registrado_por').order_by('-fecha', '-hora')
+    return render(request, 'guarderia/areas_observacion/detalle.html', {
+        'area':          area,
+        'observaciones': observaciones,
+        'total':         observaciones.count(),
+        'importantes':   observaciones.filter(importante=True).count(),
+        'recurrentes':   observaciones.filter(es_recurrente=True, atendida=False).count(),
+    })
+
+
+@login_required
+@rol_requerido('ADMIN')
+@require_http_methods(['POST'])
+def toggle_area_observacion(request, area_id):
+    area = get_object_or_404(AreaObservacion, id=area_id)
+    area.activo = not area.activo
+    area.save(update_fields=['activo'])
+    estado = 'activada' if area.activo else 'desactivada'
+
+    # Si es AJAX responder JSON, si no redirigir normal
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'Área "{area.nombre}" {estado}.'})
+
+    messages.success(request, f'Área "{area.nombre}" {estado}.')
+    return redirect('guarderia:lista_areas_observacion')

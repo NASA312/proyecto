@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Áreas de Observación{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Áreas de Observación</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Áreas de Observación</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-tags"></i> Catálogo de Áreas
+            </h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_area_observacion' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nueva Área
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+
+            <table id="tablaAreas" class="table table-striped table-bordered table-hover w-100">
+              <thead class="thead-light">
+                <tr>
+                  <th>Nombre</th>
+                  <th>Descripción</th>
+                  <th>Observaciones</th>
+                  <th>Estado</th>
+                  <th class="text-center" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for area in areas %}
+                <tr>
+                  <td><strong>{{ area.nombre }}</strong></td>
+                  <td><small class="text-muted">{{ area.descripcion|default:"—"|truncatechars:60 }}</small></td>
+                  <td class="text-center">
+                    <a href="{% url 'guarderia:detalle_area_observacion' area.id %}"
+                       class="badge badge-info">
+                      {{ area.observaciones.count }} obs.
+                    </a>
+                  </td>
+                  <td>
+                    {% if area.activo %}
+                      <span class="badge badge-success">Activa</span>
+                    {% else %}
+                      <span class="badge badge-secondary">Inactiva</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <a href="{% url 'guarderia:detalle_area_observacion' area.id %}"
+                         class="btn btn-info" title="Ver detalle">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      <a href="{% url 'guarderia:editar_area_observacion' area.id %}"
+                         class="btn btn-warning" title="Editar">
+                        <i class="fas fa-edit"></i>
+                      </a>
+                      <button type="button"
+                              class="btn {% if area.activo %}btn-secondary{% else %}btn-success{% endif %}"
+                              title="{% if area.activo %}Desactivar{% else %}Activar{% endif %}"
+                              onclick="toggleArea({{ area.id }}, this)">
+                        <i class="fas {% if area.activo %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% csrf_token %}
+<script>
+$(document).ready(function () {
+  $('#tablaAreas').DataTable({
+    responsive: true,
+    autoWidth: false,
+    pageLength: 25,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+    columnDefs: [{ orderable: false, searchable: false, targets: [2, 4] }],
+    language: Object.assign({}, window.dtEspanol, {
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay áreas registradas</span>'
+    })
+  });
+});
+
+function toggleArea(areaId, btn) {
+  var activo = $(btn).hasClass('btn-secondary');
+  Swal.fire({
+    title: activo ? '¿Desactivar área?' : '¿Activar área?',
+    text: activo ? 'El área no estará disponible para nuevas observaciones.' : 'El área volverá a estar disponible.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: activo ? '#6c757d' : '#28a745',
+    cancelButtonColor: '#adb5bd',
+    confirmButtonText: activo ? 'Sí, desactivar' : 'Sí, activar',
+    cancelButtonText: 'Cancelar'
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      $.ajax({
+        url: '/guarderia/areas-observacion/' + areaId + '/toggle/',
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(r) {
+          if (r.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Listo',
+              text: r.message,
+              timer: 1800,
+              showConfirmButton: false
+            });
+            setTimeout(function() { location.reload(); }, 1500);
+          }
+        },
+        error: function() {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cambiar el estado.' });
+        }
+      });
+    }
+  });
+}
+
+function getCookie(name) {
+  var cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    document.cookie.split(';').forEach(function(c) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(c.substring(name.length + 1));
+      }
+    });
+  }
+  return cookieValue;
+}
+</script>
+{% endblock scripts %}

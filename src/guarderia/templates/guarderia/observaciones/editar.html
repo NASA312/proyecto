@@ -92,8 +92,10 @@
               <button type="submit" class="btn btn-warning">
                 <i class="fas fa-save"></i> Actualizar
               </button>
-              <a href="{% url 'guarderia:lista_observaciones' %}" class="btn btn-default">
-                <i class="fas fa-times"></i> Cancelar
+              <a href="{% url 'guarderia:lista_observaciones' %}"
+                class="btn btn-default ml-2"
+                id="btn-cancelar">
+                <i class="fas fa-arrow-left mr-1"></i>Cancelar
               </a>
             </div>
           </form>
@@ -106,6 +108,11 @@
 
 {% block scripts %}
 <script>
+
+const nextUrl = new URLSearchParams(window.location.search).get('next');
+if (nextUrl) {
+    document.getElementById('btn-cancelar').href = nextUrl;
+}
 $(document).ready(function() {
   // Mejorar el select de niños con Select2
   if ($.fn.select2) {
