@@ -310,8 +310,40 @@ class Nino(models.Model):
         )
 
 
+
+class AreaObservacion(models.Model):
+    """Catálogo de áreas responsables de las observaciones (Médica, Psicología, etc.)"""
+    nombre      = models.CharField(
+        max_length=60,
+        unique=True,
+        help_text="Nombre del área responsable"
+    )
+    descripcion = models.TextField(
+        blank=True,
+        default='',
+        help_text="Descripción del área"
+    )
+    activo      = models.BooleanField(
+        default=True,
+        help_text="Indica si el área está disponible para nuevas observaciones"
+    )
+    orden       = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Orden de aparición en el selector"
+    )
+
+    class Meta:
+        verbose_name        = "Área de Observación"
+        verbose_name_plural = "Áreas de Observación"
+        ordering            = ['orden', 'nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
 # ⭐ NUEVO MODELO ⭐
 class ObservacionNino(models.Model):
+
     """Observaciones diarias sobre los niños"""
     TIPO_OBSERVACION_CHOICES = [
         ('GENERAL', 'General'),
@@ -372,7 +404,40 @@ class ObservacionNino(models.Model):
         null=True,
         help_text="Fecha y hora en que se notificó"
     )
-    
+
+    # ── Punto 6 ── Área responsable
+    area = models.ForeignKey(
+        'AreaObservacion',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='observaciones',
+        help_text="Área responsable de la observación"
+    )
+
+    # ── Punto 7 ── Recurrencia
+    es_recurrente = models.BooleanField(
+        default=False,
+        help_text="Si es True, se muestra en cada entrada del niño hasta ser atendida"
+    )
+    atendida = models.BooleanField(
+        default=False,
+        help_text="Indica que la observación recurrente fue vista/atendida"
+    )
+    fecha_atendida = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Fecha y hora en que se marcó como atendida"
+    )
+    atendida_por = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='observaciones_atendidas',
+        help_text="Usuario que marcó la observación como atendida"
+    )
+
     class Meta:
         verbose_name = "Observación"
         verbose_name_plural = "Observaciones"

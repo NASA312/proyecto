@@ -40,20 +40,34 @@ class GrupoAdmin(admin.ModelAdmin):
     ninos_asignados.short_description = 'Niños Asignados'
 
 
+@admin.register(AreaObservacion)
+class AreaObservacionAdmin(admin.ModelAdmin):
+    list_display       = ['orden', 'nombre', 'descripcion', 'activo']
+    list_display_links = ['nombre']
+    list_editable      = ['orden', 'activo']
+    search_fields      = ['nombre']
+    list_filter        = ['activo']
+    ordering           = ['orden', 'nombre']
+
+
 @admin.register(ObservacionNino)
 class ObservacionNinoAdmin(admin.ModelAdmin):
-    list_display = ['nino', 'tipo', 'fecha', 'hora', 'importante', 'notificar_tutor', 'notificado', 'registrado_por']
+    list_display  = ['nino', 'area', 'tipo', 'fecha', 'es_recurrente', 'atendida', 'importante', 'registrado_por']
     search_fields = ['nino__nombre', 'nino__apellido_paterno', 'descripcion']
-    list_filter = ['tipo', 'importante', 'notificar_tutor', 'notificado', 'fecha']
+    list_filter   = ['area', 'tipo', 'es_recurrente', 'atendida', 'importante', 'notificar_tutor', 'fecha']
     date_hierarchy = 'fecha'
-    readonly_fields = ['fecha_notificacion', 'hora']
-    
+    readonly_fields = ['fecha_notificacion', 'hora', 'fecha_atendida', 'atendida_por']
+
     fieldsets = (
         ('Información General', {
-            'fields': ('nino', 'tipo', 'fecha')
+            'fields': ('nino', 'area', 'tipo', 'fecha')
         }),
         ('Observación', {
             'fields': ('descripcion', 'importante')
+        }),
+        ('Recurrencia', {
+            'fields': ('es_recurrente', 'atendida', 'fecha_atendida', 'atendida_por'),
+            'description': 'Configuración para observaciones que persisten hasta ser atendidas'
         }),
         ('Notificación', {
             'fields': ('notificar_tutor', 'notificado', 'fecha_notificacion')
