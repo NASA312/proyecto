@@ -450,6 +450,56 @@ class ObservacionNino(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} - {self.nino.nombre_completo()} - {self.fecha}"
 
+class Amonestacion(models.Model):
+    """Catálogo de amonestaciones disponibles"""
+    motivo         = models.CharField(max_length=200, unique=True,
+                                      help_text='Descripción del motivo de la amonestación')
+    descripcion    = models.TextField(blank=True, default='',
+                                      help_text='Detalle adicional opcional')
+    activo         = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Amonestación'
+        verbose_name_plural = 'Amonestaciones'
+        ordering            = ['motivo']
+
+    def __str__(self):
+        return self.motivo
+
+
+class AmonestacionNino(models.Model):
+    """Relación entre un niño y una amonestación del catálogo"""
+    nino = models.ForeignKey(
+        Nino, on_delete=models.CASCADE,
+        related_name='amonestaciones',
+    )
+    amonestacion = models.ForeignKey(
+        Amonestacion, on_delete=models.PROTECT,
+        related_name='aplicaciones',
+        help_text='Amonestación del catálogo'
+    )
+    fecha          = models.DateField(default=timezone.now,
+                                      help_text='Fecha en que se aplicó la amonestación')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    registrado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='amonestaciones_registradas',
+    )
+    observaciones  = models.TextField(blank=True, default='',
+                                      help_text='Notas adicionales opcionales')
+
+    class Meta:
+        verbose_name        = 'Amonestación de Niño'
+        verbose_name_plural = 'Amonestaciones de Niños'
+        ordering            = ['-fecha', '-fecha_registro']
+        indexes = [
+            models.Index(fields=['nino', '-fecha'], name='amon_nino_fecha_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.amonestacion} → {self.nino.nombre_completo()} ({self.fecha})'
+
 
 class RegistroAcceso(models.Model):
     """Registro de entrada/salida de niños"""

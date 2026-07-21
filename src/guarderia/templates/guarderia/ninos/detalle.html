@@ -3,13 +3,58 @@
 
 {% block title %}Detalles - {{ nino.nombre_completo }}{% endblock %}
 
+{% block css %}
+<style>
+.perfil-avatar {
+  width: 100px; height: 100px;
+  border-radius: 50%; object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.perfil-avatar-placeholder {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  font-size: 2.5rem;
+}
+.info-pill {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: .85rem;
+}
+.info-pill:last-child { border-bottom: none; }
+.info-pill b { color: #555; }
+.tutor-mini {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1px solid #dee2e6; margin-bottom: 6px;
+  font-size: .82rem; transition: background .15s;
+}
+.tutor-mini:hover { background: #f8f9fa; }
+.tutor-mini .avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #007bff; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; flex-shrink: 0;
+}
+.amon-badge {
+  display: inline-block;
+  background: #fff3cd; color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 20px; padding: 2px 10px;
+  font-size: .75rem; font-weight: 600; margin: 2px;
+}
+.tab-compact .nav-link { padding: 6px 14px; font-size: .83rem; }
+.section-card { margin-bottom: 14px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0">Detalles del Niño</h1>
-      </div>
+      <div class="col-sm-6"><h1 class="m-0">Detalles del Niño</h1></div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
           <li class="breadcrumb-item"><a href="/">Inicio</a></li>
@@ -23,182 +68,289 @@
 
 <section class="content">
   <div class="container-fluid">
+
+    <!-- ══════════════════════════════════════════════════════
+         FILA SUPERIOR — Perfil + Info básica + Médica + Tutores
+    ══════════════════════════════════════════════════════ -->
     <div class="row">
 
-      <!-- ── Columna Izquierda ── -->
-      <div class="col-md-4">
-        <div class="card card-primary card-outline">
-          <div class="card-body box-profile">
-            <div class="text-center">
-              {% if nino.foto %}
-                <img src="{{ nino.foto.url }}"
-                     class="profile-user-img img-fluid img-circle"
-                     alt="{{ nino.nombre_completo }}"
-                     style="width:150px;height:150px;object-fit:cover;">
-              {% else %}
-                <div class="profile-user-img img-fluid img-circle d-inline-flex align-items-center justify-content-center
-                     {% if nino.genero == 'F' %}bg-pink{% else %}bg-primary{% endif %} text-white"
-                     style="width:150px;height:150px;">
-                  <i class="fas fa-{% if nino.genero == 'F' %}female{% else %}male{% endif %} fa-4x"></i>
-                </div>
-              {% endif %}
+      <!-- ── COLUMNA A: Foto + datos rápidos ── -->
+      <div class="col-md-3">
+        <div class="card card-primary card-outline section-card">
+          <div class="card-body text-center pt-3 pb-2">
+
+            <!-- Avatar -->
+            {% if nino.foto %}
+              <img src="{{ nino.foto.url }}" class="perfil-avatar" alt="{{ nino.nombre_completo }}">
+            {% else %}
+              <div class="perfil-avatar-placeholder mx-auto
+                {% if nino.genero == 'F' %}bg-pink{% else %}bg-primary{% endif %} text-white">
+                <i class="fas fa-{% if nino.genero == 'F' %}female{% else %}male{% endif %}"></i>
+              </div>
+            {% endif %}
+
+            <h5 class="mt-2 mb-0 font-weight-bold">{{ nino.nombre_completo }}</h5>
+            <small class="text-muted">{{ nino.grupo }}</small>
+
+            <div class="mt-3 text-left px-1">
+              <div class="info-pill">
+                <b><i class="fas fa-id-badge mr-1"></i>Matrícula</b>
+                {% if nino.numero_matricula %}
+                  <code class="text-primary">{{ nino.numero_matricula }}</code>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </div>
+              <div class="info-pill">
+                <b><i class="fas fa-venus-mars mr-1"></i>Género</b>
+                {% if nino.genero == 'F' %}
+                  <span class="badge" style="background:#e83e8c;color:#fff;">♀ Femenino</span>
+                {% else %}
+                  <span class="badge badge-primary">♂ Masculino</span>
+                {% endif %}
+              </div>
+              <div class="info-pill">
+                <b><i class="fas fa-birthday-cake mr-1"></i>Edad</b>
+                <span>{{ nino.edad }} años</span>
+              </div>
+              <div class="info-pill">
+                <b><i class="fas fa-calendar-alt mr-1"></i>Nacimiento</b>
+                <span>{{ nino.fecha_nacimiento|date:"d/m/Y" }}</span>
+              </div>
+              <div class="info-pill">
+                <b><i class="fas fa-tint mr-1"></i>Sangre</b>
+                <span class="badge badge-danger">{{ nino.tipo_sangre|default:"N/A" }}</span>
+              </div>
+              <div class="info-pill">
+                <b><i class="fas fa-user-friends mr-1"></i>Tutores</b>
+                <span class="badge badge-info">{{ tutores.count }}</span>
+              </div>
             </div>
 
-            <h3 class="profile-username text-center">{{ nino.nombre_completo }}</h3>
-            <p class="text-muted text-center">Grupo {{ nino.grupo }}</p>
-
-            <ul class="list-group list-group-unbordered mb-3">
-
-              <!-- Matrícula -->
-              <li class="list-group-item">
-                <b><i class="fas fa-id-badge mr-1"></i> Matrícula</b>
-                <span class="float-right">
-                  {% if nino.numero_matricula %}
-                    <code class="text-primary">{{ nino.numero_matricula }}</code>
-                  {% else %}
-                    <span class="text-muted">No asignada</span>
-                  {% endif %}
-                </span>
-              </li>
-
-              <!-- Género -->
-              <li class="list-group-item">
-                <b><i class="fas fa-venus-mars mr-1"></i> Género</b>
-                <span class="float-right">
-                  {% if nino.genero == 'F' %}
-                    <span class="badge" style="background-color:#e83e8c;color:#fff;">
-                      <i class="fas fa-venus mr-1"></i>Femenino
-                    </span>
-                  {% else %}
-                    <span class="badge badge-primary">
-                      <i class="fas fa-mars mr-1"></i>Masculino
-                    </span>
-                  {% endif %}
-                </span>
-              </li>
-
-              <li class="list-group-item">
-                <b><i class="fas fa-birthday-cake mr-1"></i> Edad</b>
-                <a class="float-right">{{ nino.edad }} años</a>
-              </li>
-              <li class="list-group-item">
-                <b><i class="fas fa-calendar-alt mr-1"></i> Fecha Nacimiento</b>
-                <a class="float-right">{{ nino.fecha_nacimiento|date:"d/m/Y" }}</a>
-              </li>
-              <li class="list-group-item">
-                <b><i class="fas fa-tint mr-1"></i> Tipo de Sangre</b>
-                <span class="float-right">
-                  <span class="badge badge-danger">{{ nino.tipo_sangre|default:"N/A" }}</span>
-                </span>
-              </li>
-              <li class="list-group-item">
-                <b><i class="fas fa-user-friends mr-1"></i> Tutores</b>
-                <span class="float-right">
-                  <span class="badge badge-info">{{ tutores.count }}</span>
-                </span>
-              </li>
-            </ul>
-
-            <a href="{% url 'guarderia:editar_nino' nino.id %}" class="btn btn-warning btn-block">
-              <i class="fas fa-edit"></i> Editar Información
-            </a>
-            <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-block">
-              <i class="fas fa-user-friends"></i> Gestionar Tutores
-            </a>
-          </div>
-        </div>
-
-        <!-- Información Médica -->
-        <div class="card card-warning">
-          <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-heartbeat"></i> Información Médica</h3>
-          </div>
-          <div class="card-body">
-            <strong><i class="fas fa-allergies mr-1"></i> Alergias</strong>
-            <p class="text-muted">{{ nino.alergias|default:"No registradas"|linebreaks }}</p>
-            <hr>
-            <strong><i class="fas fa-pills mr-1"></i> Medicamentos</strong>
-            <p class="text-muted">{{ nino.medicamentos|default:"No registrados"|linebreaks }}</p>
+            <div class="mt-3">
+              <a href="{% url 'guarderia:editar_nino' nino.id %}" class="btn btn-warning btn-sm btn-block">
+                <i class="fas fa-edit mr-1"></i>Editar
+              </a>
+              <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-sm btn-block">
+                <i class="fas fa-user-friends mr-1"></i>Gestionar Tutores
+              </a>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- ── Columna Derecha ── -->
-      <div class="col-md-8">
+      <!-- ── COLUMNA B: Médica + Tutores ── -->
+      <div class="col-md-3">
 
-        <!-- Tutores Autorizados -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-user-friends"></i> Tutores Autorizados</h3>
+        <!-- Información Médica -->
+        <div class="card card-warning card-outline section-card">
+          <div class="card-header p-2">
+            <h3 class="card-title" style="font-size:.9rem;">
+              <i class="fas fa-heartbeat mr-1"></i>Información Médica
+            </h3>
+          </div>
+          <div class="card-body p-2" style="font-size:.83rem;">
+            <strong><i class="fas fa-allergies mr-1 text-danger"></i>Alergias</strong>
+            <p class="text-muted mb-2" style="max-height:60px;overflow-y:auto;">
+              {{ nino.alergias|default:"No registradas" }}
+            </p>
+            <strong><i class="fas fa-pills mr-1 text-warning"></i>Medicamentos</strong>
+            <p class="text-muted mb-0" style="max-height:60px;overflow-y:auto;">
+              {{ nino.medicamentos|default:"No registrados" }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Tutores compactos -->
+        <div class="card card-outline section-card">
+          <div class="card-header p-2">
+            <h3 class="card-title" style="font-size:.9rem;">
+              <i class="fas fa-users mr-1"></i>Tutores Autorizados
+            </h3>
             <div class="card-tools">
-              <a href="{% url 'guarderia:asignar_tutores' nino.id %}" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> Modificar Tutores
+              <a href="{% url 'guarderia:asignar_tutores' nino.id %}"
+                 class="btn btn-xs btn-primary">
+                <i class="fas fa-edit"></i>
               </a>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body p-2" style="max-height:200px;overflow-y:auto;">
             {% if tutores %}
-              <div class="row">
-                {% for tutor in tutores %}
-                <div class="col-md-6 mb-3">
-                  <div class="card {% if tutor.huella_registrada %}border-success{% else %}border-warning{% endif %}">
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                          <h5 class="mb-1">{{ tutor.nombre_completo }}</h5>
-                          <p class="mb-1">
-                            <span class="badge badge-info">{{ tutor.get_parentesco_display }}</span>
-                          </p>
-                          <small class="text-muted">
-                            <i class="fas fa-phone"></i> {{ tutor.telefono }}
-                          </small>
-                          {% if tutor.email %}
-                            <br>
-                            <small class="text-muted">
-                              <i class="fas fa-envelope"></i> {{ tutor.email }}
-                            </small>
-                          {% endif %}
-                        </div>
-                        <div>
-                          {% if tutor.huella_registrada %}
-                            <span class="badge badge-success">
-                              <i class="fas fa-fingerprint"></i> Verificado
-                            </span>
-                          {% else %}
-                            <span class="badge badge-warning">
-                              <i class="fas fa-exclamation-triangle"></i> Sin huella
-                            </span>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                    <div class="card-footer">
-                      <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-sm btn-info">
-                        <i class="fas fa-eye"></i> Ver Detalles
-                      </a>
-                    </div>
+              {% for tutor in tutores %}
+              <div class="tutor-mini">
+                <div class="avatar">{{ tutor.nombre|first }}{{ tutor.apellido_paterno|first }}</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="font-weight-bold text-truncate">{{ tutor.nombre_completo }}</div>
+                  <div class="text-muted">
+                    {{ tutor.get_parentesco_display }}
+                    {% if tutor.huella_registrada %}
+                      <i class="fas fa-fingerprint text-success ml-1" title="Huella registrada"></i>
+                    {% else %}
+                      <i class="fas fa-exclamation-triangle text-warning ml-1" title="Sin huella"></i>
+                    {% endif %}
                   </div>
                 </div>
-                {% endfor %}
+                <a href="{% url 'guarderia:detalle_tutor' tutor.id %}"
+                   class="btn btn-xs btn-info" title="Ver">
+                  <i class="fas fa-eye"></i>
+                </a>
               </div>
+              {% endfor %}
             {% else %}
-              <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                No hay tutores asignados a este niño.
-                <a href="{% url 'guarderia:asignar_tutores' nino.id %}">Asignar tutores ahora</a>
+              <div class="text-center text-muted py-2" style="font-size:.82rem;">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                Sin tutores asignados.<br>
+                <a href="{% url 'guarderia:asignar_tutores' nino.id %}">Asignar ahora</a>
               </div>
             {% endif %}
           </div>
         </div>
 
-        <!-- Historial de Accesos -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-history"></i> Historial de Entradas y Salidas</h3>
+      </div>
+
+      <!-- ── COLUMNA C: Amonestaciones + Observaciones recientes ── -->
+      <div class="col-md-6">
+
+        <!-- Amonestaciones -->
+        <div class="card card-outline card-danger section-card">
+          <div class="card-header p-2">
+            <h3 class="card-title" style="font-size:.9rem;">
+              <i class="fas fa-exclamation-triangle mr-1 text-danger"></i>
+              Amonestaciones
+              {% if amonestaciones_count > 0 %}
+                <span class="badge badge-danger ml-1">{{ amonestaciones_count }}</span>
+              {% endif %}
+            </h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_amonestacion_nino' %}?nino_id={{ nino.id }}&next={{ request.path|urlencode }}"
+                 class="btn btn-xs btn-danger" title="Aplicar amonestación">
+                <i class="fas fa-plus"></i>
+              </a>
+              <a href="{% url 'guarderia:amonestaciones_por_nino' nino.id %}"
+                 class="btn btn-xs btn-default" title="Ver todas">
+                <i class="fas fa-list"></i>
+              </a>
+            </div>
+          </div>
+          <div class="card-body p-2">
+            {% if amonestaciones_recientes %}
+              <div style="max-height:120px;overflow-y:auto;">
+                {% for ap in amonestaciones_recientes %}
+                <div class="d-flex align-items-start justify-content-between mb-1"
+                     style="font-size:.82rem;padding:4px 0;border-bottom:1px solid #f5c6cb;">
+                  <div>
+                    <span class="amon-badge">{{ ap.amonestacion.motivo }}</span>
+                    {% if ap.observaciones %}
+                      <small class="text-muted d-block ml-1">{{ ap.observaciones|truncatechars:50 }}</small>
+                    {% endif %}
+                  </div>
+                  <small class="text-muted text-nowrap ml-2">{{ ap.fecha|date:"d/m/Y" }}</small>
+                </div>
+                {% endfor %}
+              </div>
+              {% if amonestaciones_count > 5 %}
+                <div class="text-right mt-1">
+                  <a href="{% url 'guarderia:amonestaciones_por_nino' nino.id %}"
+                     style="font-size:.78rem;">
+                    Ver las {{ amonestaciones_count }} amonestaciones →
+                  </a>
+                </div>
+              {% endif %}
+            {% else %}
+              <p class="text-muted text-center mb-0 py-2" style="font-size:.82rem;">
+                <i class="fas fa-check-circle text-success mr-1"></i>Sin amonestaciones registradas
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Observaciones recientes -->
+        <div class="card card-outline section-card">
+          <div class="card-header p-2">
+            <h3 class="card-title" style="font-size:.9rem;">
+              <i class="fas fa-clipboard-list mr-1"></i>Observaciones Recientes
+            </h3>
+            <div class="card-tools">
+              <a href="{% url 'guarderia:registrar_observacion' %}?nino_id={{ nino.id }}&next={{ request.path|urlencode }}"
+                 class="btn btn-xs btn-primary" title="Nueva observación">
+                <i class="fas fa-plus"></i>
+              </a>
+              <a href="{% url 'guarderia:observaciones_nino' nino.id %}"
+                 class="btn btn-xs btn-default" title="Ver todas">
+                <i class="fas fa-list"></i>
+              </a>
+            </div>
           </div>
           <div class="card-body p-0">
-            <table class="table table-striped">
-              <thead>
+            <table class="table table-sm mb-0" style="font-size:.8rem;">
+              <thead class="thead-light">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for obs in observaciones %}
+                <tr>
+                  <td class="text-nowrap">{{ obs.fecha|date:"d/m/Y" }}</td>
+                  <td><span class="badge badge-secondary" style="font-size:.7rem;">{{ obs.get_tipo_display }}</span></td>
+                  <td>
+                    {% if obs.importante %}
+                      <i class="fas fa-exclamation-circle text-danger" title="Importante"></i>
+                    {% endif %}
+                    {{ obs.descripcion|truncatechars:45 }}
+                  </td>
+                  <td>
+                    {% if obs.notificar_tutor %}
+                      {% if obs.notificado %}
+                        <span class="badge badge-success" style="font-size:.68rem;">✓ Notif.</span>
+                      {% else %}
+                        <span class="badge badge-warning" style="font-size:.68rem;">Pend.</span>
+                      {% endif %}
+                    {% elif obs.es_recurrente and not obs.atendida %}
+                      <span class="badge badge-info" style="font-size:.68rem;">↺ Recur.</span>
+                    {% else %}
+                      <span class="badge badge-light" style="font-size:.68rem;">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-2">Sin observaciones</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- /fila superior -->
+
+    <!-- ══════════════════════════════════════════════════════
+         FILA INFERIOR — Historial de accesos
+    ══════════════════════════════════════════════════════ -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card section-card">
+          <div class="card-header p-2">
+            <h3 class="card-title" style="font-size:.9rem;">
+              <i class="fas fa-history mr-1"></i>Historial de Entradas y Salidas
+            </h3>
+            {% if registros %}
+            <div class="card-tools">
+              <a href="{% url 'guarderia:historial_accesos' %}" class="btn btn-xs btn-default">
+                Ver completo
+              </a>
+            </div>
+            {% endif %}
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-sm table-striped mb-0" style="font-size:.82rem;">
+              <thead class="thead-light">
                 <tr>
                   <th>Fecha/Hora</th>
                   <th>Tutor</th>
@@ -210,120 +362,46 @@
               <tbody>
                 {% for registro in registros %}
                 <tr>
-                  <td>{{ registro.fecha_hora|date:"d/m/Y H:i" }}</td>
+                  <td class="text-nowrap">{{ registro.fecha_hora|date:"d/m/Y H:i" }}</td>
                   <td>{{ registro.tutor.nombre_completo }}</td>
                   <td>
                     {% if registro.tipo == 'ENTRADA' %}
-                      <span class="badge badge-success">
+                      <span class="badge badge-success" style="font-size:.7rem;">
                         <i class="fas fa-sign-in-alt"></i> Entrada
                       </span>
                     {% else %}
-                      <span class="badge badge-info">
+                      <span class="badge badge-info" style="font-size:.7rem;">
                         <i class="fas fa-sign-out-alt"></i> Salida
                       </span>
                     {% endif %}
                   </td>
                   <td>
-                    <span class="badge badge-primary">
+                    <span class="badge badge-primary" style="font-size:.7rem;">
                       <i class="fas fa-fingerprint"></i> {{ registro.metodo_verificacion }}
                     </span>
                   </td>
                   <td>
                     {% if registro.verificacion_exitosa %}
-                      <span class="badge badge-success">Exitosa</span>
+                      <span class="badge badge-success" style="font-size:.7rem;">Exitosa</span>
                     {% else %}
-                      <span class="badge badge-danger">Fallida</span>
+                      <span class="badge badge-danger" style="font-size:.7rem;">Fallida</span>
                     {% endif %}
                   </td>
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="5" class="text-center text-muted">
-                    <i class="fas fa-info-circle mr-1"></i> No hay registros de acceso
+                  <td colspan="5" class="text-center text-muted py-2">
+                    <i class="fas fa-info-circle mr-1"></i>Sin registros de acceso
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-          {% if registros %}
-          <div class="card-footer">
-            <a href="{% url 'guarderia:historial_accesos' %}" class="btn btn-sm btn-default">
-              Ver historial completo
-            </a>
-          </div>
-          {% endif %}
         </div>
-
-        <!-- Observaciones del Niño -->
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title"><i class="fas fa-clipboard-list"></i> Observaciones</h3>
-    <div class="card-tools">
-      <a href="{% url 'guarderia:registrar_observacion' %}?nino_id={{ nino.id }}"
-         class="btn btn-primary btn-sm">
-        <i class="fas fa-plus"></i> Nueva Observación
-      </a>
+      </div>
     </div>
-  </div>
-  <div class="card-body p-0">
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Tipo</th>
-          <th>Descripción</th>
-          <th>Registrado por</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for obs in observaciones %}
-        <tr>
-          <td>{{ obs.fecha|date:"d/m/Y" }} {{ obs.hora|time:"H:i" }}</td>
-          <td>
-            <span class="badge badge-secondary">{{ obs.get_tipo_display }}</span>
-          </td>
-          <td>
-            {% if obs.importante %}
-              <i class="fas fa-exclamation-circle text-danger mr-1" title="Importante"></i>
-            {% endif %}
-            {{ obs.descripcion|truncatechars:60 }}
-          </td>
-          <td>{{ obs.registrado_por.get_full_name|default:obs.registrado_por.username }}</td>
-          <td>
-            {% if obs.notificar_tutor %}
-              {% if obs.notificado %}
-                <span class="badge badge-success"><i class="fas fa-check"></i> Notificado</span>
-              {% else %}
-                <span class="badge badge-warning"><i class="fas fa-clock"></i> Pendiente</span>
-              {% endif %}
-            {% else %}
-              <span class="badge badge-light">—</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="text-center text-muted">
-            <i class="fas fa-info-circle mr-1"></i> No hay observaciones registradas
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% if observaciones %}
-  <div class="card-footer">
-    <a href="{% url 'guarderia:observaciones_nino' nino.id %}" class="btn btn-sm btn-default">
-      Ver todas las observaciones
-    </a>
-  </div>
-  {% endif %}
-</div>
 
-      </div><!-- /col-md-8 -->
-    </div>
   </div>
 </section>
 {% endblock %}

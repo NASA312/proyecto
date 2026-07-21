@@ -154,4 +154,38 @@ urlpatterns = [
     path('areas-observacion/<int:area_id>/editar/',     views.editar_area_observacion,    name='editar_area_observacion'),
     path('areas-observacion/<int:area_id>/detalle/',    views.detalle_area_observacion,   name='detalle_area_observacion'),
     path('areas-observacion/<int:area_id>/toggle/',     views.toggle_area_observacion,    name='toggle_area_observacion'),
+    
+# Catálogo de amonestaciones
+path('amonestaciones/',
+     views.lista_amonestaciones,
+     name='lista_amonestaciones'),
+path('amonestaciones/registrar/',
+     views.registrar_amonestacion,
+     name='registrar_amonestacion'),
+path('amonestaciones/<int:amonestacion_id>/editar/',
+     views.editar_amonestacion,
+     name='editar_amonestacion'),
+path('amonestaciones/<int:amonestacion_id>/toggle/',
+     views.toggle_amonestacion,
+     name='toggle_amonestacion'),
+
+# Amonestaciones aplicadas a niños
+path('amonestaciones-nino/',
+     views.lista_amonestaciones_nino_general,
+     name='lista_amonestaciones_nino_general'),
+path('amonestaciones-nino/registrar/',
+     views.registrar_amonestacion_nino,
+     name='registrar_amonestacion_nino'),
+path('amonestaciones-nino/<int:aplicacion_id>/editar/',
+     views.editar_amonestacion_nino,
+     name='editar_amonestacion_nino'),
+path('amonestaciones-nino/<int:aplicacion_id>/eliminar/',
+     views.eliminar_amonestacion_nino,
+     name='eliminar_amonestacion_nino'),
+path('ninos/<int:nino_id>/amonestaciones/',
+     views.amonestaciones_por_nino,
+     name='amonestaciones_por_nino'),
+    
+    
+    
 ]

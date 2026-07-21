@@ -329,7 +329,49 @@
             </li>
           </ul>
         </li>
+<!-- ============================================ -->
+<!-- AMONESTACIONES -->
+<!-- ============================================ -->
+<li class="nav-item menu-close">
+  <a href="#" class="nav-link">
+    <i class="nav-icon fas fa-exclamation-triangle"></i>
+    <p>
+      Amonestaciones
+      <i class="right fas fa-angle-left"></i>
+    </p>
+  </a>
+  <ul class="nav nav-treeview">
 
+    <!-- Catálogo -->
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_amonestaciones' %}" class="nav-link">
+        <i class="fas fa-tags nav-icon"></i>
+        <p>Catálogo</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_amonestacion' %}" class="nav-link">
+        <i class="fas fa-plus nav-icon"></i>
+        <p>Nueva Amonestación</p>
+      </a>
+    </li>
+
+    <!-- Aplicadas a niños -->
+    <li class="nav-item">
+      <a href="{% url 'guarderia:lista_amonestaciones_nino_general' %}" class="nav-link">
+        <i class="fas fa-list nav-icon"></i>
+        <p>Aplicadas a Niños</p>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'guarderia:registrar_amonestacion_nino' %}" class="nav-link">
+        <i class="fas fa-user-times nav-icon"></i>
+        <p>Aplicar a Niño</p>
+      </a>
+    </li>
+
+  </ul>
+</li>
         <!-- ============================================ -->
 <!-- ÁREAS -->
 <!-- ============================================ -->

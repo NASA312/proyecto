@@ -240,19 +240,24 @@ def registrar_nino(request):
 
 @login_required
 def detalle_nino(request, nino_id):
-    """Ver detalles de un niño"""
     nino = get_object_or_404(Nino, id=nino_id)
-    tutores = nino.tutores.filter(activo=True)
-    registros = nino.registros.all().order_by('-fecha_hora')[:10]
-    observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')[:10]
+    tutores      = nino.tutores.all()
+    registros    = nino.registros.order_by('-fecha_hora')[:10]
+    observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')[:5]
 
-    ctx = {
-        'nino': nino,
-        'tutores': tutores,
-        'registros': registros,
-        'observaciones': observaciones,  # <-- nuevo
-    }
-    return render(request, 'guarderia/ninos/detalle.html', ctx)
+    # Amonestaciones
+    amonestaciones_qs      = nino.amonestaciones.select_related('amonestacion').order_by('-fecha')
+    amonestaciones_recientes = amonestaciones_qs[:5]
+    amonestaciones_count     = amonestaciones_qs.count()
+
+    return render(request, 'guarderia/ninos/detalle.html', {
+        'nino':                    nino,
+        'tutores':                 tutores,
+        'registros':               registros,
+        'observaciones':           observaciones,
+        'amonestaciones_recientes': amonestaciones_recientes,
+        'amonestaciones_count':    amonestaciones_count,
+    })
 
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
@@ -2974,3 +2979,184 @@ def toggle_area_observacion(request, area_id):
 
     messages.success(request, f'Área "{area.nombre}" {estado}.')
     return redirect('guarderia:lista_areas_observacion')
+
+# ══════════════════════════════════════════════════════════════
+#  CATÁLOGO DE AMONESTACIONES
+# ══════════════════════════════════════════════════════════════
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def lista_amonestaciones(request):
+    amonestaciones = Amonestacion.objects.all()
+    return render(request, 'guarderia/amonestaciones/lista.html', {
+        'amonestaciones': amonestaciones,
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def registrar_amonestacion(request):
+    if request.method == 'POST':
+        form = AmonestacionForm(request.POST)
+        if form.is_valid():
+            amonestacion = form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Amonestación "{amonestacion.motivo}" registrada correctamente.'
+                })
+            messages.success(request, f'Amonestación "{amonestacion.motivo}" registrada.')
+            return redirect('guarderia:lista_amonestaciones')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = AmonestacionForm()
+    return render(request, 'guarderia/amonestaciones/registrar.html', {'form': form})
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def editar_amonestacion(request, amonestacion_id):
+    amonestacion = get_object_or_404(Amonestacion, id=amonestacion_id)
+    if request.method == 'POST':
+        form = AmonestacionForm(request.POST, instance=amonestacion)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Amonestación "{amonestacion.motivo}" actualizada.'
+                })
+            messages.success(request, f'Amonestación "{amonestacion.motivo}" actualizada.')
+            return redirect('guarderia:lista_amonestaciones')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = AmonestacionForm(instance=amonestacion)
+    return render(request, 'guarderia/amonestaciones/editar.html', {
+        'form':         form,
+        'amonestacion': amonestacion,
+    })
+
+
+@login_required
+@rol_requerido('ADMIN')
+@require_http_methods(['POST'])
+def toggle_amonestacion(request, amonestacion_id):
+    amonestacion = get_object_or_404(Amonestacion, id=amonestacion_id)
+    amonestacion.activo = not amonestacion.activo
+    amonestacion.save(update_fields=['activo'])
+    estado = 'activada' if amonestacion.activo else 'desactivada'
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'Amonestación "{amonestacion.motivo}" {estado}.'})
+    messages.success(request, f'Amonestación "{amonestacion.motivo}" {estado}.')
+    return redirect('guarderia:lista_amonestaciones')
+
+
+# ══════════════════════════════════════════════════════════════
+#  APLICAR AMONESTACIÓN A NIÑO
+# ══════════════════════════════════════════════════════════════
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def lista_amonestaciones_nino_general(request):
+    """Lista general de todas las amonestaciones aplicadas"""
+    nino_id     = request.GET.get('nino')
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+
+    qs = AmonestacionNino.objects.select_related('nino', 'amonestacion', 'registrado_por')
+
+    if nino_id:
+        qs = qs.filter(nino_id=nino_id)
+    if fecha_desde:
+        qs = qs.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha__lte=fecha_hasta)
+
+    ninos = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+
+    return render(request, 'guarderia/amonestaciones_nino/lista.html', {
+        'aplicaciones': qs.order_by('-fecha'),
+        'ninos':        ninos,
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def registrar_amonestacion_nino(request):
+    if request.method == 'POST':
+        form = AmonestacionNinoForm(request.POST)
+        if form.is_valid():
+            ap = form.save(commit=False)
+            ap.registrado_por = request.user
+            ap.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Amonestación aplicada a {ap.nino.nombre_completo()}.'
+                })
+            messages.success(request, f'Amonestación aplicada a {ap.nino.nombre_completo()}.')
+            next_url = request.GET.get('next')
+            return redirect(next_url or 'guarderia:lista_amonestaciones_nino_general')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        nino_id = request.GET.get('nino_id')
+        initial = {'nino': nino_id} if nino_id else {}
+        form    = AmonestacionNinoForm(initial=initial)
+
+    return render(request, 'guarderia/amonestaciones_nino/registrar.html', {'form': form})
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def editar_amonestacion_nino(request, aplicacion_id):
+    aplicacion = get_object_or_404(AmonestacionNino, id=aplicacion_id)
+    if request.method == 'POST':
+        form = AmonestacionNinoForm(request.POST, instance=aplicacion)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Amonestación actualizada.'})
+            messages.success(request, 'Amonestación actualizada.')
+            next_url = request.GET.get('next')
+            return redirect(next_url or 'guarderia:lista_amonestaciones_nino_general')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    else:
+        form = AmonestacionNinoForm(instance=aplicacion)
+
+    return render(request, 'guarderia/amonestaciones_nino/editar.html', {
+        'form':       form,
+        'aplicacion': aplicacion,
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def amonestaciones_por_nino(request, nino_id):
+    nino        = get_object_or_404(Nino, id=nino_id)
+    aplicaciones = nino.amonestaciones.select_related('amonestacion', 'registrado_por').order_by('-fecha')
+    return render(request, 'guarderia/amonestaciones_nino/por_nino.html', {
+        'nino':        nino,
+        'aplicaciones': aplicaciones,
+        'total':       aplicaciones.count(),
+    })
+
+
+@login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+@require_http_methods(['POST'])
+def eliminar_amonestacion_nino(request, aplicacion_id):
+    aplicacion  = get_object_or_404(AmonestacionNino, id=aplicacion_id)
+    nino_nombre = aplicacion.nino.nombre_completo()
+    aplicacion.delete()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'Amonestación de {nino_nombre} eliminada.'})
+    messages.success(request, f'Amonestación de {nino_nombre} eliminada.')
+    return redirect('guarderia:lista_amonestaciones_nino_general')

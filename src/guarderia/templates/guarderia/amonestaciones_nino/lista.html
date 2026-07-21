@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Amonestaciones Aplicadas{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Amonestaciones Aplicadas</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Amonestaciones Aplicadas</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-list mr-2"></i>Historial</h3>
+        <div class="card-tools">
+          <a href="{% url 'guarderia:registrar_amonestacion_nino' %}" class="btn btn-danger btn-sm">
+            <i class="fas fa-plus mr-1"></i>Aplicar Amonestación
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <table id="tablaAplicaciones" class="table table-striped table-bordered table-hover w-100">
+          <thead class="thead-light">
+            <tr>
+              <th>Fecha</th>
+              <th>Niño</th>
+              <th>Amonestación</th>
+              <th>Observaciones</th>
+              <th>Registrado por</th>
+              <th class="text-center" style="width:100px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ap in aplicaciones %}
+            <tr>
+              <td>{{ ap.fecha }}</td>
+              <td>
+                <a href="{% url 'guarderia:amonestaciones_por_nino' ap.nino.id %}">
+                  {{ ap.nino.nombre_completo }}
+                </a>
+              </td>
+              <td><span class="badge badge-danger">{{ ap.amonestacion.motivo }}</span></td>
+              <td><small class="text-muted">{{ ap.observaciones|default:"—"|truncatechars:60 }}</small></td>
+              <td>
+                <small class="text-muted">
+                  {{ ap.registrado_por.get_full_name|default:ap.registrado_por.username|default:"—" }}
+                </small>
+              </td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'guarderia:editar_amonestacion_nino' ap.id %}?next={{ request.get_full_path|urlencode }}"
+                     class="btn btn-warning" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <button type="button" class="btn btn-danger" title="Eliminar"
+                          onclick="eliminar({{ ap.id }}, '{{ ap.nino.nombre_completo|escapejs }}')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% csrf_token %}
+<script>
+$(document).ready(function() {
+  $('#tablaAplicaciones').DataTable({
+    responsive: true, autoWidth: false, pageLength: 25,
+    order: [[0, 'desc']],
+    columnDefs: [{ orderable: false, searchable: false, targets: 5 }],
+    language: Object.assign({}, window.dtEspanol, {
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay amonestaciones aplicadas</span>'
+    })
+  });
+});
+
+function eliminar(id, nombre) {
+  Swal.fire({
+    title: '¿Eliminar?',
+    html: 'Se eliminará la amonestación de <strong>' + nombre + '</strong>.<br><small class="text-danger">No se puede deshacer.</small>',
+    icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  }).then(function(r) {
+    if (!r.isConfirmed) return;
+    $.ajax({
+      url: '/guarderia/amonestaciones-nino/' + id + '/eliminar/',
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+      success: function(res) {
+        if (res.success) {
+          Swal.fire({ icon: 'success', title: 'Eliminada', text: res.message, timer: 2000, showConfirmButton: false });
+          setTimeout(() => location.reload(), 1500);
+        }
+      },
+      error: function() { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo eliminar.' }); }
+    });
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function(c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
+</script>
+{% endblock scripts %}

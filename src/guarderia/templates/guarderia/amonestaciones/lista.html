@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Catálogo de Amonestaciones{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Catálogo de Amonestaciones</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Amonestaciones</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+          {{ message }}<button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-exclamation-circle mr-2"></i>Amonestaciones</h3>
+        <div class="card-tools">
+          <a href="{% url 'guarderia:registrar_amonestacion' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus mr-1"></i>Nueva
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <table id="tablaAmonestaciones" class="table table-striped table-bordered table-hover w-100">
+          <thead class="thead-light">
+            <tr>
+              <th>Motivo</th>
+              <th>Descripción</th>
+              <th class="text-center">Veces aplicada</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center" style="width:120px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in amonestaciones %}
+            <tr>
+              <td><strong>{{ a.motivo }}</strong></td>
+              <td><small class="text-muted">{{ a.descripcion|default:"—"|truncatechars:80 }}</small></td>
+              <td class="text-center">
+                <span class="badge badge-info">{{ a.aplicaciones.count }}</span>
+              </td>
+              <td class="text-center">
+                {% if a.activo %}
+                  <span class="badge badge-success">Activa</span>
+                {% else %}
+                  <span class="badge badge-secondary">Inactiva</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'guarderia:editar_amonestacion' a.id %}"
+                     class="btn btn-warning" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <button type="button"
+                          class="btn {% if a.activo %}btn-secondary{% else %}btn-success{% endif %}"
+                          title="{% if a.activo %}Desactivar{% else %}Activar{% endif %}"
+                          onclick="toggleAmonestacion({{ a.id }}, this)">
+                    <i class="fas {% if a.activo %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% csrf_token %}
+<script>
+$(document).ready(function() {
+  $('#tablaAmonestaciones').DataTable({
+    responsive: true, autoWidth: false, pageLength: 25,
+    lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Todos']],
+    columnDefs: [{ orderable: false, searchable: false, targets: [2, 3, 4] }],
+    language: Object.assign({}, window.dtEspanol, {
+      emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> No hay amonestaciones registradas</span>'
+    })
+  });
+});
+
+function toggleAmonestacion(id, btn) {
+  var activo = $(btn).hasClass('btn-secondary');
+  Swal.fire({
+    title: activo ? '¿Desactivar amonestación?' : '¿Activar amonestación?',
+    icon: 'question', showCancelButton: true,
+    confirmButtonColor: activo ? '#6c757d' : '#28a745',
+    confirmButtonText: activo ? 'Sí, desactivar' : 'Sí, activar',
+    cancelButtonText: 'Cancelar'
+  }).then(function(r) {
+    if (!r.isConfirmed) return;
+    $.ajax({
+      url: '/guarderia/amonestaciones/' + id + '/toggle/',
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+      success: function(res) {
+        if (res.success) {
+          Swal.fire({ icon: 'success', title: 'Listo', text: res.message, timer: 1800, showConfirmButton: false });
+          setTimeout(() => location.reload(), 1500);
+        }
+      },
+      error: function() { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cambiar el estado.' }); }
+    });
+  });
+}
+
+function getCookie(name) {
+  var v = null;
+  if (document.cookie) document.cookie.split(';').forEach(function(c) {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+  });
+  return v;
+}
+</script>
+{% endblock scripts %}

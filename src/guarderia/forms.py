@@ -341,3 +341,53 @@ class AreaObservacionForm(forms.ModelForm):
                 'placeholder': 'Descripción opcional del área'
             }),
         }
+        
+class AmonestacionForm(forms.ModelForm):
+    """Catálogo de amonestaciones"""
+    class Meta:
+        model  = Amonestacion
+        fields = ['motivo', 'descripcion']
+        widgets = {
+            'motivo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Conducta inapropiada, Falta de uniforme...'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción adicional opcional...'
+            }),
+        }
+
+
+class AmonestacionNinoForm(forms.ModelForm):
+    """Aplicar amonestación a un niño"""
+    class Meta:
+        model  = AmonestacionNino
+        fields = ['nino', 'amonestacion', 'fecha', 'observaciones']
+        widgets = {
+            'nino': forms.Select(attrs={
+                'class': 'form-control select2'
+            }),
+            'amonestacion': forms.Select(attrs={
+                'class': 'form-control select2'
+            }),
+            'fecha': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type':  'date'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class':       'form-control',
+                'rows':        3,
+                'placeholder': 'Notas adicionales opcionales...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nino'].queryset = Nino.objects.filter(activo=True).order_by('apellido_paterno', 'nombre')
+        self.fields['nino'].label_from_instance = (
+            lambda obj: f"{obj.nombre} {obj.apellido_paterno} {obj.apellido_materno or ''}".strip()
+        )
+        # Solo mostrar amonestaciones activas en el select
+        self.fields['amonestacion'].queryset = Amonestacion.objects.filter(activo=True)
