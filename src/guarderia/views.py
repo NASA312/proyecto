@@ -3160,3 +3160,23 @@ def eliminar_amonestacion_nino(request, aplicacion_id):
         return JsonResponse({'success': True, 'message': f'Amonestación de {nino_nombre} eliminada.'})
     messages.success(request, f'Amonestación de {nino_nombre} eliminada.')
     return redirect('guarderia:lista_amonestaciones_nino_general')
+
+@login_required
+def amonestaciones_activas_nino(request, nino_id):
+    """Retorna amonestaciones de un niño para mostrar en el checador."""
+    nino = get_object_or_404(Nino, id=nino_id)
+
+    amonestaciones = AmonestacionNino.objects.filter(
+        nino=nino
+    ).select_related('amonestacion').order_by('-fecha')[:20]
+
+    data = [{
+        'id':          a.id,
+        'motivo':      a.amonestacion.motivo,
+        'descripcion': a.amonestacion.descripcion or '',
+        'notas':       a.observaciones or '',
+        'fecha':       a.fecha.strftime('%d/%m/%Y') if a.fecha else '',
+    } for a in amonestaciones]
+
+    return JsonResponse({'amonestaciones': data, 'total': len(data)})
+

@@ -186,6 +186,7 @@ path('ninos/<int:nino_id>/amonestaciones/',
      views.amonestaciones_por_nino,
      name='amonestaciones_por_nino'),
     
+    path('ninos/<int:nino_id>/amonestaciones-activas/', views.amonestaciones_activas_nino, name='amonestaciones_activas_nino'),
     
     
 ]

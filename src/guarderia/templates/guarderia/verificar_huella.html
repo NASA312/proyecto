@@ -809,6 +809,150 @@
     font-size: 1.8rem;
     color: #90cdf4;
   }
+
+  /* CSS NUEVO  */
+  /* Preview de observaciones dentro de la tarjeta ── */
+.obs-preview-wrap {
+  margin-top: 12px;
+}
+.obs-preview-item {
+  background: #1c2530;
+  border-left: 3px solid #63b3ed;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  font-size: .82rem;
+  color: #eef2f7;          /* alto contraste, ya no se pierde en el fondo */
+  line-height: 1.45;
+}
+.obs-preview-item.importante {
+  border-left-color: #fc8181;
+}
+.obs-preview-mas {
+  color: #90cdf4;
+  font-size: .76rem;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ── Botones de alternar ── */
+.nino-card-botones {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btn-toggle-info {
+  flex: 1;
+  background: #16385c;
+  border: 1px solid #2b6cb0;
+  color: #d9ecff;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-toggle-info:hover { background: #2b6cb0; color: #fff; }
+.btn-toggle-info.activo { background: #2b6cb0; color: #fff; }
+
+.btn-toggle-info.btn-amonestacion {
+  background: #4a2020;
+  border-color: #9b2c2c;
+  color: #ffdede;
+}
+.btn-toggle-info.btn-amonestacion:hover,
+.btn-toggle-info.btn-amonestacion.activo {
+  background: #9b2c2c;
+  color: #fff;
+}
+
+.count-badge {
+  background: rgba(255,255,255,.2);
+  border-radius: 10px;
+  padding: 0 7px;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+/* ── Panel expandible con scroll ── */
+.panel-info-expandible {
+  width: 100%;
+  max-width: 520px;
+  margin: 12px auto 0;
+  background: #12161d;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: left;
+  animation: expandIn .18s ease;
+}
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.panel-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #1c2530;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  font-weight: 700;
+  color: #ffffff;
+  font-size: .88rem;
+}
+.btn-cerrar-info {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  font-size: .95rem;
+  padding: 2px 6px;
+}
+.btn-cerrar-info:hover { color: #fff; }
+
+.panel-info-body {
+  max-height: 260px;      /* aquí controlas qué tan grande crece antes de hacer scroll */
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+.panel-info-body::-webkit-scrollbar { width: 6px; }
+.panel-info-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.18);
+  border-radius: 3px;
+}
+
+.info-item {
+  background: #1c2530;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid #63b3ed;
+}
+.info-item.importante { border-left-color: #fc8181; }
+.info-item.amonestacion { border-left-color: #f6ad55; }
+
+.info-item .info-desc {
+  color: #f2f6fa;          /* texto claro y legible sobre fondo oscuro sólido */
+  font-size: .86rem;
+  line-height: 1.5;
+}
+.info-item .info-meta {
+  color: rgba(255,255,255,.6);
+  font-size: .73rem;
+  margin-top: 5px;
+}
+.info-vacio {
+  color: rgba(255,255,255,.5);
+  text-align: center;
+  padding: 24px 0;
+  font-size: .85rem;
+}
 </style>
 {% endblock %}
 
@@ -844,16 +988,40 @@
 
   <!-- PASO 2: Niño encontrado → poner huella -->
   <div class="panel-huella" id="card-huella" style="display:none;">
-    <div class="nino-encontrado-card" id="nino-card-info">
-      <div class="nino-foto-kiosk" id="nino-foto-wrap">
-        <i class="fas fa-child"></i>
-      </div>
-      <div>
-        <h5 style="color:#fff; margin:0 0 4px;" id="nino-nombre-encontrado">—</h5>
-        <small style="color:rgba(255,255,255,.45);" id="nino-grupo-encontrado">—</small><br>
-        <small id="nino-estado-badge"></small>
-      </div>
+<div class="nino-encontrado-card" id="nino-card-info">
+  <div class="nino-foto-kiosk" id="nino-foto-wrap">
+    <i class="fas fa-child"></i>
+  </div>
+  <div class="flex-grow-1" style="min-width:0;">
+    <h5 style="color:#fff; margin:0 0 4px;" id="nino-nombre-encontrado">—</h5>
+    <small style="color:rgba(255,255,255,.5);" id="nino-grupo-encontrado">—</small><br>
+    <small id="nino-estado-badge"></small>
+
+    <!-- Preview de las primeras 2 observaciones -->
+    <div class="obs-preview-wrap" id="obs-preview-wrap" style="display:none;">
+      <div id="obs-preview-lista"></div>
     </div>
+
+    <!-- Botones de alternar -->
+    <div class="nino-card-botones">
+      <button type="button" class="btn-toggle-info" id="btn-ver-observaciones" onclick="toggleInfoNino('observaciones')">
+        <i class="fas fa-eye"></i> Observaciones <span id="badge-count-obs"></span>
+      </button>
+      <button type="button" class="btn-toggle-info btn-amonestacion" id="btn-ver-amonestaciones" onclick="toggleInfoNino('amonestaciones')">
+        <i class="fas fa-exclamation-circle"></i> Amonestaciones <span id="badge-count-amo"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Panel expandible (crece hacia abajo con scroll interno) -->
+<div class="panel-info-expandible" id="panel-info-expandible" style="display:none;">
+  <div class="panel-info-header">
+    <span id="panel-info-titulo">Observaciones</span>
+    <button class="btn-cerrar-info" onclick="cerrarInfoNino()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="panel-info-body" id="panel-info-body"></div>
+</div>
 
     <div class="huella-ring" id="huella-ring-paso2">
       <i class="fas fa-fingerprint huella-icono" id="icono-huella-paso2"></i>
@@ -984,6 +1152,9 @@
   }
 
   function volverAMatricula() {
+    observacionesCache = [];
+    amonestacionesCache = null;
+    cerrarInfoNino();
     detenerPolling();
     ninoActual = null;
     tutorActualId = null;
@@ -1038,10 +1209,16 @@
   // ══════════════════════════════════════════════════════════════
 //  PUNTO 8 — Verificar observaciones antes de mostrar huella
 // ══════════════════════════════════════════════════════════════
+// ── Estado de info expandible ──────────────────────────────────
+let observacionesCache = [];
+let amonestacionesCache = null;   // null = aún no cargadas
+let panelInfoAbierto = null;      // 'observaciones' | 'amonestaciones' | null
+
 function verificarObservacionesYMostrarHuella() {
     fetch('/guarderia/ninos/' + ninoActual.id + '/observaciones-activas/')
         .then(r => r.json())
         .then(function(data) {
+            observacionesCache = data.observaciones || [];
             if (data.total > 0) {
                 mostrarModalObservaciones(data.observaciones);
             } else {
@@ -1049,9 +1226,142 @@ function verificarObservacionesYMostrarHuella() {
             }
         })
         .catch(function() {
-            // Si falla la consulta, continuar de todas formas
+            observacionesCache = [];
             mostrarPanelHuella();
         });
+}
+
+function actualizarPreviewObservaciones() {
+    var wrap  = document.getElementById('obs-preview-wrap');
+    var lista = document.getElementById('obs-preview-lista');
+
+    if (!observacionesCache || observacionesCache.length === 0) {
+        wrap.style.display = 'none';
+        lista.innerHTML = '';
+        return;
+    }
+
+    var top2 = observacionesCache.slice(0, 2);
+    var html = top2.map(function(o) {
+        var cls = 'obs-preview-item' + (o.importante ? ' importante' : '');
+        return '<div class="' + cls + '">' + o.descripcion + '</div>';
+    }).join('');
+
+    if (observacionesCache.length > 2) {
+        html += '<div class="obs-preview-mas">+' + (observacionesCache.length - 2) + ' más — toca "Observaciones"</div>';
+    }
+
+    lista.innerHTML = html;
+    wrap.style.display = 'block';
+}
+
+function actualizarBadgeConteo(tipo, n) {
+    var el = document.getElementById('badge-count-' + tipo);
+    if (el) el.innerHTML = n > 0 ? '<span class="count-badge">' + n + '</span>' : '';
+}
+
+function toggleInfoNino(tipo) {
+    if (panelInfoAbierto === tipo) {
+        cerrarInfoNino();
+        return;
+    }
+    panelInfoAbierto = tipo;
+
+    document.getElementById('btn-ver-observaciones').classList.toggle('activo', tipo === 'observaciones');
+    document.getElementById('btn-ver-amonestaciones').classList.toggle('activo', tipo === 'amonestaciones');
+
+    var panel  = document.getElementById('panel-info-expandible');
+    var titulo = document.getElementById('panel-info-titulo');
+    var body   = document.getElementById('panel-info-body');
+    panel.style.display = 'block';
+
+    if (tipo === 'observaciones') {
+        titulo.textContent = 'Observaciones (' + observacionesCache.length + ')';
+        body.innerHTML = renderObservaciones(observacionesCache);
+    } else {
+        titulo.textContent = 'Amonestaciones';
+        body.innerHTML = '<div class="info-vacio"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+        cargarAmonestaciones();
+    }
+}
+
+function cerrarInfoNino() {
+    var estabaAbierto = panelInfoAbierto !== null;
+    panelInfoAbierto = null;
+
+    var panel = document.getElementById('panel-info-expandible');
+    if (panel) panel.style.display = 'none';
+    var b1 = document.getElementById('btn-ver-observaciones');
+    var b2 = document.getElementById('btn-ver-amonestaciones');
+    if (b1) b1.classList.remove('activo');
+    if (b2) b2.classList.remove('activo');
+
+    // Quitar el foco visual del botón (evita que un Enter accidental lo reactive)
+    if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+
+    // Si seguimos en el paso de huella y el panel estaba abierto, re-armar el lector
+    var cardHuella = document.getElementById('card-huella');
+    if (estabaAbierto && cardHuella && cardHuella.style.display !== 'none' && ninoActual) {
+        iniciarCapturaHuella();
+    }
+}
+
+function renderObservaciones(lista) {
+    if (!lista || lista.length === 0) {
+        return '<div class="info-vacio">Sin observaciones activas.</div>';
+    }
+    return lista.map(function(o) {
+        var cls = 'info-item' + (o.importante ? ' importante' : '');
+        var meta = (o.area ? o.area + ' · ' : '') + o.tipo + (o.es_recurrente ? ' · Recurrente' : '');
+        return '<div class="' + cls + '">'
+            + '<div class="info-desc">' + o.descripcion + '</div>'
+            + '<div class="info-meta">' + meta + ' — ' + o.fecha + '</div>'
+            + '</div>';
+    }).join('');
+}
+
+function cargarAmonestaciones() {
+    if (amonestacionesCache !== null) {
+        renderizarAmonestacionesEnPanel();
+        return;
+    }
+    fetch('/guarderia/ninos/' + ninoActual.id + '/amonestaciones-activas/')
+        .then(r => r.json())
+        .then(function(data) {
+            amonestacionesCache = data.amonestaciones || [];
+            actualizarBadgeConteo('amo', amonestacionesCache.length);
+            if (panelInfoAbierto === 'amonestaciones') renderizarAmonestacionesEnPanel();
+        })
+        .catch(function() {
+            amonestacionesCache = [];
+            if (panelInfoAbierto === 'amonestaciones') {
+                document.getElementById('panel-info-body').innerHTML =
+                    '<div class="info-vacio">Error al cargar amonestaciones.</div>';
+            }
+        });
+}
+
+function renderizarAmonestacionesEnPanel() {
+    var body   = document.getElementById('panel-info-body');
+    var titulo = document.getElementById('panel-info-titulo');
+    titulo.textContent = 'Amonestaciones (' + amonestacionesCache.length + ')';
+
+    if (!amonestacionesCache || amonestacionesCache.length === 0) {
+        body.innerHTML = '<div class="info-vacio">Sin amonestaciones registradas.</div>';
+        return;
+    }
+    body.innerHTML = amonestacionesCache.map(function(a) {
+        var extra = a.descripcion ? '<div class="info-meta" style="margin-top:2px;">' + a.descripcion + '</div>' : '';
+        var notas = a.notas ? '<div class="info-meta" style="margin-top:2px; font-style:italic;">' + a.notas + '</div>' : '';
+        return '<div class="info-item amonestacion">'
+            + '<div class="info-desc">' + a.motivo + '</div>'
+            + extra
+            + notas
+            + '<div class="info-meta">' + a.fecha + '</div>'
+            + '</div>';
+    }).join('');
 }
 
 function mostrarModalObservaciones(observaciones) {
@@ -1173,6 +1483,13 @@ function marcarAtendidaDesdeModal(obsId, btn) {
     if (ce) ce.style.display = 'none';
     document.getElementById('msg-huella-paso2').textContent = 'Coloque su dedo en el lector';
     document.getElementById('icono-huella-paso2').className = 'fas fa-fingerprint huella-icono';
+
+    // Reiniciar y llenar preview de observaciones / amonestaciones
+    cerrarInfoNino();
+    actualizarPreviewObservaciones();
+    actualizarBadgeConteo('obs', observacionesCache.length);
+    amonestacionesCache = null;
+    document.getElementById('badge-count-amo').innerHTML = '';
 
     // Iniciar captura en el servidor .NET
     iniciarCapturaHuella();
