@@ -242,7 +242,7 @@ def registrar_nino(request):
 def detalle_nino(request, nino_id):
     nino = get_object_or_404(Nino, id=nino_id)
     tutores      = nino.tutores.all()
-    registros    = nino.registros.order_by('-fecha_hora')[:10]
+    registros    = nino.registros.select_related('tutor', 'registrado_por').order_by('-fecha_hora')[:10]
     observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')[:5]
 
     # Amonestaciones
