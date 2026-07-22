@@ -498,13 +498,13 @@ Si el sistema carga con estilos correctamente, la configuración es exitosa.
 ### 17.6 Orden de arranque al encender Windows
 
 Al iniciar sesión, el sistema arranca en este orden:
-Login de Windows
-│
-├── 0s → Apache (httpd.exe) inicia en segundo plano
-│
-├── 5s → Django/Waitress inicia en segundo plano
-│
-└── 40s → BiometricServerWindows inicia
+
+| Tiempo | Proceso |
+|--------|---------|
+| 0s | Apache (httpd.exe) inicia en segundo plano |
+| 5s | Django/Waitress inicia en segundo plano |
+| 40s | BiometricServerWindows inicia |
+
 ---
 
 ## 18. Acceder al sistema
