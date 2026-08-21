@@ -182,7 +182,16 @@
         {% for reg in ultimos_registros %}
         <tr>
           <td>{{ reg.nino.nombre_completo }}</td>
-          <td>{{ reg.tutor.nombre_completo }}</td>
+          <td>
+            {% if reg.tutor %}
+              {{ reg.tutor.nombre_completo }}
+            {% elif reg.metodo_verificacion == 'EMERGENCIA' %}
+              {{ reg.registrado_por.get_full_name|default:reg.registrado_por.username|default:"—" }}
+              <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Emergencia</small>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td>
             {% if reg.tipo == 'ENTRADA' %}
               <span class="badge badge-success">Entrada</span>
