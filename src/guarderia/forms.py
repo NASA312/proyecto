@@ -2,6 +2,7 @@ from django import forms
 from .models import *
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
+from datetime import date
 
 class TutorForm(forms.ModelForm):
     # Campo colonia: queryset vacío, se llena via AJAX
@@ -249,6 +250,8 @@ class ObservacionNinoForm(forms.ModelForm):
         self.fields['area'].queryset = AreaObservacion.objects.filter(activo=True).order_by('orden', 'nombre')
         self.fields['area'].empty_label = 'Sin área asignada'
         self.fields['fecha'].input_formats = ['%Y-%m-%d']
+        if not self.instance.pk:
+            self.fields['fecha'].initial = date.today()
 
         
 class ConfiguracionGuarderiaForm(forms.ModelForm):
@@ -375,7 +378,7 @@ class AmonestacionNinoForm(forms.ModelForm):
             'fecha': forms.DateInput(attrs={
                 'class': 'form-control',
                 'type':  'date'
-            }),
+            }, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={
                 'class':       'form-control',
                 'rows':        3,
@@ -391,3 +394,7 @@ class AmonestacionNinoForm(forms.ModelForm):
         )
         # Solo mostrar amonestaciones activas en el select
         self.fields['amonestacion'].queryset = Amonestacion.objects.filter(activo=True)
+        self.fields['fecha'].input_formats = ['%Y-%m-%d']
+        if not self.instance.pk:
+            self.fields['fecha'].initial = date.today()
+        

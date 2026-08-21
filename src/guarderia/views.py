@@ -21,6 +21,8 @@ import pandas as pd
 import os
 from django.db import transaction 
 from django.views.decorators.csrf import csrf_protect
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 
 # ============================================
 # IMPORTAR DECORADORES DE PERMISOS
@@ -242,7 +244,7 @@ def registrar_nino(request):
 def detalle_nino(request, nino_id):
     nino = get_object_or_404(Nino, id=nino_id)
     tutores      = nino.tutores.all()
-    registros    = nino.registros.order_by('-fecha_hora')[:10]
+    registros    = nino.registros.select_related('tutor', 'registrado_por').order_by('-fecha_hora')[:10]
     observaciones = nino.observaciones.select_related('registrado_por').order_by('-fecha', '-hora')[:5]
 
     # Amonestaciones
@@ -1691,25 +1693,34 @@ def registrar_observacion(request):
 
 @login_required
 def observaciones_nino(request, nino_id):
-    """Ver todas las observaciones de un niño específico"""
+    """Ver todas las observaciones de un niño específico (paginado)"""
     nino = get_object_or_404(Nino, id=nino_id)
-    observaciones = nino.observaciones.select_related('area', 'registrado_por').order_by('-fecha', '-hora')
-
-    # Estadísticas
-    total                = observaciones.count()
-    importantes          = observaciones.filter(importante=True).count()
-    pendientes_notificar = observaciones.filter(notificar_tutor=True, notificado=False).count()
-    recurrentes_pendientes = observaciones.filter(es_recurrente=True, atendida=False).count()
-
+    observaciones_qs = nino.observaciones.select_related('area', 'registrado_por').order_by('-fecha', '-hora')
+ 
+    # Estadísticas — se calculan sobre el queryset completo, no sobre la página actual
+    total                  = observaciones_qs.count()
+    importantes            = observaciones_qs.filter(importante=True).count()
+    pendientes_notificar   = observaciones_qs.filter(notificar_tutor=True, notificado=False).count()
+    recurrentes_pendientes = observaciones_qs.filter(es_recurrente=True, atendida=False).count()
+ 
+    # Paginación — 10 observaciones por página
+    paginator = Paginator(observaciones_qs, 10)
+    page_number = request.GET.get('page')
+    try:
+        observaciones = paginator.page(page_number)
+    except PageNotAnInteger:
+        observaciones = paginator.page(1)
+    except EmptyPage:
+        observaciones = paginator.page(paginator.num_pages)
+ 
     return render(request, 'guarderia/observaciones/por_nino.html', {
-        'nino':                  nino,
-        'observaciones':         observaciones,
-        'total':                 total,
-        'importantes':           importantes,
-        'pendientes_notificar':  pendientes_notificar,
-        'recurrentes_pendientes': recurrentes_pendientes,
+        'nino':                     nino,
+        'observaciones':            observaciones,  # ahora es un Page, se itera igual con {% for %}
+        'total':                    total,
+        'importantes':              importantes,
+        'pendientes_notificar':     pendientes_notificar,
+        'recurrentes_pendientes':   recurrentes_pendientes,
     })
-
 
 @require_http_methods(['POST'])
 def marcar_observacion_atendida(request, observacion_id):
