@@ -115,13 +115,49 @@ if (nextUrl) {
 }
 $(document).ready(function() {
   // Mejorar el select de niños con Select2
-  if ($.fn.select2) {
-    $('#id_nino').select2({
-      placeholder: 'Seleccione un niño',
-      allowClear: true,
-      width: '100%'
-    });
-  }
+if ($.fn.select2) {
+  $('#id_nino').select2({
+    theme: 'bootstrap4',
+    placeholder: 'Seleccione un niño',
+    allowClear: true,
+    width: '100%',
+    minimumInputLength: 2,
+    ajax: {
+      url: "{% url 'guarderia:buscar_ninos_ajax' %}",
+      dataType: 'json',
+      delay: 250,
+      data: function (params) {
+        return { q: params.term };
+      },
+      processResults: function (data) {
+        return { results: data.results };
+      },
+      cache: true
+    },
+    language: {
+      inputTooShort: function() {
+        return 'Escriba al menos 2 letras...';
+      },
+      searching: function() {
+        return 'Buscando...';
+      },
+      noResults: function() {
+        return 'No se encontraron niños';
+      }
+    }
+  });
+
+  // ⭐ Precargar el niño ya asignado (solo aplica en edición)
+  {% if form.instance.pk and form.instance.nino %}
+    var ninoActual = new Option(
+      "{{ form.instance.nino.nombre }} {{ form.instance.nino.apellido_paterno }} {{ form.instance.nino.apellido_materno|default:'' }}",
+      "{{ form.instance.nino.pk }}",
+      true,
+      true
+    );
+    $('#id_nino').append(ninoActual).trigger('change');
+  {% endif %}
+}
 
   // ⭐ INTERCEPTAR EL SUBMIT Y ENVIAR CON AJAX
   $('#formObservacion').on('submit', function(e) {
@@ -163,8 +199,8 @@ $(document).ready(function() {
         else if (response.success) {
           Swal.fire({
             icon: 'success',
-            title: '¡Actualizado!',
-            text: response.mensaje || 'La observación se actualizó correctamente.',
+            title: '¡Guardado!',
+            text: response.mensaje || 'La observación se guardó correctamente.',
             timer: 1500,
             showConfirmButton: false
           }).then(() => {

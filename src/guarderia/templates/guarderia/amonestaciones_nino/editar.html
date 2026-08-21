@@ -75,7 +75,53 @@
 
 {% block scripts %}
 <script>
-$(document).ready(function() { $('.select2').select2(); });
+$(document).ready(function() { 
+  
+  if ($.fn.select2) {
+  $('#id_nino').select2({
+    theme: 'bootstrap4',
+    placeholder: 'Seleccione un niño',
+    allowClear: true,
+    width: '100%',
+    minimumInputLength: 2,
+    ajax: {
+      url: "{% url 'guarderia:buscar_ninos_ajax' %}",
+      dataType: 'json',
+      delay: 250,
+      data: function (params) {
+        return { q: params.term };
+      },
+      processResults: function (data) {
+        return { results: data.results };
+      },
+      cache: true
+    },
+    language: {
+      inputTooShort: function() {
+        return 'Escriba al menos 2 letras...';
+      },
+      searching: function() {
+        return 'Buscando...';
+      },
+      noResults: function() {
+        return 'No se encontraron niños';
+      }
+    }
+  });
+
+  // ⭐ Precargar el niño ya asignado (solo aplica en edición)
+  {% if form.instance.pk and form.instance.nino %}
+    var ninoActual = new Option(
+      "{{ form.instance.nino.nombre }} {{ form.instance.nino.apellido_paterno }} {{ form.instance.nino.apellido_materno|default:'' }}",
+      "{{ form.instance.nino.pk }}",
+      true,
+      true
+    );
+    $('#id_nino').append(ninoActual).trigger('change');
+  {% endif %}
+}
+
+ });
 const nextUrl = new URLSearchParams(window.location.search).get('next');
 if (nextUrl) document.getElementById('btn-cancelar').href = nextUrl;
 </script>

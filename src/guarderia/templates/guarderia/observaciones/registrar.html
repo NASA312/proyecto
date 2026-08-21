@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Editar Observación{% endblock %}
+{% block title %}Nueva Observación{% endblock %}
 
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="m-0">Editar Observación</h1>
+        <h1 class="m-0">Nueva Observación</h1>
       </div>
     </div>
   </div>
@@ -20,7 +20,7 @@
       <div class="col-md-8 offset-md-2">
         <div class="card card-warning">
           <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-edit"></i> Editar Observación</h3>
+            <h3 class="card-title"><i class="fas fa-edit"></i> Nueva Observación</h3>
           </div>
           <form id="formObservacion" method="post" data-custom-submit="true">
             {% csrf_token %}
@@ -103,7 +103,7 @@
             
             <div class="card-footer">
               <button type="submit" class="btn btn-warning">
-                <i class="fas fa-save"></i> Actualizar
+                <i class="fas fa-save"></i> Guardar
               </button>
               <a href="{% url 'guarderia:lista_observaciones' %}"
                 class="btn btn-default ml-2"
@@ -139,9 +139,34 @@ $(document).ready(function() {
   // Mejorar el select de niños con Select2
   if ($.fn.select2) {
     $('#id_nino').select2({
-      placeholder: 'Seleccione un niño',
+      theme: 'bootstrap4',
+      placeholder: 'Escriba el nombre del niño...',
       allowClear: true,
-      width: '100%'
+      width: '100%',
+      minimumInputLength: 2,
+      ajax: {
+        url: "{% url 'guarderia:buscar_ninos_ajax' %}",
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return { q: params.term };
+        },
+        processResults: function (data) {
+          return { results: data.results };
+        },
+        cache: true
+      },
+      language: {
+        inputTooShort: function() {
+          return 'Escriba al menos 2 letras...';
+        },
+        searching: function() {
+          return 'Buscando...';
+        },
+        noResults: function() {
+          return 'No se encontraron niños';
+        }
+      }
     });
   }
 
@@ -177,8 +202,8 @@ $(document).ready(function() {
         if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
           Swal.fire({
             icon: 'success',
-            title: '¡Actualizado!',
-            text: 'La observación se actualizó correctamente.',
+            title: 'Guardado!',
+            text: 'La observación se guardó correctamente.',
             timer: 1500,
             showConfirmButton: false
           }).then(() => {

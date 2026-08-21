@@ -185,6 +185,7 @@ path('amonestaciones-nino/<int:aplicacion_id>/eliminar/',
 path('ninos/<int:nino_id>/amonestaciones/',
      views.amonestaciones_por_nino,
      name='amonestaciones_por_nino'),
+path('ajax/buscar-ninos/', views.buscar_ninos_ajax, name='buscar_ninos_ajax'),
     
     path('ninos/<int:nino_id>/amonestaciones-activas/', views.amonestaciones_activas_nino, name='amonestaciones_activas_nino'),
     

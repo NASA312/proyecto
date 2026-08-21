@@ -3191,3 +3191,23 @@ def amonestaciones_activas_nino(request, nino_id):
 
     return JsonResponse({'amonestaciones': data, 'total': len(data)})
 
+@login_required
+def buscar_ninos_ajax(request):
+    term = request.GET.get('q', '').strip()
+    ninos = Nino.objects.filter(activo=True)
+    if term:
+        ninos = ninos.filter(
+            Q(nombre__icontains=term) |
+            Q(apellido_paterno__icontains=term) |
+            Q(apellido_materno__icontains=term)
+        )
+    ninos = ninos.order_by('apellido_paterno', 'nombre')[:20]
+
+    results = [
+        {
+            'id': n.pk,
+            'text': f"{n.nombre} {n.apellido_paterno} {n.apellido_materno or ''}".strip()
+        }
+        for n in ninos
+    ]
+    return JsonResponse({'results': results})
