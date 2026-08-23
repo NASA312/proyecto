@@ -1224,19 +1224,31 @@ def registrar_dependencia(request):
 @login_required
 @admin_requerido
 def editar_dependencia(request, dependencia_id):
-    """Editar dependencia"""
     dependencia = get_object_or_404(Dependencia, id=dependencia_id)
-    
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if request.method == 'POST':
         form = DependenciaForm(request.POST, instance=dependencia)
-        
+
         if form.is_valid():
             form.save()
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Dependencia {dependencia.nombre} actualizada'
+                })
             messages.success(request, f'Dependencia {dependencia.nombre} actualizada')
             return redirect('guarderia:lista_dependencias')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Revisa los errores del formulario.',
+                    'errors': form.errors
+                }, status=400)
     else:
         form = DependenciaForm(instance=dependencia)
-    
+
     return render(request, 'guarderia/dependencias/editar.html', {
         'form': form,
         'dependencia': dependencia
@@ -1261,17 +1273,30 @@ def lista_departamentos(request):
 def editar_departamento(request, departamento_id):
     """Editar departamento"""
     departamento = get_object_or_404(Departamento, id=departamento_id)
-    
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if request.method == 'POST':
         form = DepartamentoForm(request.POST, instance=departamento)
-        
+
         if form.is_valid():
             form.save()
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Departamento {departamento.nombre} actualizado'
+                })
             messages.success(request, f'Departamento {departamento.nombre} actualizado')
             return redirect('guarderia:lista_departamentos')
+        else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Revisa los errores del formulario.',
+                    'errors': form.errors
+                }, status=400)
     else:
         form = DepartamentoForm(instance=departamento)
-    
+
     return render(request, 'guarderia/departamentos/editar.html', {
         'form': form,
         'departamento': departamento
