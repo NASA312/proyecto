@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reporte: Asistencia por Grupo{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Reporte: Asistencia por Grupo</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'guarderia:dashboard' %}">Inicio</a></li>
+          <li class="breadcrumb-item active">Asistencia por Grupo</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- ── Selector de fecha ────────────────────────────────────────── -->
+    <div class="card card-secondary">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-calendar-alt mr-1"></i>
+          Consultando:
+          <strong class="ml-1">
+            {% if es_hoy %}Hoy — {{ hoy|date:"d/m/Y" }}{% else %}{{ fecha_consulta|date:"d \d\e F \d\e Y" }}{% endif %}
+          </strong>
+          {% if not es_hoy %}
+            <span class="badge badge-warning ml-2">Histórico</span>
+          {% else %}
+            <span class="badge badge-success ml-2">Hoy</span>
+          {% endif %}
+        </h3>
+      </div>
+      <div class="card-body">
+        <div class="row align-items-end">
+          <div class="col-md-4">
+            <form method="get" id="formFecha">
+              <div class="form-group mb-0">
+                <label class="font-weight-bold">
+                  <i class="fas fa-calendar mr-1"></i> Selecciona una fecha:
+                </label>
+                <input type="date" id="inputFecha" name="fecha" class="form-control"
+                       value="{{ fecha_consulta|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}">
+              </div>
+            </form>
+          </div>
+          <div class="col-md-3">
+            <button type="button" onclick="document.getElementById('formFecha').submit()" class="btn btn-primary btn-block">
+              <i class="fas fa-search"></i> Ver Asistencia
+            </button>
+          </div>
+          <div class="col-md-5">
+            {% if not es_hoy %}
+            <a href="{% url 'guarderia:reporte_asistencia_grupos' %}" class="btn btn-success btn-sm">
+              <i class="fas fa-calendar-day"></i> Ir a Hoy
+            </a>
+            {% endif %}
+            {% if fechas_con_asistencia %}
+            <label class="font-weight-bold d-block mt-2 mb-1">
+              <i class="fas fa-history mr-1"></i> Días recientes con asistencia:
+            </label>
+            <div class="d-flex flex-wrap" style="gap:4px;">
+              {% for fecha in fechas_con_asistencia %}
+              <a href="?fecha={{ fecha|date:'Y-m-d' }}"
+                 class="btn btn-xs {% if fecha == fecha_consulta %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                 title="{{ fecha|date:'d/m/Y' }}">
+                {{ fecha|date:"d/m" }}
+              </a>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tarjetas resumen ─────────────────────────────────────────── -->
+    <div class="row">
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-success elevation-1"><i class="fas fa-clipboard-check"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Asistencias totales</span>
+            <span class="info-box-number">{{ total_asistencias_general }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-primary elevation-1"><i class="fas fa-mars"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Niños</span>
+            <span class="info-box-number">
+              {{ total_masculino_general }}
+              <small class="text-muted" style="font-size:.55em;">({{ pct_masculino }}%)</small>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-venus"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Niñas</span>
+            <span class="info-box-number">
+              {{ total_femenino_general }}
+              <small class="text-muted" style="font-size:.55em;">({{ pct_femenino }}%)</small>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="info-box">
+          <span class="info-box-icon bg-info elevation-1"><i class="fas fa-th-large"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">Grupos con asistencia</span>
+            <span class="info-box-number">{{ resumen_por_grupo|length }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Barra distribución ───────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-body py-2">
+        <div class="d-flex justify-content-between mb-1" style="font-size:.85rem;">
+          <span><i class="fas fa-mars mr-1 text-primary"></i> Niños {{ pct_masculino }}%</span>
+          <span><i class="fas fa-venus mr-1 text-danger"></i> Niñas {{ pct_femenino }}%</span>
+        </div>
+        <div class="progress" style="height:16px;border-radius:8px;">
+          <div class="progress-bar bg-primary" style="width:{{ pct_masculino }}%;border-radius:8px 0 0 8px;">
+            {% if pct_masculino > 10 %}{{ pct_masculino }}%{% endif %}
+          </div>
+          <div class="progress-bar bg-danger" style="width:{{ pct_femenino }}%;border-radius:0 8px 8px 0;">
+            {% if pct_femenino > 10 %}{{ pct_femenino }}%{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tabla resumen por grupo ─────────────────────────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-bar"></i> Asistencia por Grupo — {{ fecha_consulta|date:"d/m/Y" }}
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        <table id="tablaResumenGrupos" class="table table-striped table-bordered table-hover w-100 mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Grupo</th>
+              <th class="text-center" style="width:80px;"><i class="fas fa-mars text-primary" title="Niños"></i></th>
+              <th class="text-center" style="width:80px;"><i class="fas fa-venus text-danger" title="Niñas"></i></th>
+              <th class="text-center" style="width:90px;">Asistieron</th>
+              <th class="text-center" style="width:100px;">Inscritos</th>
+              <th class="text-center" style="width:110px;">% Asistencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fila in resumen_por_grupo %}
+            <tr>
+              <td>{{ fila.grupo }}</td>
+              <td class="text-center"><span class="badge badge-primary">{{ fila.masculino }}</span></td>
+              <td class="text-center"><span class="badge badge-danger">{{ fila.femenino }}</span></td>
+              <td class="text-center"><strong>{{ fila.total }}</strong></td>
+              <td class="text-center">
+                {% if fila.total_inscritos is not None %}
+                  {{ fila.total_inscritos }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-center">
+                {% if fila.porcentaje is not None %}
+                  <span class="badge {% if fila.porcentaje >= 75 %}badge-success{% elif fila.porcentaje >= 40 %}badge-warning{% else %}badge-danger{% endif %}">
+                    {{ fila.porcentaje }}%
+                  </span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">Sin asistencia registrada para esta fecha</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="thead-light">
+            <tr>
+              <th>Total general</th>
+              <th class="text-center">{{ total_masculino_general }}</th>
+              <th class="text-center">{{ total_femenino_general }}</th>
+              <th class="text-center">{{ total_asistencias_general }}</th>
+              <th class="text-center">—</th>
+              <th class="text-center">—</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+<script>
+$(document).ready(function () {
+  var lang = Object.assign({}, window.dtEspanol, {
+    emptyTable: '<span class="text-muted"><i class="fas fa-info-circle"></i> Sin datos</span>'
+  });
+
+var botonesExport = function (titulo) {
+  return [
+    {
+      extend: 'copy', text: '<i class="fas fa-copy mr-1"></i>Copiar', className: 'btn btn-default btn-sm',
+      exportOptions: {
+        columns: ':visible', stripHtml: true,
+        format: {
+          header: function (data, columnIdx, node) {
+            if ($(node).find('.fa-mars').length) return 'Niños';
+            if ($(node).find('.fa-venus').length) return 'Niñas';
+            return data;
+          }
+        }
+      }
+    },
+    {
+      extend: 'excel', text: '<i class="fas fa-file-excel mr-1"></i>Excel', className: 'btn btn-success btn-sm', title: titulo,
+      exportOptions: {
+        columns: ':visible', stripHtml: true,
+        format: {
+          header: function (data, columnIdx, node) {
+            if ($(node).find('.fa-mars').length) return 'Niños';
+            if ($(node).find('.fa-venus').length) return 'Niñas';
+            return data;
+          }
+        }
+      },
+      footer: true
+    },
+    {
+      extend: 'csv', text: '<i class="fas fa-file-csv mr-1"></i>CSV', className: 'btn btn-info btn-sm', title: titulo,
+      exportOptions: {
+        columns: ':visible', stripHtml: true,
+        format: {
+          header: function (data, columnIdx, node) {
+            if ($(node).find('.fa-mars').length) return 'Niños';
+            if ($(node).find('.fa-venus').length) return 'Niñas';
+            return data;
+          }
+        }
+      },
+      footer: true
+    },
+    {
+      extend: 'pdf', text: '<i class="fas fa-file-pdf mr-1"></i>PDF', className: 'btn btn-danger btn-sm', title: titulo,
+      orientation: 'portrait', pageSize: 'A4',
+      exportOptions: {
+        columns: ':visible', stripHtml: true,
+        format: {
+          header: function (data, columnIdx, node) {
+            if ($(node).find('.fa-mars').length) return 'Niños';
+            if ($(node).find('.fa-venus').length) return 'Niñas';
+            return data;
+          }
+        }
+      },
+      footer: true
+    },
+    {
+      extend: 'print', text: '<i class="fas fa-print mr-1"></i>Imprimir', className: 'btn btn-secondary btn-sm',
+      exportOptions: {
+        columns: ':visible',
+        format: {
+          header: function (data, columnIdx, node) {
+            if ($(node).find('.fa-mars').length) return 'Niños';
+            if ($(node).find('.fa-venus').length) return 'Niñas';
+            return data;
+          }
+        }
+      },
+      footer: true
+    }
+  ];
+};
+
+$('#tablaResumenGrupos').DataTable({
+  responsive: true,
+  autoWidth: false,
+  paging: false,
+  searching: false,
+  info: false,
+  dom: '<"row align-items-center mb-2"<"col-sm-12"B>>t',
+  buttons: botonesExport('Asistencia por Grupo — {{ fecha_consulta|date:"d/m/Y" }}'),
+  columnDefs: [{ orderable: false, targets: [1, 2, 3, 4, 5] }],
+  language: lang,
+  order: [[3, 'desc']]
+});
+});
+</script>
+{% endblock scripts %}

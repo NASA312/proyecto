@@ -2648,6 +2648,120 @@ def reporte_asistencia_genero(request):
     return render(request, 'guarderia/reportes/asistencia_genero.html', context)
 
 @login_required
+@rol_requerido('ADMIN', 'EMPLEADO')
+def reporte_asistencia_grupos(request):
+    """Reporte de asistencia por grupo: cuántos niños y niñas asistieron cada día, por grupo"""
+    from datetime import date as date_type
+
+    hoy = date_type.today()
+
+    # ── Fecha seleccionada (por defecto hoy) ────────────────────────────
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        fecha_consulta = date_type.fromisoformat(fecha_str) if fecha_str else hoy
+    except ValueError:
+        fecha_consulta = hoy
+
+    es_hoy = (fecha_consulta == hoy)
+
+    # ── Niños que asistieron (tuvieron ENTRADA) en la fecha, por grupo ──
+    grupos_activos = Grupo.objects.filter(activo=True).order_by('tipo', 'grado', 'nombre')
+
+    resumen_por_grupo = []
+    total_masculino_general = 0
+    total_femenino_general  = 0
+
+    for grupo in grupos_activos:
+        # IDs de niños de este grupo con al menos una ENTRADA ese día
+        ninos_asistieron_ids = (
+            RegistroAcceso.objects
+            .filter(
+                nino__grupo=grupo,
+                tipo='ENTRADA',
+                fecha_hora__date=fecha_consulta,
+                verificacion_exitosa=True,
+            )
+            .values_list('nino_id', flat=True)
+            .distinct()
+        )
+
+        ninos_asistieron = Nino.objects.filter(id__in=ninos_asistieron_ids)
+        masc = ninos_asistieron.filter(genero='M').count()
+        fem  = ninos_asistieron.filter(genero='F').count()
+        tot  = masc + fem
+
+        # Total de niños inscritos en el grupo (para referencia de ocupación)
+        total_inscritos = grupo.ninos.filter(activo=True).count()
+
+        resumen_por_grupo.append({
+            'grupo':           grupo,
+            'masculino':       masc,
+            'femenino':        fem,
+            'total':           tot,
+            'total_inscritos': total_inscritos,
+            'porcentaje':      round(tot / total_inscritos * 100, 1) if total_inscritos else 0,
+        })
+
+        total_masculino_general += masc
+        total_femenino_general  += fem
+
+    total_asistencias_general = total_masculino_general + total_femenino_general
+
+    # ── Niños sin grupo que asistieron (por si acaso) ────────────────────
+    ninos_sg_ids = (
+        RegistroAcceso.objects
+        .filter(
+            nino__grupo__isnull=True,
+            tipo='ENTRADA',
+            fecha_hora__date=fecha_consulta,
+            verificacion_exitosa=True,
+        )
+        .values_list('nino_id', flat=True)
+        .distinct()
+    )
+    ninos_sg = Nino.objects.filter(id__in=ninos_sg_ids)
+    m_sg = ninos_sg.filter(genero='M').count()
+    f_sg = ninos_sg.filter(genero='F').count()
+    t_sg = m_sg + f_sg
+
+    if t_sg > 0:
+        resumen_por_grupo.append({
+            'grupo':           'Sin grupo asignado',
+            'masculino':       m_sg,
+            'femenino':        f_sg,
+            'total':           t_sg,
+            'total_inscritos': None,
+            'porcentaje':      None,
+        })
+        total_masculino_general += m_sg
+        total_femenino_general  += f_sg
+        total_asistencias_general += t_sg
+
+    # ── Fechas con asistencia registrada (para el datepicker) ───────────
+    fechas_con_asistencia = (
+        RegistroAcceso.objects
+        .filter(tipo='ENTRADA', verificacion_exitosa=True)
+        .dates('fecha_hora', 'day', order='DESC')[:30]
+    )
+
+    pct_masculino = round(total_masculino_general / total_asistencias_general * 100, 1) if total_asistencias_general else 0
+    pct_femenino  = round(total_femenino_general  / total_asistencias_general * 100, 1) if total_asistencias_general else 0
+
+    context = {
+        'resumen_por_grupo':          resumen_por_grupo,
+        'total_masculino_general':    total_masculino_general,
+        'total_femenino_general':     total_femenino_general,
+        'total_asistencias_general':  total_asistencias_general,
+        'pct_masculino':              pct_masculino,
+        'pct_femenino':               pct_femenino,
+        'hoy':                        hoy,
+        'fecha_consulta':             fecha_consulta,
+        'es_hoy':                     es_hoy,
+        'fechas_con_asistencia':      fechas_con_asistencia,
+    }
+    return render(request, 'guarderia/reportes/asistencia_grupos.html', context)
+
+@login_required
 @admin_requerido
 def configuracion_guarderia(request):
     config = ConfiguracionGuarderia.get_solo()
