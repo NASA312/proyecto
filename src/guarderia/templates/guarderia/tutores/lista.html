@@ -86,7 +86,7 @@
                       <td><span class="badge badge-info">{{ tutor.get_parentesco_display }}</span></td>
                       <td>{{ tutor.telefono }}</td>
                       <td>{{ tutor.email|default:"—" }}</td>
-                      <td>{{ tutor.numero_identificacion }}</td>
+                      <td>{{ tutor.numero_identificacion|default:"—" }}</td>
                       <td class="text-center">
                         {% if tutor.huella_registrada %}
                           <span class="badge badge-success"><i class="fas fa-check"></i> Registrada</span>
@@ -145,7 +145,7 @@
                       <td><span class="badge badge-secondary">{{ tutor.get_parentesco_display }}</span></td>
                       <td><small class="text-muted">{{ tutor.telefono }}</small></td>
                       <td><small class="text-muted">{{ tutor.email|default:"—" }}</small></td>
-                      <td><small class="text-muted">{{ tutor.numero_identificacion }}</small></td>
+                      <td><small class="text-muted">{{ tutor.numero_identificacion|default:"—" }}</small></td>
                       <td class="text-center">
                         {% if tutor.huella_registrada %}
                           <span class="badge badge-secondary"><i class="fas fa-check"></i> Registrada</span>

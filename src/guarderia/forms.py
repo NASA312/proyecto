@@ -50,6 +50,10 @@ class TutorForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        # Hacer que los campos de identificación sean opcionales
+        self.fields['tipo_identificacion'].required = False
+        self.fields['numero_identificacion'].required = False
+        
         # Si viene un POST con colonia_id, incluirla en el queryset para que valide
         colonia_id = None
         if args and hasattr(args[0], 'get'):          # args[0] es el QueryDict del POST
@@ -88,6 +92,11 @@ class TutorForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         es_trabajador = cleaned_data.get('es_trabajador')
+        
+        # Limpiar el campo de número de identificación si está vacío
+        numero_identificacion = cleaned_data.get('numero_identificacion')
+        if numero_identificacion == '':
+            cleaned_data['numero_identificacion'] = None
         
         # Validar campos laborales si es trabajador
         if es_trabajador:

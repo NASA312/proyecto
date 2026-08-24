@@ -148,8 +148,8 @@ class Tutor(models.Model):
         ('LICENCIA', 'Licencia de Conducir'),
         ('OTRO', 'Otro'),
     ]
-    tipo_identificacion = models.CharField(max_length=20, choices=TIPO_ID_CHOICES, default='INE')
-    numero_identificacion = models.CharField(max_length=50, unique=True)
+    tipo_identificacion = models.CharField(max_length=20, choices=TIPO_ID_CHOICES, default='INE', blank=True)
+    numero_identificacion = models.CharField(max_length=50, unique=True, blank=True, null=True)
     
     # Relación con el niño
     PARENTESCO_CHOICES = [
