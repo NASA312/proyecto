@@ -196,10 +196,12 @@ def registrar_huella_tutor(request, tutor_id):
 @login_required
 def lista_ninos(request):
     """Lista de niños registrados"""
-    ninos_activos   = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
-    ninos_inactivos = Nino.objects.filter(activo=False).order_by('grupo', 'apellido_paterno')
+    ninos_activos    = Nino.objects.filter(activo=True).order_by('grupo', 'apellido_paterno')
+    ninos_graduados  = Nino.objects.filter(activo=False, graduado=True).order_by('-fecha_graduacion')
+    ninos_inactivos  = Nino.objects.filter(activo=False, graduado=False).order_by('grupo', 'apellido_paterno')
     return render(request, 'guarderia/ninos/lista.html', {
         'ninos_activos':   ninos_activos,
+        'ninos_graduados': ninos_graduados, 
         'ninos_inactivos': ninos_inactivos,
     })
 
@@ -297,6 +299,42 @@ def editar_nino(request, nino_id):
         form = NinoForm(instance=nino)
     
     return render(request, 'guarderia/ninos/editar.html', {'form': form, 'nino': nino})
+
+@login_required
+@admin_requerido
+def graduar_nino(request, nino_id):
+    """Graduar a un niño de forma individual (fuera del ciclo escolar masivo)"""
+    nino = get_object_or_404(Nino, id=nino_id)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
+
+    if not nino.activo:
+        return JsonResponse({'success': False, 'message': 'Este niño ya no está activo.'}, status=400)
+
+    grupo_anterior = str(nino.grupo) if nino.grupo else 'Sin grupo'
+
+    with transaction.atomic():
+        ObservacionNino.objects.create(
+            nino=nino,
+            tipo='ACADEMICO',
+            descripcion=f'Graduado individualmente el {timezone.now().strftime("%d/%m/%Y")}',
+            importante=True,
+            notificar_tutor=True,
+            registrado_por=request.user
+        )
+        nino.grupo = None
+        nino.activo = False
+        nino.graduado = True                 # ⭐ nuevo
+        nino.fecha_graduacion = timezone.now()  # ⭐ nuevo
+        nino.save()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'{nino.nombre_completo()} ha sido graduado correctamente.',
+        'grupo_anterior': grupo_anterior,
+        'redirect_url': '/guarderia/ninos/'
+    })
 
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
@@ -2280,6 +2318,8 @@ def finalizar_ciclo_escolar(request):
                             )
                             nino.grupo = None
                             nino.activo = False 
+                            nino.graduado = True         
+                            nino.fecha_graduacion = timezone.now() 
                             nino.save()
                             resultado['graduados'].append({
                                 'nino': nino.nombre_completo(),

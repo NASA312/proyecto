@@ -28,6 +28,7 @@ urlpatterns = [
     path('ninos/<int:nino_id>/editar/', views.editar_nino, name='editar_nino'),
     path('ninos/<int:nino_id>/asignar-tutores/', views.asignar_tutores, name='asignar_tutores'),
     path('ninos/<int:nino_id>/observaciones/', views.observaciones_nino, name='observaciones_nino'),
+    path('ninos/<int:nino_id>/graduar/', views.graduar_nino, name='graduar_nino'),
 
     # =====================================
     # VERIFICACIÓN PÚBLICA

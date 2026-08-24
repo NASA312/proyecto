@@ -48,20 +48,26 @@
           <div class="card-body">
 
             <!-- Tabs -->
-            <ul class="nav nav-tabs" role="tablist">
-              <li class="nav-item">
-                <a class="nav-link active" data-toggle="tab" href="#tabActivos" role="tab">
-                  <i class="fas fa-check-circle text-success"></i> Activos
-                  <span class="badge badge-success ml-1">{{ ninos_activos|length }}</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" data-toggle="tab" href="#tabPapelera" role="tab">
-                  <i class="fas fa-trash text-danger"></i> Papelera
-                  <span class="badge badge-danger ml-1">{{ ninos_inactivos|length }}</span>
-                </a>
-              </li>
-            </ul>
+              <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item">
+                  <a class="nav-link active" data-toggle="tab" href="#tabActivos" role="tab">
+                    <i class="fas fa-check-circle text-success"></i> Activos
+                    <span class="badge badge-success ml-1">{{ ninos_activos|length }}</span>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" data-toggle="tab" href="#tabGraduados" role="tab">
+                    <i class="fas fa-graduation-cap text-primary"></i> Graduados
+                    <span class="badge badge-primary ml-1">{{ ninos_graduados|length }}</span>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" data-toggle="tab" href="#tabPapelera" role="tab">
+                    <i class="fas fa-trash text-danger"></i> Papelera
+                    <span class="badge badge-danger ml-1">{{ ninos_inactivos|length }}</span>
+                  </a>
+                </li>
+              </ul>
 
             <div class="tab-content pt-3">
 
@@ -223,6 +229,68 @@
                 </table>
               </div>
 
+              <div class="tab-pane fade" id="tabGraduados" role="tabpanel">
+  <div class="alert alert-info">
+    <i class="fas fa-graduation-cap"></i>
+    <strong>Graduados:</strong> Estos niños completaron su ciclo y ya no están asignados a ningún grupo.
+  </div>
+  <table id="tablaGraduados" class="table table-striped table-bordered table-hover w-100">
+    <thead class="thead-light">
+      <tr>
+        <th class="text-center" style="width:55px;">Foto</th>
+        <th style="width:120px;">Matrícula</th>
+        <th>Nombre Completo</th>
+        <th class="text-center" style="width:90px;">Género</th>
+        <th style="width:130px;">Fecha Graduación</th>
+        <th class="text-center" style="width:110px;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nino in ninos_graduados %}
+      <tr>
+        <td class="text-center">
+          {% if nino.foto %}
+            <img src="{{ nino.foto.url }}" class="img-circle" style="width:40px;height:40px;object-fit:cover;" alt="{{ nino.nombre_completo }}">
+          {% else %}
+            <div class="img-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+              <i class="fas fa-graduation-cap"></i>
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          {% if nino.numero_matricula %}
+            <code class="text-muted" style="font-size:.85rem;">{{ nino.numero_matricula }}</code>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ nino.nombre_completo }}</td>
+        <td class="text-center">
+          {% if nino.genero == 'F' %}
+            <span class="badge" style="background-color:#e83e8c;color:#fff;"><i class="fas fa-venus mr-1"></i>Femenino</span>
+          {% else %}
+            <span class="badge badge-primary"><i class="fas fa-mars mr-1"></i>Masculino</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if nino.fecha_graduacion %}
+            {{ nino.fecha_graduacion|date:"d/m/Y" }}
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-center">
+          <a href="{% url 'guarderia:detalle_nino' nino.id %}" class="btn btn-info btn-sm" title="Ver detalles">
+            <i class="fas fa-eye"></i>
+          </a>
+                                  <button type="button" class="btn btn-success btn-sm"
+                                onclick="restaurar({{ nino.id }}, '{{ nino.nombre_completo|escapejs }}')"
+                                title="Restaurar">
+                          <i class="fas fa-undo"></i> 
+                        </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
             </div>
           </div>
         </div>
@@ -250,7 +318,9 @@ $(document).ready(function () {
 
   $('#tablaActivos').DataTable(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay niños activos</span>'));
   $('#tablaPapelera').DataTable(opts('<span class="text-muted"><i class="fas fa-check-circle"></i> La papelera está vacía</span>'));
-
+  $('#tablaGraduados').DataTable(Object.assign(opts('<span class="text-muted"><i class="fas fa-info-circle"></i> No hay niños graduados</span>'), {
+  columnDefs: [{ orderable: false, searchable: false, targets: [0, 3, 5] }]
+}));
   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     $($(e.target).attr('href')).find('table.dataTable').DataTable().columns.adjust().draw();
   });

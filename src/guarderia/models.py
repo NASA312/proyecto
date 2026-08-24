@@ -289,6 +289,8 @@ class Nino(models.Model):
     )
     
     activo = models.BooleanField(default=True)
+    graduado = models.BooleanField(default=False) 
+    fecha_graduacion = models.DateTimeField(null=True, blank=True)
     fecha_ingreso = models.DateField(auto_now_add=True)
     
     class Meta:

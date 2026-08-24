@@ -238,6 +238,12 @@
                     {% endif %}
                   </div>
                 </div>
+{% if nino.activo %}
+<button type="button" class="btn btn-outline-danger btn-block btn-sm"
+        onclick="graduarNino({{ nino.id }}, '{{ nino.nombre_completo|escapejs }}')">
+  <i class="fas fa-graduation-cap mr-1"></i> Graduar a este niño
+</button>
+{% endif %}
               </div>
             </div>
           </div>
@@ -311,7 +317,7 @@
 </section>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 $(document).ready(function() {
   // Actualizar label del input file + preview en tiempo real
@@ -392,5 +398,49 @@ $(document).ready(function() {
     }
   {% endif %}
 });
+
+function graduarNino(ninoId, nombreNino) {
+  Swal.fire({
+    title: '¿Graduar a ' + nombreNino + '?',
+    text: 'Esta acción marcará al niño como inactivo y lo quitará de su grupo. No se puede deshacer desde aquí.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e94560',
+    cancelButtonColor: '#636e72',
+    confirmButtonText: '<i class="fas fa-graduation-cap mr-1"></i> Sí, graduar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true
+  }).then(function(result) {
+    if (!result.isConfirmed) return;
+
+    fetch(`/guarderia/ninos/${ninoId}/graduar/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+      if (data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Graduado!',
+          text: data.message,
+          timer: 2500,
+          showConfirmButton: false
+        }).then(() => {
+          window.location.href = data.redirect_url;
+        });
+      } else {
+        Swal.fire('Error', data.message || 'No se pudo graduar al niño.', 'error');
+      }
+    })
+    .catch(function() {
+      Swal.fire('Error de conexión', 'No se pudo procesar la solicitud.', 'error');
+    });
+  });
+}
 </script>
 {% endblock %}
