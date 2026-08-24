@@ -1545,6 +1545,16 @@ def detalle_grupo(request, grupo_id):
         if reg.nino_id not in primera_entrada:
             primera_entrada[reg.nino_id] = reg.fecha_hora
 
+    # ── ⭐ Última salida de cada niño en la fecha consultada ─────────────
+    ultima_salida = {}
+    for reg in RegistroAcceso.objects.filter(
+        nino_id__in=ninos_con_entrada,
+        tipo='SALIDA',
+        fecha_hora__date=fecha_consulta,
+    ).order_by('-fecha_hora'):
+        if reg.nino_id not in ultima_salida:
+            ultima_salida[reg.nino_id] = reg.fecha_hora
+
     # ── Armar lista de asistencia ────────────────────────────────────────
     asistencia = []
     for reg in registros_fecha:
@@ -1552,6 +1562,7 @@ def detalle_grupo(request, grupo_id):
             'nino':         reg.nino,
             'tutor':        reg.tutor,
             'hora_entrada': primera_entrada.get(reg.nino_id),
+            'hora_salida':  ultima_salida.get(reg.nino_id),  # ⭐ None si aún no ha salido
         })
 
     # ── Fechas con asistencia registrada (para el datepicker) ───────────

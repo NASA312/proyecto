@@ -261,49 +261,60 @@
                         <th style="width:40px;">#</th>
                         <th style="width:120px;">Matrícula</th>
                         <th>Nombre del Niño</th>
-                        <th style="width:160px;">Hora de Entrada</th>
+                        <th style="width:140px;">Hora de Entrada</th>
+                        <th style="width:160px;">Hora de Salida</th>
                         <th style="width:180px;">Quién lo Trajo</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {% for item in asistencia %}
-                      <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>
-                          {% if item.nino.numero_matricula %}
-                            <span class="badge badge-secondary">{{ item.nino.numero_matricula }}</span>
-                          {% else %}
-                            <span class="text-muted">—</span>
-                          {% endif %}
-                        </td>
-                        <td><strong>{{ item.nino.nombre_completo }}</strong></td>
-                        <td>
-                          {% if item.hora_entrada %}
-                            <i class="fas fa-clock text-muted mr-1"></i>
-                            {{ item.hora_entrada|time:"H:i" }}
-                          {% else %}—{% endif %}
-                        </td>
-                        <td>
-                          {% if item.tutor %}
-                            <small>
-                              <i class="fas fa-user text-muted mr-1"></i>
-                              {{ item.tutor.nombre_completo }}
-                            </small>
-                          {% else %}—{% endif %}
-                        </td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                    <tfoot>
-                      <tr class="table-light">
-                        <td colspan="4" class="text-right"><strong>Total asistencia:</strong></td>
-                        <td>
-                          <span class="badge badge-success" style="font-size:1rem; padding:6px 12px;">
-                            {{ total_presentes }}
-                          </span>
-                        </td>
-                      </tr>
-                    </tfoot>
+                      <tbody>
+                        {% for item in asistencia %}
+                        <tr>
+                          <td>{{ forloop.counter }}</td>
+                          <td>
+                            {% if item.nino.numero_matricula %}
+                              <span class="badge badge-secondary">{{ item.nino.numero_matricula }}</span>
+                            {% else %}
+                              <span class="text-muted">—</span>
+                            {% endif %}
+                          </td>
+                          <td><strong>{{ item.nino.nombre_completo }}</strong></td>
+                          <td>
+                            {% if item.hora_entrada %}
+                              <i class="fas fa-clock text-muted mr-1"></i>
+                              {{ item.hora_entrada|time:"H:i" }}
+                            {% else %}—{% endif %}
+                          </td>
+                          <td>
+                            {% if item.hora_salida %}
+                              <i class="fas fa-clock text-muted mr-1"></i>
+                              {{ item.hora_salida|time:"H:i" }}
+                            {% else %}
+                              <span class="badge badge-info">
+                                <i class="fas fa-clock"></i> Aún no ha salido
+                              </span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            {% if item.tutor %}
+                              <small>
+                                <i class="fas fa-user text-muted mr-1"></i>
+                                {{ item.tutor.nombre_completo }}
+                              </small>
+                            {% else %}—{% endif %}
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                      <tfoot>
+                        <tr class="table-light">
+                          <td colspan="5" class="text-right"><strong>Total asistencia:</strong></td>
+                          <td>
+                            <span class="badge badge-success" style="font-size:1rem; padding:6px 12px;">
+                              {{ total_presentes }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tfoot>
                   </table>
                 </div>
               {% else %}
@@ -449,6 +460,7 @@ function imprimirAsistencia() {
         '<td>' + $(celdas[2]).text().trim() + '</td>' +
         '<td>' + $(celdas[3]).text().trim() + '</td>' +
         '<td>' + $(celdas[4]).text().trim() + '</td>' +
+        '<td>' + $(celdas[5]).text().trim() + '</td>' +
       '</tr>'
     );
   });
@@ -481,13 +493,13 @@ function imprimirAsistencia() {
         <thead>
           <tr>
             <th>#</th><th>Matrícula</th><th>Nombre del Niño</th>
-            <th>Hora de Entrada</th><th>Quién lo Trajo</th>
+            <th>Hora de Entrada</th><th>Hora de Salida</th><th>Quién lo Trajo</th>
           </tr>
         </thead>
         <tbody>${filas.join('')}</tbody>
         <tfoot>
           <tr>
-            <td colspan="4" style="text-align:right;">Total asistencia:</td>
+            <td colspan="5" style="text-align:right;">Total asistencia:</td>
             <td style="text-align:center;"><strong>{{ total_presentes }}</strong></td>
           </tr>
         </tfoot>
