@@ -209,13 +209,25 @@ def lista_ninos(request):
 @rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_nino(request):
     """Registrar nuevo niño"""
+    config = ConfiguracionGuarderia.get_solo()
+
     if request.method == 'POST':
         form = NinoForm(request.POST, request.FILES)
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
+
         if form.is_valid():
             nino = form.save()
-            
+
+            # Avanzar el contador de matrícula solo si el valor usado
+            # es numérico y mayor o igual al siguiente esperado
+            try:
+                matricula_usada = int(nino.numero_matricula)
+                if matricula_usada >= config.siguiente_matricula:
+                    config.siguiente_matricula = matricula_usada + 1
+                    config.save(update_fields=['siguiente_matricula'])
+            except (TypeError, ValueError):
+                pass  # matrícula vacía o no numérica, no se toca el contador
+
             if is_ajax:
                 return JsonResponse({
                     'success': True,
@@ -238,8 +250,9 @@ def registrar_nino(request):
             else:
                 messages.error(request, 'Por favor corrige los errores.')
     else:
-        form = NinoForm()
-    
+        # Precargar la matrícula sugerida (editable) en el GET
+        form = NinoForm(initial={'numero_matricula': config.siguiente_matricula})
+
     return render(request, 'guarderia/ninos/registrar.html', {'form': form})
 
 @login_required
@@ -2756,13 +2769,19 @@ def configuracion_guarderia(request):
             cfg.actualizado_por = request.user
             cfg.save()
             
+            mensaje = (
+                f'Configuración guardada: {cfg.tiempo_minimo_entre_registros} min. '
+                f'entre registros · Próxima matrícula: {cfg.siguiente_matricula}.'
+            )
+            
             if is_ajax:
                 return JsonResponse({
                     'success': True,
-                    'message': f'Configuración guardada: {cfg.tiempo_minimo_entre_registros} minutos entre registros.',
+                    'message': mensaje,
                     'tiempo': cfg.tiempo_minimo_entre_registros,
+                    'siguiente_matricula': cfg.siguiente_matricula,
                 })
-            messages.success(request, 'Configuración actualizada correctamente.')
+            messages.success(request, mensaje)
             return redirect('guarderia:configuracion_guarderia')
         else:
             if is_ajax:
@@ -2771,7 +2790,6 @@ def configuracion_guarderia(request):
     else:
         form = ConfiguracionGuarderiaForm(instance=config)
     
-    # Últimas 10 modificaciones de registros para mostrar contexto
     ultimos_registros = RegistroAcceso.objects.select_related(
         'nino', 'tutor'
     ).order_by('-fecha_hora')[:10]

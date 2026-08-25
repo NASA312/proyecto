@@ -100,6 +100,31 @@
           </button>
         </div>
       </div>
+      <div class="card card-secondary">
+  <div class="card-header">
+    <h3 class="card-title">
+      <i class="fas fa-hashtag mr-1"></i>
+      Numeración de matrícula
+    </h3>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">
+      Define el siguiente número de matrícula que se asignará automáticamente
+      al registrar un nuevo niño.
+    </p>
+    <div class="form-group">
+      <label>Siguiente matrícula</label>
+      {{ form.siguiente_matricula }}
+      {% if form.siguiente_matricula.errors %}
+        <span class="text-danger">{{ form.siguiente_matricula.errors.0 }}</span>
+      {% endif %}
+      <small class="form-text text-muted">
+        Ej: si pones 2601, el próximo niño registrado tomará el 2601, el
+        siguiente el 2602, y así sucesivamente.
+      </small>
+    </div>
+  </div>
+</div>
 
       <!-- Botón -->
       <button type="submit" class="btn btn-primary btn-block" id="btnGuardar">

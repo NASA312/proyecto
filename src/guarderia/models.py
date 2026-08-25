@@ -556,6 +556,10 @@ class ConfiguracionGuarderia(models.Model):
         verbose_name='Tiempo mínimo entre registros (minutos)',
         help_text='Minutos que deben pasar entre una entrada y una salida, o viceversa, para el mismo niño.'
     )
+    siguiente_matricula = models.PositiveIntegerField(
+        default=2601,
+        verbose_name="Siguiente número de matrícula"
+    )
     
     # Metadata
     actualizado_por = models.ForeignKey(

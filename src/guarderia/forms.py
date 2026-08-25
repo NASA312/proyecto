@@ -266,14 +266,18 @@ class ObservacionNinoForm(forms.ModelForm):
 class ConfiguracionGuarderiaForm(forms.ModelForm):
     class Meta:
         model = ConfiguracionGuarderia
-        fields = ['tiempo_minimo_entre_registros']
+        fields = ['tiempo_minimo_entre_registros', 'siguiente_matricula']
         widgets = {
             'tiempo_minimo_entre_registros': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': 1,
                 'max': 1440,
                 'placeholder': 'Ej: 30',
-            })
+            }),
+            'siguiente_matricula': forms.NumberInput(attrs={
+    'class': 'form-control form-control-lg text-center font-weight-bold',
+    'min': 1
+}),
         }
         labels = {
             'tiempo_minimo_entre_registros': 'Tiempo mínimo entre registros (minutos)',
