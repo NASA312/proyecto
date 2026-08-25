@@ -546,33 +546,9 @@ def registrar_entrada(request):
                 }, status=403)
             
             # ── Validación de tiempo mínimo ──────────────────────────
-            config = ConfiguracionGuarderia.get_solo()
-            minutos_minimo = config.tiempo_minimo_entre_registros
-            
-            ultimo_registro = RegistroAcceso.objects.filter(
-                nino=nino
-            ).order_by('-fecha_hora').first()
-            
-            if ultimo_registro:
-                delta = timezone.now() - ultimo_registro.fecha_hora
-                minutos_transcurridos = delta.total_seconds() / 60
-                
-                if minutos_transcurridos < minutos_minimo:
-                    faltan = minutos_minimo - minutos_transcurridos
-                    minutos_faltan = int(faltan)
-                    segundos_faltan = int((faltan - minutos_faltan) * 60)
-                    
-                    tipo_anterior = 'entrada' if ultimo_registro.tipo == 'ENTRADA' else 'salida'
-                    return JsonResponse({
-                        'success': False,
-                        'tiempo_bloqueado': True,
-                        'mensaje': (
-                            f'Debe esperar {minutos_faltan}m {segundos_faltan}s más. '
-                            f'El último registro ({tipo_anterior}) fue hace '
-                            f'{int(minutos_transcurridos)}m {int((minutos_transcurridos % 1) * 60)}s. '
-                            f'El tiempo mínimo entre registros es {minutos_minimo} minutos.'
-                        )
-                    }, status=400)
+            bloqueo = _tiempo_bloqueado_info(nino)
+            if bloqueo:
+                return JsonResponse({'success': False, **bloqueo}, status=400)
             # ── Fin validación de tiempo ─────────────────────────────
             
             # Verificar si ya hay una entrada sin salida
@@ -614,9 +590,6 @@ def registrar_entrada(request):
     return JsonResponse({'success': False}, status=405)
 
 
-
-# MODIFICAR la función registrar_salida existente para agregar validaciones
-
 @csrf_exempt  
 def registrar_salida(request):
     if request.method == 'POST':
@@ -640,33 +613,9 @@ def registrar_salida(request):
                 }, status=403)
             
             # ── Validación de tiempo mínimo ──────────────────────────
-            config = ConfiguracionGuarderia.get_solo()
-            minutos_minimo = config.tiempo_minimo_entre_registros
-            
-            ultimo_registro = RegistroAcceso.objects.filter(
-                nino=nino
-            ).order_by('-fecha_hora').first()
-            
-            if ultimo_registro:
-                delta = timezone.now() - ultimo_registro.fecha_hora
-                minutos_transcurridos = delta.total_seconds() / 60
-                
-                if minutos_transcurridos < minutos_minimo:
-                    faltan = minutos_minimo - minutos_transcurridos
-                    minutos_faltan = int(faltan)
-                    segundos_faltan = int((faltan - minutos_faltan) * 60)
-                    
-                    tipo_anterior = 'entrada' if ultimo_registro.tipo == 'ENTRADA' else 'salida'
-                    return JsonResponse({
-                        'success': False,
-                        'tiempo_bloqueado': True,
-                        'mensaje': (
-                            f'Debe esperar {minutos_faltan}m {segundos_faltan}s más. '
-                            f'El último registro ({tipo_anterior}) fue hace '
-                            f'{int(minutos_transcurridos)}m {int((minutos_transcurridos % 1) * 60)}s. '
-                            f'El tiempo mínimo entre registros es {minutos_minimo} minutos.'
-                        )
-                    }, status=400)
+            bloqueo = _tiempo_bloqueado_info(nino)
+            if bloqueo:
+                return JsonResponse({'success': False, **bloqueo}, status=400)
             # ── Fin validación de tiempo ─────────────────────────────
             
             # Verificar si hay una entrada previa
@@ -708,7 +657,6 @@ def registrar_salida(request):
             return JsonResponse({'success': False, 'mensaje': f'Error: {str(e)}'}, status=500)
     
     return JsonResponse({'success': False}, status=405)
-
 
 # ============================================
 # REEMPLAZAR la función obtener_estado_nino en guarderia/views.py
@@ -800,16 +748,20 @@ def buscar_nino_por_matricula(request):
     ultimo = RegistroAcceso.objects.filter(nino=nino).order_by('-fecha_hora').first()
     estado = 'DENTRO' if (ultimo and ultimo.tipo == 'ENTRADA') else 'FUERA'
 
+    bloqueo = _tiempo_bloqueado_info(nino)
+
     return JsonResponse({
         'success': True,
         'nino': {
             'id':       nino.id,
             'nombre':   nino.nombre_completo(),
             'grupo':    str(nino.grupo),
-            'edad':     nino.edad(),        # <-- agregar ()
+            'edad':     nino.edad(),
             'foto_url': nino.foto.url if nino.foto else None,
             'estado':   estado,
-        }
+        },
+        'tiempo_bloqueado': bool(bloqueo),
+        'mensaje_tiempo_espera': bloqueo['mensaje'] if bloqueo else None,
     })
 
 @csrf_exempt
@@ -1131,7 +1083,35 @@ def verificar_huella_estado(request):
     
     return JsonResponse({'success': False}, status=405)
 
+def _tiempo_bloqueado_info(nino):
+    """Devuelve None si puede registrar, o un dict con el mensaje de bloqueo."""
+    config = ConfiguracionGuarderia.get_solo()
+    minutos_minimo = config.tiempo_minimo_entre_registros
 
+    ultimo_registro = RegistroAcceso.objects.filter(nino=nino).order_by('-fecha_hora').first()
+    if not ultimo_registro:
+        return None
+
+    delta = timezone.now() - ultimo_registro.fecha_hora
+    minutos_transcurridos = delta.total_seconds() / 60
+
+    if minutos_transcurridos >= minutos_minimo:
+        return None
+
+    faltan = minutos_minimo - minutos_transcurridos
+    minutos_faltan = int(faltan)
+    segundos_faltan = int((faltan - minutos_faltan) * 60)
+    tipo_anterior = 'entrada' if ultimo_registro.tipo == 'ENTRADA' else 'salida'
+
+    return {
+        'tiempo_bloqueado': True,
+        'mensaje': (
+            f'Debe esperar {minutos_faltan}m {segundos_faltan}s más. '
+            f'El último registro ({tipo_anterior}) fue hace '
+            f'{int(minutos_transcurridos)}m {int((minutos_transcurridos % 1) * 60)}s. '
+            f'El tiempo mínimo entre registros es {minutos_minimo} minutos.'
+        )
+    }
 
 # ============================================
 # VISTAS DE COLONIAS (CÓDIGO POSTAL)

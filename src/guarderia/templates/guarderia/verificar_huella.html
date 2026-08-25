@@ -1182,7 +1182,7 @@
     ninoActual = null;
     tutorActualId = null;
     // Cancelar captura en el servidor .NET si estaba activa
-    fetch('/guarderia/api/cancelar-huella/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } }).catch(() => { });
+    
     mostrarPanelMatricula();
   }
 
@@ -1209,20 +1209,33 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Buscando...';
 
-    fetch('/guarderia/api/buscar-nino/?matricula=' + encodeURIComponent(matricula))
-      .then(r => r.json())
-      .then(function (data) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
+fetch('/guarderia/api/buscar-nino/?matricula=' + encodeURIComponent(matricula))
+  .then(r => r.json())
+  .then(function (data) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
 
-        if (!data.success) {
-          mostrarErrorMatricula(data.mensaje || 'Niño no encontrado.');
-          return;
-        }
+    if (!data.success) {
+      mostrarErrorMatricula(data.mensaje || 'Niño no encontrado.');
+      return;
+    }
 
-        ninoActual = data.nino;  // { id, nombre, grupo, edad, foto_url, estado }
-        verificarObservacionesYMostrarHuella();
-      })
+    ninoActual = data.nino;
+
+    if (data.tiempo_bloqueado) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Debe esperar',
+        text: data.mensaje_tiempo_espera,
+        background: '#161b22',
+        color: '#fff',
+        confirmButtonColor: '#2b6cb0'
+      });
+      return;
+    }
+
+    verificarObservacionesYMostrarHuella();
+  })
       .catch(function () {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-search" style="margin-right:8px;"></i>Buscar Niño';
@@ -1563,7 +1576,7 @@ function marcarAtendidaDesdeModal(obsId, btn) {
   // ══════════════════════════════════════════════════════════════
   //  PASO 3 — CONFIRMAR Y REGISTRAR
   // ══════════════════════════════════════════════════════════════
-  function confirmarYRegistrar(tutor) {
+function confirmarYRegistrar(tutor) {
     var accion = (ninoActual.estado === 'DENTRO') ? 'SALIDA' : 'ENTRADA';
     var colorBtn = accion === 'ENTRADA' ? '#276749' : '#2b4c7e';
     var iconoBtn = accion === 'ENTRADA' ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
@@ -1573,15 +1586,13 @@ function marcarAtendidaDesdeModal(obsId, btn) {
       html:
         '<p style="color:#fff;margin-bottom:4px;"><strong>' + tutor.nombre + '</strong></p>'
         + '<p style="color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:16px;">' + tutor.parentesco + '</p>'
-        + '<p style="color:#ccc;margin-bottom:8px;">Se registrará: <strong>' + accion + '</strong> de <strong>' + ninoActual.nombre + '</strong></p>'
-        + '<textarea id="swal-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="height:70px;"></textarea>',
+        + '<p style="color:#ccc;margin-bottom:8px;">Se registrará: <strong>' + accion + '</strong> de <strong>' + ninoActual.nombre + '</strong></p>',
       icon: 'question',
       background: '#161b22', color: '#fff',
       showCancelButton: true,
       confirmButtonColor: colorBtn,
       confirmButtonText: '<i class="fas ' + iconoBtn + '" style="margin-right:6px;"></i>Registrar ' + accion,
       cancelButtonText: 'Cancelar',
-      preConfirm: () => document.getElementById('swal-obs').value
     }).then(function (result) {
       if (!result.isConfirmed) { volverAMatricula(); return; }
 
@@ -1595,7 +1606,7 @@ function marcarAtendidaDesdeModal(obsId, btn) {
         body: JSON.stringify({
           nino_id: ninoActual.id,
           tutor_id: tutorActualId,
-          observaciones: result.value || ''
+          observaciones: ''
         })
       })
         .then(r => r.json())
@@ -1618,7 +1629,7 @@ function marcarAtendidaDesdeModal(obsId, btn) {
             .then(volverAMatricula);
         });
     });
-  }
+}
 
   // ══════════════════════════════════════════════════════════════
   //  PANEL ERROR
@@ -1636,20 +1647,6 @@ function marcarAtendidaDesdeModal(obsId, btn) {
 
   // El botón reintentar del panel error vuelve al inicio
   function reiniciar() { volverAMatricula(); }
-
-  function reiniciar() {
-    if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
-    verificando = false; tutorActualId = null; ninosEstados = {};
-    document.getElementById('card-inicial').style.display = 'block';
-    document.getElementById('card-verificado').style.display = 'none';
-    document.getElementById('card-error').style.display = 'none';
-
-    // CAMBIO 4: Siempre mostrar el mensaje original
-    document.getElementById('mensaje-estado').textContent = 'Coloque su dedo en el lector';
-    document.getElementById('icono-mano').className = 'fas fa-fingerprint huella-icono';
-
-    setTimeout(iniciarVerificacion, 2000);
-  }
 
   // ══════════════════════════════════════════════════════════════
   //  MODO EMERGENCIA — Código de Escalamiento
