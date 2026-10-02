@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Registrar Huella - {{ tutor.nombre_completo }}{% endblock %}
+{% block title %}{% if modo_cambio %}Cambiar{% else %}Registrar{% endif %} Huella - {{ tutor.nombre_completo }}{% endblock %}
 
 {% block content %}
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="m-0">Registro de Huella Dactilar</h1>
+        <h1 class="m-0">{% if modo_cambio %}Cambio de Huella Dactilar{% else %}Registro de Huella Dactilar{% endif %}</h1>
       </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
           <li class="breadcrumb-item"><a href="/">Inicio</a></li>
           <li class="breadcrumb-item"><a href="{% url 'guarderia:lista_tutores' %}">Tutores</a></li>
-          <li class="breadcrumb-item active">Registrar Huella</li>
+          <li class="breadcrumb-item active">{% if modo_cambio %}Cambiar Huella{% else %}Registrar Huella{% endif %}</li>
         </ol>
       </div>
     </div>
@@ -36,7 +36,8 @@
             </div>
 
             <div id="estado-captura" class="text-center">
-              {% if tutor.huella_registrada %}
+              {# Solo mostrar "ya registrada" si NO estamos en modo cambio #}
+              {% if tutor.huella_registrada and not modo_cambio %}
                 <div class="alert alert-success">
                   <i class="fas fa-check-circle fa-3x mb-3"></i>
                   <h4>Huella Registrada Exitosamente</h4>
@@ -46,6 +47,13 @@
                   <img src="{{ tutor.huella_imagen.url }}" class="img-fluid" alt="Huella capturada" style="max-width: 300px;">
                 {% endif %}
               {% else %}
+                {% if modo_cambio %}
+                  <div class="alert alert-warning">
+                    <i class="fas fa-sync-alt"></i>
+                    Se registrará una nueva huella que reemplazará a la actual.
+                  </div>
+                {% endif %}
+
                 <div class="callout callout-info">
                   <h5><i class="fas fa-hand-paper"></i> Instrucciones:</h5>
                   <p>Por favor, coloque el dedo índice en el lector biométrico</p>
@@ -57,7 +65,7 @@
                     <span class="sr-only">Cargando...</span>
                   </div>
                   <p class="mt-2" id="mensaje-estado">Esperando captura de huella...</p>
-                  <small class="text-muted" id="intentos-contador">Intento 0/30</small>
+                  <small class="text-muted" id="intentos-contador">Intento 0/60</small>
                 </div>
 
                 <div id="huella-preview" class="mt-4" style="display: none;">
@@ -72,7 +80,7 @@
             </div>
           </div>
           <div class="card-footer">
-            {% if tutor.huella_registrada %}
+            {% if tutor.huella_registrada and not modo_cambio %}
               <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-success btn-block">
                 <i class="fas fa-check"></i> Continuar
               </a>
@@ -80,15 +88,21 @@
               <button id="btn-reintentar" class="btn btn-warning btn-block" style="display: none;" onclick="location.reload()">
                 <i class="fas fa-redo"></i> Reintentar Captura
               </button>
-              <a href="{% url 'guarderia:lista_tutores' %}" class="btn btn-default btn-block">
-                <i class="fas fa-arrow-left"></i> Volver a Lista
-              </a>
+              {% if modo_cambio %}
+                <a href="{% url 'guarderia:detalle_tutor' tutor.id %}" class="btn btn-default btn-block">
+                  <i class="fas fa-times"></i> Cancelar (conservar huella actual)
+                </a>
+              {% else %}
+                <a href="{% url 'guarderia:lista_tutores' %}" class="btn btn-default btn-block">
+                  <i class="fas fa-arrow-left"></i> Volver a Lista
+                </a>
+              {% endif %}
             {% endif %}
           </div>
         </div>
 
         <!-- Card de Debug (solo en desarrollo) -->
- <div class="card card-secondary collapsed-card">
+        <div class="card card-secondary collapsed-card">
           <div class="card-header">
             <h3 class="card-title">🔍 Información de Debug</h3>
             <div class="card-tools">
@@ -100,7 +114,7 @@
           <div class="card-body">
             <pre id="debug-info" style="font-size: 11px; max-height: 300px; overflow-y: auto;"></pre>
           </div>
-        </div> 
+        </div>
       </div>
     </div>
   </div>
@@ -132,7 +146,7 @@ function mostrarError(mensaje) {
   document.getElementById('error-mensaje').style.display = 'block';
   document.getElementById('error-texto').textContent = mensaje;
   document.getElementById('btn-reintentar').style.display = 'block';
-  
+
   if (intervalId) {
     clearInterval(intervalId);
   }
@@ -143,10 +157,10 @@ function verificarCaptura() {
     log('⚠️ Ya hay una verificación en curso, saltando...');
     return;
   }
-  
+
   verificando = true;
   intentos++;
-  
+
   log(`🔍 Intento ${intentos}/${maxIntentos} - Consultando estado...`);
   actualizarUI('Consultando estado del lector...', intentos);
 
@@ -157,17 +171,17 @@ function verificarCaptura() {
     })
     .then(data => {
       log(`📦 Datos recibidos: ${JSON.stringify(data)}`);
-      
+
       if (data.capturada) {
         log('✅ ¡HUELLA CAPTURADA!');
-        
+
         // Detener el polling
         if (intervalId) {
           clearInterval(intervalId);
         }
-        
+
         document.querySelector('.spinner-border').style.display = 'none';
-        
+
         if (data.imagen_url) {
           log(`🖼️ Mostrando imagen: ${data.imagen_url}`);
           document.getElementById('imagen-huella').src = data.imagen_url;
@@ -178,19 +192,19 @@ function verificarCaptura() {
         verificarEstadoBD();
       } else {
         log(`⏳ Aún no capturada. Siguiente intento en 1 segundo...`);
-        
+
         if (intentos >= maxIntentos) {
           log('❌ Tiempo máximo alcanzado');
           mostrarError('Tiempo de espera agotado. Por favor, intente nuevamente.');
         }
-        
+
         verificando = false;
       }
     })
     .catch(error => {
       log(`❌ ERROR en la petición: ${error.message}`);
       console.error('Error completo:', error);
-      
+
       if (intentos < 5) {
         log('⚠️ Reintentando en 1 segundo...');
         verificando = false;
@@ -202,18 +216,18 @@ function verificarCaptura() {
 
 function verificarEstadoBD() {
   log('🔍 Verificando estado en base de datos...');
-  
+
   fetch("{% url 'guarderia:verificar_estado_huella' tutor.id %}")
     .then(response => response.json())
     .then(data => {
       log(`💾 Estado en BD: ${JSON.stringify(data)}`);
-      
+
       if (data.success && data.huella_registrada) {
         Swal.fire({
           icon: 'success',
-          title: '¡Huella Registrada!',
+          title: '{% if modo_cambio %}¡Huella Actualizada!{% else %}¡Huella Registrada!{% endif %}',
           html: `
-            <p>La huella ha sido registrada exitosamente</p>
+            <p>La huella ha sido {% if modo_cambio %}actualizada{% else %}registrada{% endif %} exitosamente</p>
             <ul style="text-align: left; display: inline-block;">
               <li>Imagen: ${data.tiene_imagen ? '✅ Guardada' : '❌ No guardada'}</li>
               <li>Template: ${data.tiene_template ? '✅ Guardado (' + data.template_size + ' bytes)' : '❌ No guardado'}</li>
@@ -235,15 +249,17 @@ function verificarEstadoBD() {
     });
 }
 
-{% if not tutor.huella_registrada %}
+{# Iniciar la captura si no hay huella, o si estamos en modo cambio #}
+{% if not tutor.huella_registrada or modo_cambio %}
   log('🚀 Iniciando sistema de captura de huella');
   log(`📋 Tutor ID: {{ tutor.id }}`);
   log(`👤 Tutor: {{ tutor.nombre_completo }}`);
+  log('🔄 Modo: {% if modo_cambio %}CAMBIO de huella{% else %}registro nuevo{% endif %}');
   log('⏰ Iniciando polling cada 1 segundo...');
-  
-  // Primera verificación inmediata
+
+  // Primera verificación
   setTimeout(verificarCaptura, 2000);
-  
+
   // Polling cada 1 segundo
   intervalId = setInterval(() => {
     if (intentos < maxIntentos && !verificando) {

@@ -324,6 +324,54 @@ tutor.nombre_completo }}{% endblock %} {% block content %}
                   </div>
                 </div>
               </div>
+              <!-- Huella Digital -->
+<h5 class="mb-3 mt-3">
+  <i class="fas fa-fingerprint"></i> Huella Digital
+</h5>
+<div class="row">
+  {% if tutor.huella_registrada and tutor.huella_imagen %}
+  <div class="col-md-2 text-center mb-2">
+    <img src="{{ tutor.huella_imagen.url }}" alt="Huella actual"
+      class="img-thumbnail" style="max-height: 90px;">
+  </div>
+  {% endif %}
+  <div class="col-md-5">
+    <div class="form-group">
+      <label>Estado</label>
+      <div>
+        {% if tutor.huella_registrada %}
+          <span class="badge badge-success p-2">
+            <i class="fas fa-check-circle"></i> Huella registrada
+          </span>
+        {% else %}
+          <span class="badge badge-secondary p-2">
+            <i class="fas fa-times-circle"></i> Sin huella registrada
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="form-group">
+      <label>Acción</label>
+      <div>
+        {% if tutor.huella_registrada %}
+          <button type="button" id="btnCambiarHuella" class="btn btn-outline-info">
+            <i class="fas fa-sync-alt"></i> Cambiar huella
+          </button>
+        {% else %}
+          <a href="{% url 'guarderia:registrar_huella_tutor' tutor.id %}" class="btn btn-outline-info">
+            <i class="fas fa-fingerprint"></i> Registrar huella
+          </a>
+        {% endif %}
+      </div>
+      <small class="form-text text-muted">
+        Se usará el lector biométrico para capturar la nueva huella.
+      </small>
+    </div>
+  </div>
+</div>
+              
 
               <!-- Notas -->
               <h5 class="mb-3 mt-3">
@@ -366,6 +414,22 @@ tutor.nombre_completo }}{% endblock %} {% block content %}
     const infoOk = $('#colonia_seleccionada');
     const textoOk = $('#colonia_seleccionada_texto');
     const icono = $('#icono_busqueda');
+
+    $('#btnCambiarHuella').on('click', function () {
+  Swal.fire({
+    icon: 'warning',
+    title: '¿Cambiar la huella?',
+    text: 'Se registrará una nueva huella y reemplazará a la actual.',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, cambiar',
+    cancelButtonText: 'Cancelar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href =
+        "{% url 'guarderia:registrar_huella_tutor' tutor.id %}?cambiar=1";
+    }
+  });
+});
 
     // Modo editar: restaurar colonia guardada
     if (window._coloniaInicial && window._coloniaInicial.id) {

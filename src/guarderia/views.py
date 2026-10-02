@@ -170,24 +170,26 @@ def editar_tutor(request, tutor_id):
 @login_required
 @rol_requerido('ADMIN', 'EMPLEADO')
 def registrar_huella_tutor(request, tutor_id):
-    """Registrar huella del tutor con lector biométrico"""
+    """Registrar o cambiar la huella del tutor con lector biométrico"""
     tutor = get_object_or_404(Tutor, id=tutor_id)
-    
-    # Enviar solicitud al servidor .NET para iniciar captura
-    if request.method == 'GET' and not tutor.huella_registrada:
+    modo_cambio = request.GET.get('cambiar') == '1'
+
+    if request.method == 'GET' and (not tutor.huella_registrada or modo_cambio):
         try:
             response = requests.get(
                 f'{settings.BIOMETRIC_SERVER_URL}/capturar?persona_id={tutor_id}&tipo=tutor',
                 timeout=2
             )
-            print(f"✓ Solicitud enviada al servidor biométrico para tutor {tutor_id}")
-            print(f"Respuesta del servidor .NET: {response.json()}")
+            print(f"✓ Captura iniciada para tutor {tutor_id} (cambio={modo_cambio})")
         except requests.exceptions.ConnectionError:
             messages.error(request, 'No se puede conectar con el lector de huellas.')
         except Exception as e:
             print(f"✗ Error: {e}")
-    
-    return render(request, 'guarderia/tutores/registrar_huella.html', {'tutor': tutor})
+
+    return render(request, 'guarderia/tutores/registrar_huella.html', {
+        'tutor': tutor,
+        'modo_cambio': modo_cambio,
+    })
 
 # ============================================
 # VISTAS DE NIÑOS
