@@ -1151,6 +1151,10 @@
   let intervalPolling = null;
   let ninoActual = null;   // objeto con id, nombre, grupo, estado
   let tutorActualId = null;
+  let errorTimer = null;        // temporizador del panel de error
+  let pollingToken = 0;         // invalida respuestas de consultas anteriores
+  let intentosHuella = 0;       // reintentos sin salir de la pantalla de huella
+  const MAX_INTENTOS_HUELLA = 3;
 
   // ── Al cargar ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
@@ -1174,17 +1178,21 @@
     setTimeout(() => document.getElementById('input-matricula').focus(), 100);
   }
 
-  function volverAMatricula() {
-    observacionesCache = [];
-    amonestacionesCache = null;
-    cerrarInfoNino();
-    detenerPolling();
-    ninoActual = null;
-    tutorActualId = null;
-    // Cancelar captura en el servidor .NET si estaba activa
-    
-    mostrarPanelMatricula();
-  }
+function cancelarCapturaHuella() {
+  try { navigator.sendBeacon("{% url 'guarderia:cancelar_captura_huella' %}"); } catch (e) {}
+}
+
+function volverAMatricula() {
+  clearTimeout(errorTimer);
+  ninoActual = null;            // antes de cerrar el panel, para que no re-arme el lector
+  tutorActualId = null;
+  observacionesCache = [];
+  amonestacionesCache = null;
+  cerrarInfoNino();
+  detenerPolling();
+  cancelarCapturaHuella();
+  mostrarPanelMatricula();
+}
 
   function mostrarErrorMatricula(msg) {
     document.getElementById('error-matricula').style.display = 'block';
@@ -1198,6 +1206,7 @@
   }
 
   function buscarNino() {
+    clearTimeout(errorTimer);
     var matricula = document.getElementById('input-matricula').value.trim();
     if (!matricula) {
       mostrarErrorMatricula('Ingrese una matrícula.');
@@ -1490,6 +1499,8 @@ function marcarAtendidaDesdeModal(obsId, btn) {
   //  PASO 2 — MOSTRAR PANEL DE HUELLA
   // ══════════════════════════════════════════════════════════════
   function mostrarPanelHuella() {
+    clearTimeout(errorTimer);
+    intentosHuella = 0;
     // Llenar datos del niño
     document.getElementById('nino-nombre-encontrado').textContent = ninoActual.nombre;
     document.getElementById('nino-grupo-encontrado').textContent = 'Grupo: ' + ninoActual.grupo + ' · ' + ninoActual.edad + ' años';
@@ -1534,44 +1545,86 @@ function marcarAtendidaDesdeModal(obsId, btn) {
   // ══════════════════════════════════════════════════════════════
   //  CAPTURA DE HUELLA (llama al backend Django que habla con .NET)
   // ══════════════════════════════════════════════════════════════
-  function iniciarCapturaHuella() {
-    fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
+function iniciarCapturaHuella() {
+  fetch("{% url 'guarderia:verificar_huella_inicio' %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }
+  })
+    .then(r => r.json())
+    .then(function (d) {
+      // Si el usuario ya salió de la pantalla, no dejar el lector armado
+      if (!ninoActual || emgPanelActivo) { cancelarCapturaHuella(); return; }
+      if (d.success) {
+        iniciarPolling();
+      } else {
+        mostrarError(d.mensaje || 'Error al iniciar el lector.');
+      }
     })
+    .catch(() => mostrarError('No se puede conectar con el lector. Verifique que esté conectado.'));
+}
+
+function iniciarPolling() {
+  detenerPolling();
+  const token = ++pollingToken;
+  const inicio = Date.now();
+  let enVuelo = false;
+  let erroresSeguidos = 0;
+
+  intervalPolling = setInterval(function () {
+    if (enVuelo) return;            // no apilar consultas
+    enVuelo = true;
+
+    fetch("{% url 'guarderia:verificar_huella_estado' %}")
       .then(r => r.json())
       .then(function (d) {
+        enVuelo = false;
+        if (token !== pollingToken) return;   // respuesta vieja: ignorar
+
+        if (d.error) {
+          if (++erroresSeguidos >= 8) {
+            detenerPolling();
+            mostrarError('No se puede conectar con el lector.');
+          }
+          return;
+        }
+        erroresSeguidos = 0;
+
+        if (!d.completado) {
+          // El servidor cierra la sesión a los 20 s: re-armar antes de que expire
+          if (Date.now() - inicio > 15000) {
+            detenerPolling();
+            iniciarCapturaHuella();
+          }
+          return;
+        }
+
+        detenerPolling();
         if (d.success) {
-          iniciarPolling();
+          tutorActualId = d.tutor.id;
+          confirmarYRegistrar(d.tutor);
         } else {
-          mostrarError(d.mensaje || 'Error al iniciar el lector.');
+          reintentarHuella(d.mensaje);
         }
       })
-      .catch(() => mostrarError('No se puede conectar con el lector. Verifique que esté conectado.'));
-  }
+      .catch(function (e) { enVuelo = false; console.error(e); });
+  }, 1000);
+}
 
-  function iniciarPolling() {
-    detenerPolling();
-    intervalPolling = setInterval(function () {
-      fetch("{% url 'guarderia:verificar_huella_estado' %}")
-        .then(r => r.json())
-        .then(function (d) {
-          if (!d.completado) return;
-          detenerPolling();
-          if (d.success) {
-            tutorActualId = d.tutor.id;
-            confirmarYRegistrar(d.tutor);
-          } else {
-            mostrarError(d.mensaje || 'Huella no reconocida.');
-          }
-        })
-        .catch(e => console.error(e));
-    }, 1000);
-  }
+function detenerPolling() {
+  pollingToken++;                    // invalida cualquier consulta en vuelo
+  if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
+}
 
-  function detenerPolling() {
-    if (intervalPolling) { clearInterval(intervalPolling); intervalPolling = null; }
+function reintentarHuella(mensaje) {
+  intentosHuella++;
+  if (intentosHuella >= MAX_INTENTOS_HUELLA) {
+    mostrarError(mensaje || 'Huella no reconocida.');
+    return;
   }
+  document.getElementById('msg-huella-paso2').textContent =
+    'No se reconoció la huella. Intente de nuevo (' + intentosHuella + '/' + MAX_INTENTOS_HUELLA + ')';
+  iniciarCapturaHuella();
+}
 
   // ══════════════════════════════════════════════════════════════
   //  PASO 3 — CONFIRMAR Y REGISTRAR
@@ -1634,16 +1687,18 @@ function confirmarYRegistrar(tutor) {
   // ══════════════════════════════════════════════════════════════
   //  PANEL ERROR
   // ══════════════════════════════════════════════════════════════
-  function mostrarError(mensaje) {
-    detenerPolling();
-    document.getElementById('card-matricula').style.display = 'none';
-    document.getElementById('card-huella').style.display = 'none';
-    var cv = document.getElementById('card-verificado');
-    if (cv) cv.style.display = 'none';
-    document.getElementById('card-error').style.display = 'block';
-    document.getElementById('mensaje-error').textContent = mensaje;
-    setTimeout(volverAMatricula, 5000);
-  }
+function mostrarError(mensaje) {
+  detenerPolling();
+  cancelarCapturaHuella();
+  document.getElementById('card-matricula').style.display = 'none';
+  document.getElementById('card-huella').style.display = 'none';
+  var cv = document.getElementById('card-verificado');
+  if (cv) cv.style.display = 'none';
+  document.getElementById('card-error').style.display = 'block';
+  document.getElementById('mensaje-error').textContent = mensaje;
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(volverAMatricula, 5000);
+}
 
   // El botón reintentar del panel error vuelve al inicio
   function reiniciar() { volverAMatricula(); }
@@ -1664,6 +1719,8 @@ function confirmarYRegistrar(tutor) {
 
   function activarEmergencia() {
     detenerPolling();
+    clearTimeout(errorTimer);
+    cancelarCapturaHuella();
     emgPanelActivo = true;
     // Limpiar estado
     var inp = document.getElementById('emg-pin-input');
@@ -1861,5 +1918,8 @@ function confirmarYRegistrar(tutor) {
         });
     });
   }
+  window.addEventListener('pagehide', () => {
+  navigator.sendBeacon("{% url 'guarderia:cancelar_captura_huella' %}");
+});
 </script>
 {% endblock %}

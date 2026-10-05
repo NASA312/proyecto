@@ -935,6 +935,7 @@ def verificar_huella_inicio(request):
             )
             
             if response.status_code == 200:
+                request.session['huella_sesion'] = response.json().get('sesion')
                 return JsonResponse({
                     'success': True,
                     'mensaje': 'Coloque su dedo en el lector'
@@ -967,8 +968,22 @@ def verificar_huella_estado(request):
             response = requests.get(f'{settings.BIOMETRIC_SERVER_URL}/estado', timeout=2)
             estado = response.json()
             
+            # Ignorar resultados de una verificación anterior
+            sesion_esperada = request.session.get('huella_sesion')
+            if sesion_esperada is not None and estado.get('sesion') != sesion_esperada:
+                return JsonResponse({
+                    'completado': False,
+                    'mensaje': 'Esperando huella...'
+                })
+
             # Si aún no se completa
             if not estado.get('completado'):
+                if estado.get('expirada'):
+                    return JsonResponse({
+                        'completado': False,
+                        'expirada': True,
+                        'mensaje': 'Tiempo agotado. Vuelva a intentarlo.'
+                    })
                 return JsonResponse({
                     'completado': False,
                     'mensaje': 'Esperando huella...'
@@ -995,6 +1010,9 @@ def verificar_huella_estado(request):
                 huella_template__isnull=False,
                 activo=True
             )
+            nino_id = request.GET.get('nino_id')
+            if nino_id:
+                tutores = tutores.filter(ninos__id=nino_id).distinct()
             
             print(f"Tutores a comparar: {tutores.count()}")
             
@@ -3401,3 +3419,11 @@ def buscar_ninos_ajax(request):
         for n in ninos
     ]
     return JsonResponse({'results': results})
+
+@csrf_exempt
+def cancelar_captura_huella(request):
+    try:
+        requests.post(f'{settings.BIOMETRIC_SERVER_URL}/cancelar', timeout=2)
+    except Exception:
+        pass
+    return JsonResponse({'success': True})
