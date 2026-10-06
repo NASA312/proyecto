@@ -1574,7 +1574,8 @@ function iniciarPolling() {
     if (enVuelo) return;            // no apilar consultas
     enVuelo = true;
 
-    fetch("{% url 'guarderia:verificar_huella_estado' %}")
+    if (!ninoActual) { detenerPolling(); return; }
+    fetch("{% url 'guarderia:verificar_huella_estado' %}?nino_id=" + ninoActual.id)
       .then(r => r.json())
       .then(function (d) {
         enVuelo = false;

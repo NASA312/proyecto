@@ -1010,6 +1010,7 @@ def verificar_huella_estado(request):
                 huella_template__isnull=False,
                 activo=True
             )
+
             nino_id = request.GET.get('nino_id')
             if nino_id:
                 tutores = tutores.filter(ninos__id=nino_id).distinct()
